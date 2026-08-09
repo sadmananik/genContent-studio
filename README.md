@@ -53,8 +53,18 @@ Default local URLs:
 
 ## Environment
 
-Copy the backend env example before wiring the ChatGPT API:
+Copy the backend env example and add your OpenAI API key:
 
 ```bash
 cp packages/backend/.env.example packages/backend/.env
 ```
+
+Set `OPENAI_API_KEY` in `packages/backend/.env`.
+
+## OpenAI prototype
+
+Sprint deliverable for Chat Completions + Image Generation:
+
+- Docs: [docs/openai-api-prototype.md](docs/openai-api-prototype.md)
+- Backend routes: `GET /api/openai/auth`, `POST /api/openai/text`, `POST /api/openai/image`
+- UI: http://localhost:3000/openai-prototype

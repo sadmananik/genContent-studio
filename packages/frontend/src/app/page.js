@@ -9,8 +9,11 @@ export default function Home() {
           <h1>GenContent Studio</h1>
           <p>
             A capstone-ready monorepo foundation with a Next.js frontend, an
-            Express backend, and room to connect the ChatGPT API in the next
-            sprint.
+            Express backend, and an OpenAI text/image prototype for the AI
+            integration sprint.
+          </p>
+          <p className="home-link-row">
+            <a href="/openai-prototype">Open OpenAI prototype</a>
           </p>
         </div>
 
