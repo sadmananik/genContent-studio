@@ -39,21 +39,10 @@ a {
   text-decoration: none;
 }
 
-.prototype-stage {
-  display: grid;
-  gap: 16px;
-  width: min(1440px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 18px 0;
-}
-
 .screen {
-  min-height: 655px;
+  min-height: 100vh;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.94);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
 }
 
 .brand {
@@ -113,15 +102,15 @@ a {
 .auth-stage,
 .protected-stage,
 .prototype-stage {
-  width: min(1440px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 18px 0;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 .auth-stage {
   display: grid;
-  min-height: 100vh;
-  place-items: center;
+  place-items: stretch;
 }
 
 .protected-stage {
@@ -131,9 +120,10 @@ a {
 .login-screen {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 0.6fr;
-  gap: 28px;
-  padding: 32px;
+  grid-template-columns: minmax(420px, 0.95fr) minmax(420px, 1.05fr);
+  gap: 48px;
+  align-items: center;
+  padding: 64px clamp(28px, 6vw, 96px);
 }
 
 .login-screen::after {
@@ -153,15 +143,15 @@ a {
 
 .login-screen .brand {
   position: absolute;
-  top: 34px;
-  left: 32px;
+  top: 38px;
+  left: clamp(28px, 6vw, 96px);
 }
 
 .login-panel {
   align-self: center;
-  width: min(380px, 100%);
-  padding: 34px;
-  margin-top: 34px;
+  width: min(480px, 100%);
+  padding: 42px;
+  margin-top: 48px;
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -176,6 +166,10 @@ a {
   letter-spacing: 0;
 }
 
+.login-panel h2 {
+  font-size: 34px;
+}
+
 .login-panel p,
 .title-row p,
 .project-card p,
@@ -187,7 +181,7 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 47px;
+  height: 52px;
   padding: 0 14px;
   margin-top: 18px;
   border: 1px solid var(--line);
@@ -254,12 +248,12 @@ a {
 .robot-scene {
   position: relative;
   align-self: center;
-  min-height: 420px;
+  min-height: min(620px, 72vh);
 }
 
 .robot-scene::before {
   position: absolute;
-  inset: 22px -26px 16px 0;
+  inset: 0;
   content: "";
   background: radial-gradient(circle at 55% 18%, #efeaff, transparent 23%), linear-gradient(135deg, transparent 42%, #d9d0ff 43%, #8a77ff 78%, transparent 79%);
   border-radius: 50%;
@@ -268,8 +262,8 @@ a {
 
 .chat-bubble {
   position: absolute;
-  top: 100px;
-  left: 70px;
+  top: 14%;
+  left: 34%;
   padding: 12px 20px;
   color: white;
   background: linear-gradient(135deg, #8265ff, #5b41e5);
@@ -279,10 +273,12 @@ a {
 
 .robot {
   position: absolute;
-  top: 190px;
-  left: 28px;
-  width: 170px;
-  height: 190px;
+  top: 36%;
+  left: 24%;
+  width: 220px;
+  height: 250px;
+  transform: scale(1.25);
+  transform-origin: top left;
 }
 
 .robot-head {
@@ -346,6 +342,7 @@ a {
 .chat-frame {
   display: grid;
   grid-template-columns: 205px 1fr;
+  min-height: 100vh;
 }
 
 .app-sidebar {
@@ -632,7 +629,7 @@ a {
 }
 
 .editor-shell {
-  min-height: 655px;
+  min-height: 100vh;
   background: white;
 }
 
@@ -651,7 +648,7 @@ a {
 .editor-body {
   display: grid;
   grid-template-columns: 70px 1fr 255px;
-  min-height: 585px;
+  min-height: calc(100vh - 70px);
 }
 
 .editor-rail {
@@ -969,11 +966,26 @@ a {
 
 @media (max-width: 900px) {
   .prototype-stage {
-    width: min(100% - 24px, 720px);
+    width: 100%;
   }
 
   .screen {
     overflow: auto;
+  }
+
+  .login-screen {
+    min-height: 100vh;
+    padding: 88px 20px 32px;
+  }
+
+  .login-panel {
+    width: 100%;
+    padding: 28px;
+    margin-top: 0;
+  }
+
+  .robot-scene {
+    display: none;
   }
 
   .login-screen,
