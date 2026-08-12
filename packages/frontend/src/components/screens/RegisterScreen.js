@@ -2,15 +2,41 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
 import { setDemoLogin } from "../common/ProtectedRoute";
+import { requestAuth } from "../../lib/auth";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleDemoRegister(event) {
+  async function handleRegister(event) {
     event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      await requestAuth("register", form);
+      router.push("/dashboard");
+    } catch (authError) {
+      setError(authError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function handleChange(event) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      [event.target.name]: event.target.value
+    }));
+  }
+
+  function handleDemoRegister() {
     setDemoLogin();
     router.push("/dashboard");
   }
@@ -18,24 +44,37 @@ export default function RegisterScreen() {
   return (
     <section className="screen login-screen">
       <Brand />
-      <form className="login-panel" onSubmit={handleDemoRegister}>
+      <form className="login-panel" onSubmit={handleRegister}>
         <h2>Create account</h2>
         <p>Start creating with your AI workspace</p>
         <label>
           <span>◇</span>
-          <input placeholder="Full name" />
+          <input name="name" onChange={handleChange} placeholder="Full name" value={form.name} />
         </label>
         <label>
           <span>✉</span>
-          <input placeholder="Email address" />
+          <input
+            name="email"
+            onChange={handleChange}
+            placeholder="Email address"
+            type="email"
+            value={form.email}
+          />
         </label>
         <label>
           <span>⌘</span>
-          <input placeholder="Password" type="password" />
+          <input
+            name="password"
+            onChange={handleChange}
+            placeholder="Password"
+            type="password"
+            value={form.password}
+          />
           <span>⊙</span>
         </label>
-        <Button className="full-width" type="submit">
-          Create Demo Account
+        {error ? <p className="form-error">{error}</p> : null}
+        <Button className="full-width" disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Creating..." : "Create Account"}
         </Button>
         <div className="divider">or</div>
         <Button

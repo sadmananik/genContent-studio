@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearAuthSession, getAuthSession, saveAuthSession } from "../../lib/auth";
 
 const DEMO_AUTH_KEY = "gencontent-demo-auth";
 
@@ -22,9 +23,10 @@ export default function ProtectedRoute({ children }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    const session = getAuthSession();
     const hasDemoLogin = window.localStorage.getItem(DEMO_AUTH_KEY) === "true";
 
-    if (!hasDemoLogin) {
+    if (!session?.token && !hasDemoLogin) {
       router.replace("/login");
       return;
     }
@@ -37,7 +39,7 @@ export default function ProtectedRoute({ children }) {
       <main className="auth-check">
         <div className="auth-check-panel">
           <strong>Checking access...</strong>
-          <p>Protected route placeholder using the dev demo login flag.</p>
+          <p>Checking your saved session.</p>
         </div>
       </main>
     );
@@ -45,3 +47,5 @@ export default function ProtectedRoute({ children }) {
 
   return children;
 }
+
+export { clearAuthSession, getAuthSession, saveAuthSession };

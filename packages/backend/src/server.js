@@ -2,6 +2,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const express = require("express");
 const connectDatabase = require("./config/database");
+const { getDatabaseStatus } = require("./config/database");
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const imageContentRoutes = require("./routes/imageContentRoutes");
@@ -19,17 +20,21 @@ const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 app.use(cors({ origin: frontendOrigin }));
 app.use(express.json());
 
-app.get("/health", (req, res) => {
+function healthCheck(req, res) {
   res.json({
     status: "ok",
-    service: "gencontent-backend"
+    database: getDatabaseStatus()
   });
-});
+}
+
+app.get("/health", healthCheck);
+app.get("/api/health", healthCheck);
 
 app.get("/api", (req, res) => {
   res.json({
     message: "GenContent Studio API is ready.",
     routes: [
+      "/api/health",
       "/api/auth",
       "/api/users",
       "/api/projects",

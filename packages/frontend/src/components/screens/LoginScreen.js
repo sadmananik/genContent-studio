@@ -2,15 +2,41 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
 import { setDemoLogin } from "../common/ProtectedRoute";
+import { requestAuth } from "../../lib/auth";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleDemoLogin(event) {
+  async function handleLogin(event) {
     event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      await requestAuth("login", form);
+      router.push("/dashboard");
+    } catch (authError) {
+      setError(authError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function handleChange(event) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      [event.target.name]: event.target.value
+    }));
+  }
+
+  function handleDemoLogin() {
     setDemoLogin();
     router.push("/dashboard");
   }
@@ -18,28 +44,41 @@ export default function LoginScreen() {
   return (
     <section className="screen login-screen">
       <Brand />
-      <form className="login-panel" onSubmit={handleDemoLogin}>
+      <form className="login-panel" onSubmit={handleLogin}>
         <h2>Welcome back!</h2>
         <p>Sign in to continue to your account</p>
         <label>
           <span>✉</span>
-          <input placeholder="Email address" />
+          <input
+            name="email"
+            onChange={handleChange}
+            placeholder="Email address"
+            type="email"
+            value={form.email}
+          />
         </label>
         <label>
           <span>⌘</span>
-          <input placeholder="Password" type="password" />
+          <input
+            name="password"
+            onChange={handleChange}
+            placeholder="Password"
+            type="password"
+            value={form.password}
+          />
           <span>⊙</span>
         </label>
+        {error ? <p className="form-error">{error}</p> : null}
         <div className="form-row">
           <span>☐ Remember me</span>
           <a href="#">Forgot password?</a>
         </div>
-        <Button className="full-width" type="submit">
-          Demo Sign In
+        <Button className="full-width" disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Signing in..." : "Sign In"}
         </Button>
         <div className="divider">or</div>
         <Button variant="secondary" className="full-width" type="button" onClick={handleDemoLogin}>
-          <span className="google-dot">G</span> Continue with Google
+          Quick Demo Access
         </Button>
         <p className="signup">
           Don&apos;t have an account? <Link href="/register">Sign up</Link>
