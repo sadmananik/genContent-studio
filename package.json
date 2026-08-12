@@ -12,6 +12,7 @@
     "build": "lerna run build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "setup:hooks": "git config core.hooksPath .githooks",
     "start": "lerna run start --parallel",
     "lint": "lerna run lint"
   },
