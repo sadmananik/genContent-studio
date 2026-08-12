@@ -322,6 +322,20 @@ a {
   font-weight: 700;
 }
 
+.password-match {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.login-panel .password-match.is-match {
+  color: #067647;
+}
+
+.login-panel .password-match.is-mismatch {
+  color: #b42318;
+}
+
 .create-account-button {
   margin-top: 22px;
 }

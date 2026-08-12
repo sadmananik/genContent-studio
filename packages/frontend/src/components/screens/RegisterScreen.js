@@ -15,6 +15,15 @@ export default function RegisterScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const passwordStrength = getPasswordStrength(form.password);
+  const hasConfirmPassword = form.confirmPassword.length > 0;
+  const passwordsMatch = form.password === form.confirmPassword;
+  const isFormComplete =
+    form.name.trim() &&
+    form.email.trim() &&
+    form.password &&
+    form.confirmPassword &&
+    passwordStrength.level >= 2 &&
+    passwordsMatch;
 
   async function handleRegister(event) {
     event.preventDefault();
@@ -127,8 +136,17 @@ export default function RegisterScreen() {
             value={form.confirmPassword}
           />
         </label>
+        {hasConfirmPassword ? (
+          <p className={`password-match ${passwordsMatch ? "is-match" : "is-mismatch"}`}>
+            {passwordsMatch ? "Passwords match" : "Passwords do not match"}
+          </p>
+        ) : null}
         {error ? <p className="form-error">{error}</p> : null}
-        <Button className="full-width create-account-button" disabled={isSubmitting} type="submit">
+        <Button
+          className="full-width create-account-button"
+          disabled={isSubmitting || !isFormComplete}
+          type="submit"
+        >
           {isSubmitting ? "Creating..." : "Create Account"}
         </Button>
         <p className="signup">
