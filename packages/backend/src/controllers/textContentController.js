@@ -24,7 +24,10 @@ const upsertTextContent = asyncHandler(async (req, res) => {
 const getTextContent = asyncHandler(async (req, res) => {
   await findAccessibleProject(req.params.projectId, req.user.id);
 
-  const textContent = await TextContent.findOne({ project: req.params.projectId }).populate("lastUpdatedBy", "name email");
+  const textContent = await TextContent.findOne({ project: req.params.projectId }).populate(
+    "lastUpdatedBy",
+    "name email"
+  );
 
   if (!textContent) {
     throw httpError(404, "Text content not found");
