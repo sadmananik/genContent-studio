@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -63,10 +64,17 @@ export default function LoginScreen() {
             name="password"
             onChange={handleChange}
             placeholder="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={form.password}
           />
-          <span>⊙</span>
+          <button
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="password-toggle"
+            onClick={() => setShowPassword((currentValue) => !currentValue)}
+            type="button"
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
         </label>
         {error ? <p className="form-error">{error}</p> : null}
         <div className="form-row">

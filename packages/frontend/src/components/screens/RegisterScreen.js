@@ -5,22 +5,38 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
-import { setDemoLogin } from "../common/ProtectedRoute";
 import { requestAuth } from "../../lib/auth";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordStrength = getPasswordStrength(form.password);
 
   async function handleRegister(event) {
     event.preventDefault();
     setError("");
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (passwordStrength.level < 2) {
+      setError("Use a stronger password before creating your account");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await requestAuth("register", form);
+      await requestAuth("register", {
+        name: form.name,
+        email: form.email,
+        password: form.password
+      });
       router.push("/dashboard");
     } catch (authError) {
       setError(authError.message);
@@ -34,11 +50,6 @@ export default function RegisterScreen() {
       ...currentForm,
       [event.target.name]: event.target.value
     }));
-  }
-
-  function handleDemoRegister() {
-    setDemoLogin();
-    router.push("/dashboard");
   }
 
   return (
@@ -67,23 +78,39 @@ export default function RegisterScreen() {
             name="password"
             onChange={handleChange}
             placeholder="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={form.password}
           />
-          <span>⊙</span>
+          <button
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="password-toggle"
+            onClick={() => setShowPassword((currentValue) => !currentValue)}
+            type="button"
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </label>
+        <div className="password-strength" data-strength={passwordStrength.level}>
+          <div className="strength-bars" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <p>{passwordStrength.label}</p>
+        </div>
+        <label>
+          <span>⌘</span>
+          <input
+            name="confirmPassword"
+            onChange={handleChange}
+            placeholder="Repeat password"
+            type={showPassword ? "text" : "password"}
+            value={form.confirmPassword}
+          />
         </label>
         {error ? <p className="form-error">{error}</p> : null}
-        <Button className="full-width" disabled={isSubmitting} type="submit">
+        <Button className="full-width create-account-button" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Creating..." : "Create Account"}
-        </Button>
-        <div className="divider">or</div>
-        <Button
-          variant="secondary"
-          className="full-width"
-          type="button"
-          onClick={handleDemoRegister}
-        >
-          Quick Register for Dev
         </Button>
         <p className="signup">
           Already have an account? <Link href="/login">Sign in</Link>
@@ -103,4 +130,27 @@ export default function RegisterScreen() {
       </div>
     </section>
   );
+}
+
+function getPasswordStrength(password) {
+  let score = 0;
+
+  if (password.length >= 8) score += 1;
+  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+  if (!password) {
+    return { level: 0, label: "Password strength" };
+  }
+
+  if (score <= 1) {
+    return { level: 1, label: "Weak password" };
+  }
+
+  if (score <= 3) {
+    return { level: 2, label: "Medium password" };
+  }
+
+  return { level: 3, label: "Strong password" };
 }

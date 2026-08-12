@@ -206,11 +206,57 @@ a {
   outline: 0;
 }
 
+.password-toggle {
+  padding: 0;
+  color: var(--purple);
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.password-strength {
+  margin-top: 10px;
+}
+
+.strength-bars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.strength-bars span {
+  height: 6px;
+  background: #e7e9f2;
+  border-radius: 999px;
+}
+
+.password-strength p {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+.password-strength[data-strength="1"] .strength-bars span:first-child {
+  background: #f04438;
+}
+
+.password-strength[data-strength="2"] .strength-bars span:nth-child(-n + 2) {
+  background: #fdb022;
+}
+
+.password-strength[data-strength="3"] .strength-bars span {
+  background: #12b76a;
+}
+
 .login-panel .form-error {
   margin: 12px 0 0;
   color: #b42318;
   font-size: 13px;
   font-weight: 700;
+}
+
+.create-account-button {
+  margin-top: 22px;
 }
 
 .form-row,
