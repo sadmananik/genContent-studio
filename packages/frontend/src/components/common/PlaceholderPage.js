@@ -1,4 +1,7 @@
-export default function PlaceholderPage({ title, description = "Protected route placeholder for future workspace content." }) {
+export default function PlaceholderPage({
+  title,
+  description = "Protected route placeholder for future workspace content."
+}) {
   return (
     <main className="dashboard-content">
       <div className="placeholder-panel">

@@ -42,7 +42,8 @@ const toggleFavourite = asyncHandler(async (req, res) => {
 
   await findAccessibleProject(chat.project, req.user.id);
 
-  chat.isFavourite = req.body.isFavourite === undefined ? !chat.isFavourite : Boolean(req.body.isFavourite);
+  chat.isFavourite =
+    req.body.isFavourite === undefined ? !chat.isFavourite : Boolean(req.body.isFavourite);
   await chat.save();
 
   res.json(chat);

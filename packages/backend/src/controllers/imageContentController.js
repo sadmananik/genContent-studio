@@ -24,7 +24,10 @@ const upsertImageContent = asyncHandler(async (req, res) => {
 const getImageContent = asyncHandler(async (req, res) => {
   await findAccessibleProject(req.params.projectId, req.user.id);
 
-  const imageContent = await ImageContent.findOne({ project: req.params.projectId }).populate("lastUpdatedBy", "name email");
+  const imageContent = await ImageContent.findOne({ project: req.params.projectId }).populate(
+    "lastUpdatedBy",
+    "name email"
+  );
 
   if (!imageContent) {
     throw httpError(404, "Image content not found");

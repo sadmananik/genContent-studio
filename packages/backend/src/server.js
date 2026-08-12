@@ -29,7 +29,14 @@ app.get("/health", (req, res) => {
 app.get("/api", (req, res) => {
   res.json({
     message: "GenContent Studio API is ready.",
-    routes: ["/api/auth", "/api/users", "/api/projects", "/api/chats", "/api/text-content", "/api/image-content"]
+    routes: [
+      "/api/auth",
+      "/api/users",
+      "/api/projects",
+      "/api/chats",
+      "/api/text-content",
+      "/api/image-content"
+    ]
   });
 });
 

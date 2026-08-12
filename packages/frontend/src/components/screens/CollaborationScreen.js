@@ -6,7 +6,10 @@ export default function CollaborationScreen() {
       <EditorChrome title="Marketing Campaign ⌄" collaboration aside={<CollaborationPanel />}>
         <article className="document-card collaborative-doc">
           <h2>Summer Sale Campaign ☀</h2>
-          <p>Our summer sale campaign is designed to bring amazing deals to our customers. We&apos;ll focus on digital platforms to reach a wider audience and drive more engagement.</p>
+          <p>
+            Our summer sale campaign is designed to bring amazing deals to our customers. We&apos;ll
+            focus on digital platforms to reach a wider audience and drive more engagement.
+          </p>
           <p>Key highlights of the campaign:</p>
           <ul>
             <li>Exclusive discounts</li>
@@ -31,8 +34,17 @@ export default function CollaborationScreen() {
 }
 
 function CollaborationPanel() {
-  const users = [["Anik Rahman (You)", "green"], ["Sravya R.", "blue"], ["Akramul H.", "pink"], ["John D.", "cyan"]];
-  const feed = ["Sravya R. edited the document", "Akramul H. added a comment", "John D. joined the document"];
+  const users = [
+    ["Anik Rahman (You)", "green"],
+    ["Sravya R.", "blue"],
+    ["Akramul H.", "pink"],
+    ["John D.", "cyan"]
+  ];
+  const feed = [
+    "Sravya R. edited the document",
+    "Akramul H. added a comment",
+    "John D. joined the document"
+  ];
 
   return (
     <aside className="collab-panel">
@@ -49,10 +61,15 @@ function CollaborationPanel() {
       {feed.map((item, index) => (
         <div className="feed-item" key={item}>
           <span className="avatar avatar-2">{item.slice(0, 2)}</span>
-          <p>{item}<small>{index * 3 + 2} min ago</small></p>
+          <p>
+            {item}
+            <small>{index * 3 + 2} min ago</small>
+          </p>
         </div>
       ))}
-      <div className="mini-composer">Type a message... <span>▷</span></div>
+      <div className="mini-composer">
+        Type a message... <span>▷</span>
+      </div>
     </aside>
   );
 }

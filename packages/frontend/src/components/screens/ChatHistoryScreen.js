@@ -18,7 +18,9 @@ export default function ChatHistoryScreen({ onNavigate }) {
           <h2>AI Chat History</h2>
           <Button>＋ New Chat</Button>
         </div>
-        <div className="chat-search">⌕ Search chats... <button>⌯</button></div>
+        <div className="chat-search">
+          ⌕ Search chats... <button>⌯</button>
+        </div>
         {chats.map(([title, time, active]) => (
           <article className={`chat-list-item ${active}`} key={title}>
             <span className="soft-icon lavender">◉</span>
@@ -28,7 +30,9 @@ export default function ChatHistoryScreen({ onNavigate }) {
             </div>
           </article>
         ))}
-        <a className="load-link" href="#">Load more chats</a>
+        <a className="load-link" href="#">
+          Load more chats
+        </a>
       </aside>
       <main className="conversation">
         <header>
@@ -42,10 +46,16 @@ export default function ChatHistoryScreen({ onNavigate }) {
         </div>
         <div className="message ai-message">
           <strong>✦ AI Assistant</strong>
-          <p>Artificial Intelligence (AI) tools are revolutionizing the way we work, create, and solve problems. From automation to content generation, these tools empower businesses and individuals to achieve more in less time.</p>
+          <p>
+            Artificial Intelligence (AI) tools are revolutionizing the way we work, create, and
+            solve problems. From automation to content generation, these tools empower businesses
+            and individuals to achieve more in less time.
+          </p>
           <div className="message-actions">▣ ♡ ♧</div>
         </div>
-        <div className="composer">Ask anything... <span>▷</span></div>
+        <div className="composer">
+          Ask anything... <span>▷</span>
+        </div>
       </main>
     </section>
   );

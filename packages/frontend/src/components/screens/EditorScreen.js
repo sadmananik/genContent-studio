@@ -8,8 +8,14 @@ export default function EditorScreen() {
         <article className="document-card">
           <h2>The Future of AI Tools</h2>
           <p>Artificial Intelligence (AI) tools are revolutionizing the way we work and create.</p>
-          <p>From content generation to data analysis, AI tools are becoming essential for businesses and individuals alike.</p>
-          <p>In this blog, we&apos;ll explore the most impactful AI tools, their use cases, and how they can boost productivity and creativity.</p>
+          <p>
+            From content generation to data analysis, AI tools are becoming essential for businesses
+            and individuals alike.
+          </p>
+          <p>
+            In this blog, we&apos;ll explore the most impactful AI tools, their use cases, and how
+            they can boost productivity and creativity.
+          </p>
         </article>
         <footer className="editor-status">
           <span>Words: 232</span>
@@ -30,8 +36,15 @@ function AssistantPanel() {
       <textarea defaultValue="Improve this content" />
       <Button className="full-width">✦ Generate</Button>
       <h4>Suggestions</h4>
-      {["Improve clarity", "Make it more engaging", "Shorten this paragraph", "Expand this paragraph"].map((item) => (
-        <button className="suggestion" key={item}>✧ {item}</button>
+      {[
+        "Improve clarity",
+        "Make it more engaging",
+        "Shorten this paragraph",
+        "Expand this paragraph"
+      ].map((item) => (
+        <button className="suggestion" key={item}>
+          ✧ {item}
+        </button>
       ))}
     </aside>
   );
