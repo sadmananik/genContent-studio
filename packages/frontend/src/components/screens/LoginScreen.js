@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Brand from "../common/Brand";
@@ -49,7 +50,7 @@ export default function LoginScreen() {
         <h2>Welcome back!</h2>
         <p>Sign in to continue to your account</p>
         <label>
-          <span>✉</span>
+          <Mail aria-hidden="true" size={18} />
           <input
             name="email"
             onChange={handleChange}
@@ -59,7 +60,7 @@ export default function LoginScreen() {
           />
         </label>
         <label>
-          <span>⌘</span>
+          <Lock aria-hidden="true" size={18} />
           <input
             name="password"
             onChange={handleChange}
@@ -73,7 +74,11 @@ export default function LoginScreen() {
             onClick={() => setShowPassword((currentValue) => !currentValue)}
             type="button"
           >
-            {showPassword ? "Hide" : "Show"}
+            {showPassword ? (
+              <EyeOff aria-hidden="true" size={18} />
+            ) : (
+              <Eye aria-hidden="true" size={18} />
+            )}
           </button>
         </label>
         {error ? <p className="form-error">{error}</p> : null}

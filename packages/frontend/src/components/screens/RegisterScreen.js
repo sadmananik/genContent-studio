@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Eye, EyeOff, Info, Lock, Mail, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Brand from "../common/Brand";
@@ -59,11 +60,11 @@ export default function RegisterScreen() {
         <h2>Create account</h2>
         <p>Start creating with your AI workspace</p>
         <label>
-          <span>◇</span>
+          <User aria-hidden="true" size={18} />
           <input name="name" onChange={handleChange} placeholder="Full name" value={form.name} />
         </label>
         <label>
-          <span>✉</span>
+          <Mail aria-hidden="true" size={18} />
           <input
             name="email"
             onChange={handleChange}
@@ -73,7 +74,7 @@ export default function RegisterScreen() {
           />
         </label>
         <label>
-          <span>⌘</span>
+          <Lock aria-hidden="true" size={18} />
           <input
             name="password"
             onChange={handleChange}
@@ -87,19 +88,37 @@ export default function RegisterScreen() {
             onClick={() => setShowPassword((currentValue) => !currentValue)}
             type="button"
           >
-            {showPassword ? "Hide" : "Show"}
+            {showPassword ? (
+              <EyeOff aria-hidden="true" size={18} />
+            ) : (
+              <Eye aria-hidden="true" size={18} />
+            )}
           </button>
         </label>
         <div className="password-strength" data-strength={passwordStrength.level}>
-          <div className="strength-bars" aria-hidden="true">
-            <span />
-            <span />
-            <span />
+          <div>
+            <div className="strength-bars" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+            <p>{passwordStrength.label}</p>
           </div>
-          <p>{passwordStrength.label}</p>
+          <div className="password-info">
+            <button aria-label="Password requirements" type="button">
+              <Info aria-hidden="true" size={16} />
+            </button>
+            <div className="password-requirements" role="tooltip">
+              <strong>Password requirements</strong>
+              <span>At least 8 characters</span>
+              <span>Uppercase and lowercase letters</span>
+              <span>At least 1 number</span>
+              <span>Special character for strong password</span>
+            </div>
+          </div>
         </div>
         <label>
-          <span>⌘</span>
+          <Lock aria-hidden="true" size={18} />
           <input
             name="confirmPassword"
             onChange={handleChange}
