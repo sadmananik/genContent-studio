@@ -8,4 +8,20 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+echo "Running backend build before commit..."
+yarn workspace @gencontent/backend build
+
+if [ $? -ne 0 ]; then
+  echo "Backend build failed. Commit cancelled."
+  exit 1
+fi
+
+echo "Running frontend build before commit..."
+yarn workspace @gencontent/frontend build
+
+if [ $? -ne 0 ]; then
+  echo "Frontend build failed. Commit cancelled."
+  exit 1
+fi
+
 git add .

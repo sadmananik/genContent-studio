@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
@@ -18,7 +19,8 @@ const register = asyncHandler(async (req, res) => {
   const user = await User.create({ name, email, passwordHash, profile });
 
   res.status(201).json({
-    user: serializeUser(user)
+    user: serializeUser(user),
+    token: signToken(user)
   });
 });
 
@@ -37,9 +39,21 @@ const login = asyncHandler(async (req, res) => {
 
   res.json({
     user: serializeUser(user),
-    authPlaceholder: "Use this user id in the x-user-id header until token auth is added"
+    token: signToken(user)
   });
 });
+
+function signToken(user) {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw httpError(500, "JWT_SECRET is not configured");
+  }
+
+  return jwt.sign({ userId: user._id.toString() }, secret, {
+    expiresIn: process.env.JWT_EXPIRES_IN || "7d"
+  });
+}
 
 function serializeUser(user) {
   return {
