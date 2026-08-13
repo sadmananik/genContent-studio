@@ -262,7 +262,9 @@ a {
   position: absolute;
   inset: 0;
   content: "";
-  background: radial-gradient(circle at 55% 18%, #efeaff, transparent 23%), linear-gradient(135deg, transparent 42%, #d9d0ff 43%, #8a77ff 78%, transparent 79%);
+  background:
+    radial-gradient(circle at 55% 18%, #efeaff, transparent 23%),
+    linear-gradient(135deg, transparent 42%, #d9d0ff 43%, #8a77ff 78%, transparent 79%);
   border-radius: 50%;
   opacity: 0.85;
 }
@@ -461,11 +463,22 @@ a {
   font-weight: 800;
 }
 
-.avatar-1 { background: #184e36; }
-.avatar-2 { background: #7158d9; }
-.avatar-3 { background: #ef3d9d; }
-.avatar-4 { background: #1b8bdc; }
-.avatar-more { color: #475467; background: #eef2f7; }
+.avatar-1 {
+  background: #184e36;
+}
+.avatar-2 {
+  background: #7158d9;
+}
+.avatar-3 {
+  background: #ef3d9d;
+}
+.avatar-4 {
+  background: #1b8bdc;
+}
+.avatar-more {
+  color: #475467;
+  background: #eef2f7;
+}
 
 .title-row {
   justify-content: space-between;
@@ -554,7 +567,10 @@ a {
 
 .clickable {
   cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .clickable:hover {
@@ -956,10 +972,18 @@ a {
   border-radius: 50%;
 }
 
-.avatar-dot.green { background: #184e36; }
-.avatar-dot.blue { background: #7158d9; }
-.avatar-dot.pink { background: #ef3d9d; }
-.avatar-dot.cyan { background: #1b8bdc; }
+.avatar-dot.green {
+  background: #184e36;
+}
+.avatar-dot.blue {
+  background: #7158d9;
+}
+.avatar-dot.pink {
+  background: #ef3d9d;
+}
+.avatar-dot.cyan {
+  background: #1b8bdc;
+}
 
 .feed-item p {
   margin: 0;

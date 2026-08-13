@@ -34,19 +34,31 @@ export default function RegisterScreen() {
           <input placeholder="Password" type="password" />
           <span>⊙</span>
         </label>
-        <Button className="full-width" type="submit">Create Demo Account</Button>
+        <Button className="full-width" type="submit">
+          Create Demo Account
+        </Button>
         <div className="divider">or</div>
-        <Button variant="secondary" className="full-width" type="button" onClick={handleDemoRegister}>
+        <Button
+          variant="secondary"
+          className="full-width"
+          type="button"
+          onClick={handleDemoRegister}
+        >
           Quick Register for Dev
         </Button>
-        <p className="signup">Already have an account? <Link href="/login">Sign in</Link></p>
+        <p className="signup">
+          Already have an account? <Link href="/login">Sign in</Link>
+        </p>
       </form>
       <div className="robot-scene" aria-hidden="true">
         <div className="chat-bubble">•••</div>
         <div className="robot">
           <span className="antenna left" />
           <span className="antenna right" />
-          <div className="robot-head"><i /><i /></div>
+          <div className="robot-head">
+            <i />
+            <i />
+          </div>
           <div className="robot-body" />
         </div>
       </div>

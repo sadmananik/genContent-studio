@@ -1,0 +1,11 @@
+#!/bin/sh
+
+echo "Running Prettier before commit..."
+yarn format
+
+if [ $? -ne 0 ]; then
+  echo "Prettier failed. Commit cancelled."
+  exit 1
+fi
+
+git add .

@@ -40,6 +40,12 @@ Install dependencies from the repository root:
 yarn install
 ```
 
+Enable the project Git hooks so Prettier runs before each commit:
+
+```bash
+yarn setup:hooks
+```
+
 Run the frontend and backend together:
 
 ```bash

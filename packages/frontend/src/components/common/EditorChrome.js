@@ -33,7 +33,11 @@ export function FormatToolbar() {
 export default function EditorChrome({ children, title, aside, collaboration = false }) {
   return (
     <div className="editor-shell">
-      <EditorTopbar title={title} collaboration={collaboration} savedLabel={collaboration ? "All changes saved" : "Saved"} />
+      <EditorTopbar
+        title={title}
+        collaboration={collaboration}
+        savedLabel={collaboration ? "All changes saved" : "Saved"}
+      />
       <div className="editor-body">
         <EditorRail />
         <main className="document-area">

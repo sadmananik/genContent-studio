@@ -34,19 +34,26 @@ export default function LoginScreen() {
           <span>☐ Remember me</span>
           <a href="#">Forgot password?</a>
         </div>
-        <Button className="full-width" type="submit">Demo Sign In</Button>
+        <Button className="full-width" type="submit">
+          Demo Sign In
+        </Button>
         <div className="divider">or</div>
         <Button variant="secondary" className="full-width" type="button" onClick={handleDemoLogin}>
           <span className="google-dot">G</span> Continue with Google
         </Button>
-        <p className="signup">Don&apos;t have an account? <Link href="/register">Sign up</Link></p>
+        <p className="signup">
+          Don&apos;t have an account? <Link href="/register">Sign up</Link>
+        </p>
       </form>
       <div className="robot-scene" aria-hidden="true">
         <div className="chat-bubble">•••</div>
         <div className="robot">
           <span className="antenna left" />
           <span className="antenna right" />
-          <div className="robot-head"><i /><i /></div>
+          <div className="robot-head">
+            <i />
+            <i />
+          </div>
           <div className="robot-body" />
         </div>
       </div>
