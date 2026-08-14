@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../common/Button";
 import {
@@ -14,7 +14,6 @@ import {
 } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
 import UserProfileMenu from "../common/UserProfileMenu";
-import { clearAuthState, getDisplayUser } from "../../lib/auth";
 import {
   CATEGORY_COUNTS,
   DASHBOARD_TEXT,
@@ -22,25 +21,33 @@ import {
   SUMMARY_CARDS
 } from "../../constants/dashboard";
 import { ROUTES } from "../../constants/navigation";
+import { PROJECT_TYPES } from "../../constants/content";
+import { useAppStore } from "../../store";
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const [user, setUser] = useState({ name: "Sadman Anik" });
+  const auth = useAppStore((state) => state.auth);
+  const createProject = useAppStore((state) => state.createProject);
+  const logoutUser = useAppStore((state) => state.logoutUser);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projects] = useState(MOCK_RECENT_PROJECTS);
 
-  useEffect(() => {
-    setUser(getDisplayUser());
-  }, []);
-
+  const user = auth.user || { name: "Sadman Anik" };
   const hasProjects = projects.length > 0;
 
   function handleLogout() {
-    clearAuthState();
+    logoutUser();
     router.push(ROUTES.LOGIN);
   }
 
-  function handleCreateProject() {
+  async function handleCreateProject(values) {
+    if (auth.token) {
+      await createProject({
+        title: values.title,
+        type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+      });
+    }
+
     setShowProjectForm(false);
     router.push(ROUTES.EDITOR);
   }
