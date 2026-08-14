@@ -3,40 +3,23 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Brand from "./Brand";
-import { clearDemoLogin } from "./ProtectedRoute";
-
-const navItems = [
-  ["⌂", "Dashboard", "/dashboard"],
-  ["□", "Projects", "/projects"],
-  ["◉", "AI Chat History", "/chat-history"],
-  ["⌘", "Shared with Me", "/shared"],
-  ["☆", "Favorites", "/favorites"],
-  ["▱", "Templates", "/templates"],
-  ["♧", "Trash", "/trash"]
-];
-
-const editorItems = [
-  ["✎", "Editor"],
-  ["▣", "AI Chat"],
-  ["▥", "Templates"],
-  ["◎", "SEO Tools"],
-  ["⚙", "Settings"]
-];
+import { clearAuthState } from "../../lib/auth";
+import { EDITOR_NAV_ITEMS, NAV_ITEMS, ROUTES } from "../../constants/navigation";
 
 export function AppSidebar({ active }) {
   const pathname = usePathname();
   const router = useRouter();
 
   function handleLogout() {
-    clearDemoLogin();
-    router.push("/login");
+    clearAuthState();
+    router.push(ROUTES.LOGIN);
   }
 
   return (
     <aside className="app-sidebar">
       <Brand />
       <nav className="nav-list">
-        {navItems.map(([icon, label, href]) => (
+        {NAV_ITEMS.map(({ icon, label, href }) => (
           <Link
             className={active === label || pathname === href ? "active" : ""}
             href={href}
@@ -64,7 +47,7 @@ export function AppSidebar({ active }) {
 export function EditorRail({ active = "Editor" }) {
   return (
     <aside className="editor-rail">
-      {editorItems.map(([icon, label]) => (
+      {EDITOR_NAV_ITEMS.map(({ icon, label }) => (
         <a className={label === active ? "active" : ""} href="#" key={label}>
           <span>{icon}</span>
           {label}
