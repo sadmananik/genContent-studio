@@ -2,29 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearDemoLogin, getAuthSession, hasDemoLogin, setDemoLogin } from "../../lib/auth";
 
-const DEMO_AUTH_KEY = "gencontent-demo-auth";
-
-export function setDemoLogin() {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(DEMO_AUTH_KEY, "true");
-  }
-}
-
-export function clearDemoLogin() {
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem(DEMO_AUTH_KEY);
-  }
-}
+export { clearDemoLogin, setDemoLogin };
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const hasDemoLogin = window.localStorage.getItem(DEMO_AUTH_KEY) === "true";
-
-    if (!hasDemoLogin) {
+    if (!getAuthSession()?.token && !hasDemoLogin()) {
       router.replace("/login");
       return;
     }
