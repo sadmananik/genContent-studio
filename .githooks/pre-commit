@@ -1,11 +1,17 @@
 #!/bin/sh
 
-echo "Running Prettier before commit..."
-yarn format
+echo "Checking Prettier formatting..."
+yarn format:check
 
 if [ $? -ne 0 ]; then
-  echo "Prettier failed. Commit cancelled."
+  echo "Prettier check failed. Run yarn format before committing."
   exit 1
 fi
 
-git add .
+echo "Building frontend..."
+yarn workspace @gencontent/frontend build
+
+if [ $? -ne 0 ]; then
+  echo "Frontend build failed. Commit cancelled."
+  exit 1
+fi
