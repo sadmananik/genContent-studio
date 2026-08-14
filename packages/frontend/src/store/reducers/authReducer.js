@@ -1,10 +1,5 @@
 import { apiRequest } from "../../lib/apiClient";
-import {
-  clearAuthState,
-  getAuthSession,
-  saveAuthSession,
-  setDemoLogin
-} from "../../lib/auth";
+import { clearAuthState, getAuthSession, saveAuthSession, setDemoLogin } from "../../lib/auth";
 
 const initialSession = getAuthSession();
 
