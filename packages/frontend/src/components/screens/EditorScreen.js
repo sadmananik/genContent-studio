@@ -1,10 +1,11 @@
 import Button from "../common/Button";
 import EditorChrome from "../common/EditorChrome";
+import { MOCK_RECENT_PROJECTS } from "../../constants/dashboard";
 
 export default function EditorScreen() {
   return (
     <section className="screen">
-      <EditorChrome title="Blog Post: Future of AI" aside={<AssistantPanel />}>
+      <EditorChrome title={MOCK_RECENT_PROJECTS[0].title} aside={<AssistantPanel />}>
         <article className="document-card">
           <h2>The Future of AI Tools</h2>
           <p>Artificial Intelligence (AI) tools are revolutionizing the way we work and create.</p>
