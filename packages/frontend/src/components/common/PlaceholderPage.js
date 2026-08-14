@@ -1,11 +1,13 @@
+import { IconBadge } from "./Cards";
+
 export default function PlaceholderPage({
   title,
   description = "Protected route placeholder for future workspace content."
 }) {
   return (
-    <main className="dashboard-content">
+    <main className="p-5 md:p-7">
       <div className="placeholder-panel">
-        <span className="soft-icon lavender">▱</span>
+        <IconBadge tone="lavender">▱</IconBadge>
         <h2>{title}</h2>
         <p>{description}</p>
       </div>

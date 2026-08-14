@@ -1,4 +1,5 @@
 import Button from "../common/Button";
+import { IconBadge } from "../common/Cards";
 import { AppSidebar } from "../common/Sidebar";
 
 const chats = [
@@ -23,7 +24,7 @@ export default function ChatHistoryScreen({ onNavigate }) {
         </div>
         {chats.map(([title, time, active]) => (
           <article className={`chat-list-item ${active}`} key={title}>
-            <span className="soft-icon lavender">◉</span>
+            <IconBadge tone="lavender">◉</IconBadge>
             <div>
               <strong>{title}</strong>
               <p>{time}</p>
