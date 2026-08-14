@@ -4,14 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
-import { setDemoLogin } from "../common/ProtectedRoute";
+import { useAppStore } from "../../store";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const setDemoAuthenticated = useAppStore((state) => state.setDemoAuthenticated);
 
   function handleDemoLogin(event) {
     event.preventDefault();
-    setDemoLogin();
+    setDemoAuthenticated();
     router.push("/dashboard");
   }
 
