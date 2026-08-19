@@ -4728,6 +4728,11 @@ node-releases@^2.0.53:
   resolved "https://registry.yarnpkg.com/node-releases/-/node-releases-2.0.53.tgz#0fe5ad8a7935e075172f574e56f0c20f07fa41af"
   integrity sha512-D9UOmYG3UH1V+ENW56t5QXBwJw1YEY18ruVeus89Rw+SyIgjPkCO84bRzO3uNIYosJbNwiabWVn48o3uJLjxFQ==
 
+nodemailer@^7.0.6:
+  version "7.0.13"
+  resolved "https://registry.yarnpkg.com/nodemailer/-/nodemailer-7.0.13.tgz#74acaa55f0c6f9476384c29f27f53e467e8483cd"
+  integrity sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==
+
 nodemon@^3.1.4:
   version "3.1.14"
   resolved "https://registry.yarnpkg.com/nodemon/-/nodemon-3.1.14.tgz#8487ca379c515301d221ec007f27f24ecafa2b51"
