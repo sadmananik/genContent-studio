@@ -1,5 +1,6 @@
 export const ROUTES = {
   DASHBOARD: "/dashboard",
+  PROFILE: "/profile",
   PROJECTS: "/projects",
   CHAT_HISTORY: "/chat-history",
   SHARED: "/shared",
@@ -15,6 +16,7 @@ export const ROUTES = {
 
 export const NAV_ITEMS = [
   { icon: "LayoutDashboard", label: "Dashboard", href: ROUTES.DASHBOARD },
+  { icon: "User", label: "Profile", href: ROUTES.PROFILE },
   { icon: "FolderKanban", label: "Projects", href: ROUTES.PROJECTS },
   { icon: "MessagesSquare", label: "AI Chat History", href: ROUTES.CHAT_HISTORY },
   { icon: "Users", label: "Shared with Me", href: ROUTES.SHARED },

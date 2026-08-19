@@ -50,6 +50,10 @@ export default function DashboardScreen() {
     router.push(ROUTES.LOGIN);
   }
 
+  function handleProfile() {
+    router.push(ROUTES.PROFILE);
+  }
+
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
@@ -58,7 +62,7 @@ export default function DashboardScreen() {
           <p className="mt-1.5 text-sm text-slate-500">{DASHBOARD_TEXT.SUBTITLE}</p>
         </div>
         <div className="hidden flex-1 sm:block" />
-        <UserProfileMenu user={user} onLogout={handleLogout} />
+        <UserProfileMenu user={user} onLogout={handleLogout} onProfile={handleProfile} />
       </header>
 
       <WelcomePanel
