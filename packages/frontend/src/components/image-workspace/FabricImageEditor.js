@@ -1,19 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BringToFront, Circle, Download, ImagePlus, Square, Trash2, Type } from "lucide-react";
+import { BringToFront, Circle, ImagePlus, Square, Trash2, Type } from "lucide-react";
 import Button from "../common/Button";
 import { demoImageSvg } from "./mockImageWorkspaceData";
 
 const canvasSize = { height: 600, width: 900 };
 
-export default function FabricImageEditor({
-  generationRequest,
-  onDirtyChange,
-  onExport,
-  onReady,
-  onSave
-}) {
+export default function FabricImageEditor({ generationRequest, onDirtyChange, onReady }) {
   const canvasElementRef = useRef(null);
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
@@ -279,35 +273,9 @@ export default function FabricImageEditor({
     onDirtyChange?.(true);
   }
 
-  function saveCanvas() {
-    const canvas = canvasRef.current;
-
-    if (!canvas) {
-      return;
-    }
-
-    onSave?.(JSON.stringify(canvas.toJSON()));
-  }
-
-  function exportPng() {
-    const canvas = canvasRef.current;
-
-    if (!canvas) {
-      return;
-    }
-
-    onExport?.(
-      canvas.toDataURL({
-        format: "png",
-        multiplier: 1,
-        quality: 1
-      })
-    );
-  }
-
   return (
-    <div className="grid min-w-0 gap-4">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
+    <section className="grid min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-3">
         <Button onClick={addText} type="button" variant="secondary">
           <Type aria-hidden="true" size={17} />
           Text
@@ -358,16 +326,9 @@ export default function FabricImageEditor({
         <span className="text-xs font-bold uppercase text-slate-500">
           Selected: {activeObjectType}
         </span>
-        <Button onClick={exportPng} type="button" variant="secondary">
-          <Download aria-hidden="true" size={17} />
-          PNG
-        </Button>
-        <Button onClick={saveCanvas} type="button">
-          Save Canvas
-        </Button>
       </div>
 
-      <div className="overflow-auto rounded-lg border border-slate-200 bg-slate-100 p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
+      <div className="min-h-[680px] overflow-auto bg-slate-100 p-4">
         <div
           className="mx-auto rounded-md border border-slate-200 bg-white"
           style={{ height: canvasSize.height, width: canvasSize.width }}
@@ -375,7 +336,7 @@ export default function FabricImageEditor({
           <canvas height={canvasSize.height} ref={canvasElementRef} width={canvasSize.width} />
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

@@ -279,11 +279,6 @@ export default function ImageEditorScreen() {
     showNotification("Exported", "Image PNG exported.", TOAST_TYPES.SUCCESS, 3000);
   }
 
-  function handleCanvasExport(dataUrl) {
-    downloadDataUrl(dataUrl, `${slugify(project.title)}.png`);
-    showNotification("Exported", "Image PNG exported.", TOAST_TYPES.SUCCESS, 3000);
-  }
-
   return (
     <section className="min-h-screen overflow-hidden bg-slate-50">
       <TextWorkspaceHeader
@@ -313,9 +308,7 @@ export default function ImageEditorScreen() {
           <FabricImageEditor
             generationRequest={generationRequest}
             onDirtyChange={setHasUnsavedChanges}
-            onExport={handleCanvasExport}
             onReady={setCanvas}
-            onSave={handleSaveCanvas}
           />
 
           <aside className="grid min-w-0 content-start gap-5">
