@@ -1,4 +1,5 @@
 const Project = require("../models/Project");
+const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 
@@ -60,6 +61,46 @@ const updateProject = asyncHandler(async (req, res) => {
   res.json(project);
 });
 
+const inviteProjectCollaborator = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw httpError(400, "Invite email is required");
+  }
+
+  const project = await Project.findOne({
+    _id: req.params.id,
+    owner: req.user.id
+  });
+
+  if (!project) {
+    throw httpError(404, "Project not found or only owners can invite collaborators");
+  }
+
+  const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+  if (!user) {
+    throw httpError(404, "No user account exists for this email");
+  }
+
+  if (String(user._id) === String(project.owner)) {
+    throw httpError(400, "Project owner is already a collaborator");
+  }
+
+  if (
+    !project.collaborators.some((collaboratorId) => String(collaboratorId) === String(user._id))
+  ) {
+    project.collaborators.push(user._id);
+    await project.save();
+  }
+
+  const updatedProject = await Project.findById(project._id)
+    .populate("owner", "name email")
+    .populate("collaborators", "name email");
+
+  res.json(updatedProject);
+});
+
 const deleteProject = asyncHandler(async (req, res) => {
   const project = await Project.findOne({
     _id: req.params.id,
@@ -94,6 +135,7 @@ module.exports = {
   deleteProject,
   findAccessibleProject,
   getProjectById,
+  inviteProjectCollaborator,
   listProjects,
   updateProject
 };

@@ -3,6 +3,7 @@ const {
   createProject,
   deleteProject,
   getProjectById,
+  inviteProjectCollaborator,
   listProjects,
   updateProject
 } = require("../controllers/projectController");
@@ -17,6 +18,7 @@ router.post("/", createProject);
 router.get("/", listProjects);
 router.get("/:id", validateObjectId("id"), getProjectById);
 router.put("/:id", validateObjectId("id"), updateProject);
+router.patch("/:id/invite", validateObjectId("id"), inviteProjectCollaborator);
 router.delete("/:id", validateObjectId("id"), deleteProject);
 router.get("/:projectId/chats", validateObjectId("projectId"), listProjectChats);
 

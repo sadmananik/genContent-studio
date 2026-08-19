@@ -23,9 +23,9 @@ export default function TextWorkspaceHeader({
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
 
-  function handleInviteSubmit(event) {
+  async function handleInviteSubmit(event) {
     event.preventDefault();
-    const invited = onInviteUser?.(inviteEmail);
+    const invited = await onInviteUser?.(inviteEmail);
 
     if (invited) {
       setInviteEmail("");

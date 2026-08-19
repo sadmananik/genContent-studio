@@ -1,10 +1,11 @@
-import { Check, Copy, Edit3, ImagePlus, MoreHorizontal, Save, Star } from "lucide-react";
+import { Check, Copy, Edit3, ImagePlus, MoreHorizontal, Save, Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "../common/Button";
 
 export default function ImageResponseCard({
   copied,
   onCopy,
+  onDelete,
   onFavourite,
   onInsert,
   onUpdate,
@@ -77,6 +78,12 @@ export default function ImageResponseCard({
           <Button onClick={() => setIsEditing(true)} type="button" variant="secondary">
             <Edit3 aria-hidden="true" size={16} />
             Edit
+          </Button>
+        )}
+        {onDelete && (
+          <Button onClick={() => onDelete(response.id)} type="button" variant="ghost">
+            <Trash2 aria-hidden="true" size={16} />
+            Delete
           </Button>
         )}
         <Button aria-label="More image response options" type="button" variant="icon">

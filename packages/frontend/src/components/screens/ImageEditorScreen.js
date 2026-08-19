@@ -8,7 +8,7 @@ import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import FabricImageEditor from "../image-workspace/FabricImageEditor";
 import ImageResponseCard from "../image-workspace/ImageResponseCard";
-import { mockImageProject, mockImageResponses } from "../image-workspace/mockImageWorkspaceData";
+import { mockImageProject } from "../image-workspace/mockImageWorkspaceData";
 import { mockPromptActions } from "../text-workspace/mockTextWorkspaceData";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
@@ -17,8 +17,14 @@ export default function ImageEditorScreen() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId") || mockImageProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
+  const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
+  const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
   const fetchProjectById = useAppStore((state) => state.fetchProjectById);
+  const inviteProjectCollaborator = useAppStore((state) => state.inviteProjectCollaborator);
+  const saveAiResponse = useAppStore((state) => state.saveAiResponse);
   const sendImageGenerationRequest = useAppStore((state) => state.sendImageGenerationRequest);
+  const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
+  const updateAiResponse = useAppStore((state) => state.updateAiResponse);
   const [canvas, setCanvas] = useState(null);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [generationRequest, setGenerationRequest] = useState(null);
@@ -27,12 +33,11 @@ export default function ImageEditorScreen() {
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
-  const [localInvites, setLocalInvites] = useState([]);
   const [notification, setNotification] = useState(null);
   const [prompt, setPrompt] = useState("Create a clean product launch social post.");
   const [project, setProject] = useState(mockImageProject);
-  const [responses, setResponses] = useState(mockImageResponses);
-  const [selectedResponseId, setSelectedResponseId] = useState(mockImageResponses[0]?.id);
+  const [responses, setResponses] = useState([]);
+  const [selectedResponseId, setSelectedResponseId] = useState(null);
   const selectedResponse = responses.find((response) => response.id === selectedResponseId);
   const history = responses.map((response) => ({
     id: response.id,
@@ -41,16 +46,9 @@ export default function ImageEditorScreen() {
     favourite: response.favourite
   }));
   const invitedUsers = useMemo(() => {
-    const projectUsers =
-      project.collaborators?.length > 0
-        ? project.collaborators
-        : [
-            { name: "Sravya Matta", email: "sravya.matta@cqumail.com" },
-            { name: "Sadman Anik", email: "sadmananik1@gmail.com" }
-          ];
     const usersByEmail = new Map();
 
-    [...projectUsers, ...localInvites].forEach((user) => {
+    (project.collaborators || []).forEach((user) => {
       const email = user.email?.toLowerCase();
 
       if (email && !usersByEmail.has(email)) {
@@ -59,7 +57,7 @@ export default function ImageEditorScreen() {
     });
 
     return [...usersByEmail.values()];
-  }, [localInvites, project.collaborators]);
+  }, [project.collaborators]);
   const statusLabel = hasUnsavedChanges
     ? "Unsaved changes"
     : lastSavedAt
@@ -83,6 +81,31 @@ export default function ImageEditorScreen() {
       .then((loadedProject) => setProject(normalizeProject(loadedProject)))
       .catch(() => {});
   }, [fetchProjectById, isRealProject, projectId]);
+
+  useEffect(() => {
+    if (!isRealProject) {
+      setResponses([]);
+      setSelectedResponseId(null);
+      return;
+    }
+
+    fetchProjectChatHistory(projectId)
+      .then((chatHistory) => {
+        const imageResponses = chatHistory
+          .filter((chat) => chat.contentType === "image")
+          .map(normalizeImageChat);
+
+        setResponses(imageResponses);
+        setSelectedResponseId(imageResponses[0]?.id || null);
+      })
+      .catch((error) => {
+        showNotification(
+          "History unavailable",
+          error.message || "Image history could not be loaded.",
+          TOAST_TYPES.ERROR
+        );
+      });
+  }, [fetchProjectChatHistory, isRealProject, projectId]);
 
   useEffect(() => {
     if (!canvas || !isRealProject) {
@@ -130,24 +153,47 @@ export default function ImageEditorScreen() {
 
   function handleGenerate() {
     setIsGenerating(true);
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
+      const responseText = buildDemoImageResponse(prompt);
       const nextResponse = {
         id: `image-response-${Date.now()}`,
         prompt,
-        response: buildDemoImageResponse(prompt),
+        response: responseText,
         timestamp: "Just now",
         favourite: false
       };
 
-      setResponses((currentResponses) => [nextResponse, ...currentResponses]);
-      setSelectedResponseId(nextResponse.id);
-      setGenerationRequest({ id: Date.now(), prompt });
-      setIsGenerating(false);
-      showNotification(
-        "Image generated",
-        "Demo image response added and inserted into the canvas.",
-        TOAST_TYPES.SUCCESS
-      );
+      try {
+        const savedResponse = isRealProject
+          ? normalizeImageChat(
+              await saveAiResponse({
+                contentType: "image",
+                project: projectId,
+                prompt,
+                response: responseText
+              })
+            )
+          : nextResponse;
+
+        setResponses((currentResponses) => [savedResponse, ...currentResponses]);
+        setSelectedResponseId(savedResponse.id);
+        setGenerationRequest({ id: Date.now(), prompt });
+        showNotification(
+          "Image generated",
+          isRealProject
+            ? "Demo image response saved to history and inserted into the canvas."
+            : "Demo image response inserted into the canvas.",
+          TOAST_TYPES.SUCCESS
+        );
+      } catch (error) {
+        showNotification(
+          "Generate failed",
+          error.message || "Demo image response could not be saved.",
+          TOAST_TYPES.ERROR
+        );
+      } finally {
+        setIsGenerating(false);
+      }
     }, 800);
   }
 
@@ -155,7 +201,7 @@ export default function ImageEditorScreen() {
     setPrompt(`${action}: ${prompt}`.slice(0, 1200));
   }
 
-  function handleInviteUser(emailValue) {
+  async function handleInviteUser(emailValue) {
     const email = emailValue.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -172,9 +218,28 @@ export default function ImageEditorScreen() {
       return false;
     }
 
-    setLocalInvites((currentInvites) => [...currentInvites, { email, name: nameFromEmail(email) }]);
-    showNotification("Shared", `Invite prepared for ${email}.`, TOAST_TYPES.SUCCESS);
-    return true;
+    if (!isRealProject) {
+      showNotification(
+        "Invite unavailable",
+        "Save this project before inviting users.",
+        TOAST_TYPES.WARNING
+      );
+      return false;
+    }
+
+    try {
+      const updatedProject = await inviteProjectCollaborator(projectId, email);
+      setProject(normalizeProject(updatedProject));
+      showNotification("Shared", `${email} was invited to this project.`, TOAST_TYPES.SUCCESS);
+      return true;
+    } catch (error) {
+      showNotification(
+        "Invite failed",
+        error.message || "User could not be invited.",
+        TOAST_TYPES.ERROR
+      );
+      return false;
+    }
   }
 
   function handleSelectHistory(responseId) {
@@ -188,29 +253,100 @@ export default function ImageEditorScreen() {
     window.setTimeout(() => setCopiedResponseId(null), 1600);
   }
 
-  function handleFavouriteResponse(responseId) {
+  async function handleFavouriteResponse(responseId) {
     const response = responses.find((item) => item.id === responseId);
+    const nextFavouriteValue = !response?.favourite;
 
     setResponses((currentResponses) =>
       currentResponses.map((item) =>
-        item.id === responseId ? { ...item, favourite: !item.favourite } : item
+        item.id === responseId ? { ...item, favourite: nextFavouriteValue } : item
       )
     );
+
+    if (response?.sourceId) {
+      try {
+        const updatedResponse = normalizeImageChat(
+          await toggleAiResponseFavourite(response.sourceId, nextFavouriteValue)
+        );
+        setResponses((currentResponses) =>
+          currentResponses.map((item) => (item.id === responseId ? updatedResponse : item))
+        );
+      } catch (error) {
+        setResponses((currentResponses) =>
+          currentResponses.map((item) =>
+            item.id === responseId ? { ...item, favourite: response.favourite } : item
+          )
+        );
+        showNotification(
+          "Favourite failed",
+          error.message || "Favourite could not be saved.",
+          TOAST_TYPES.ERROR
+        );
+        return;
+      }
+    }
+
     showNotification(
-      response?.favourite ? "Favourite removed" : "Favourite saved",
-      response?.favourite ? "Image response removed from favourites." : "Image response saved.",
+      nextFavouriteValue ? "Favourite saved" : "Favourite removed",
+      nextFavouriteValue ? "Image response saved." : "Image response removed from favourites.",
       TOAST_TYPES.SUCCESS,
       3000
     );
   }
 
-  function handleUpdateResponse(responseId, nextResponseText) {
+  async function handleUpdateResponse(responseId, nextResponseText) {
+    const response = responses.find((item) => item.id === responseId);
+
     setResponses((currentResponses) =>
       currentResponses.map((response) =>
         response.id === responseId ? { ...response, response: nextResponseText } : response
       )
     );
+
+    if (response?.sourceId) {
+      try {
+        const updatedResponse = normalizeImageChat(
+          await updateAiResponse(response.sourceId, { response: nextResponseText })
+        );
+        setResponses((currentResponses) =>
+          currentResponses.map((item) => (item.id === responseId ? updatedResponse : item))
+        );
+      } catch (error) {
+        showNotification(
+          "Update failed",
+          error.message || "Image response could not be updated.",
+          TOAST_TYPES.ERROR
+        );
+        return;
+      }
+    }
+
     showNotification("Updated", "Image response updated.", TOAST_TYPES.SUCCESS, 3000);
+  }
+
+  async function handleDeleteResponse(responseId) {
+    const response = responses.find((item) => item.id === responseId);
+
+    if (response?.sourceId) {
+      try {
+        await deleteAiResponse(response.sourceId);
+      } catch (error) {
+        showNotification(
+          "Delete failed",
+          error.message || "Image response could not be deleted.",
+          TOAST_TYPES.ERROR
+        );
+        return;
+      }
+    }
+
+    const nextResponses = responses.filter((item) => item.id !== responseId);
+
+    setResponses(nextResponses);
+    setSelectedResponseId((currentSelectedId) =>
+      currentSelectedId === responseId ? nextResponses[0]?.id || null : currentSelectedId
+    );
+    showNotification("Deleted", "Image response deleted from history.", TOAST_TYPES.SUCCESS, 3000);
   }
 
   function handleInsertResponse(response) {
@@ -299,6 +435,7 @@ export default function ImageEditorScreen() {
         <AIHistorySidebar
           history={history}
           isCollapsed={isHistoryCollapsed}
+          onDeleteHistory={handleDeleteResponse}
           onSelectHistory={handleSelectHistory}
           onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
           selectedHistoryId={selectedResponseId}
@@ -333,6 +470,7 @@ export default function ImageEditorScreen() {
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}
+                  onDelete={handleDeleteResponse}
                   onFavourite={handleFavouriteResponse}
                   onInsert={handleInsertResponse}
                   onUpdate={handleUpdateResponse}
@@ -375,6 +513,17 @@ function normalizeProject(project) {
   };
 }
 
+function normalizeImageChat(chat) {
+  return {
+    id: chat._id || chat.id,
+    sourceId: chat._id || chat.id,
+    prompt: chat.prompt,
+    response: chat.response,
+    timestamp: chat.createdAt ? formatRelativeTime(new Date(chat.createdAt)) : "Just now",
+    favourite: Boolean(chat.isFavourite)
+  };
+}
+
 function downloadDataUrl(dataUrl, filename) {
   const link = document.createElement("a");
   link.href = dataUrl;
@@ -400,19 +549,31 @@ function formatTime(value) {
   return value.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function nameFromEmail(email) {
-  return email
-    .replace(/@.*/, "")
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => `${part[0]?.toUpperCase() || ""}${part.slice(1)}`)
-    .join(" ");
-}
-
 function buildDemoImageResponse(prompt) {
   const cleanPrompt = prompt.trim() || "Create a polished social media image.";
 
   return `Demo image concept for "${cleanPrompt}" with an editable generated image layer, headline card, caption block, and accent shapes ready for Fabric.js editing.`;
+}
+
+function formatRelativeTime(value) {
+  const diffMs = Date.now() - value.getTime();
+  const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
+
+  if (diffMinutes < 1) {
+    return "Just now";
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} minutes ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours} hours ago`;
+  }
+
+  return value.toLocaleDateString();
 }
 
 function getImageWorkspaceDraftKey(projectId) {

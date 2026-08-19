@@ -7,25 +7,6 @@ export const mockImageProject = {
   saveStatus: "Draft saved"
 };
 
-export const mockImageResponses = [
-  {
-    id: "image-response-launch",
-    prompt: "Create a clean product launch social post.",
-    response:
-      "Demo image concept with a soft gradient background, bold launch headline, product card, and accent shapes for a social media post.",
-    timestamp: "10 minutes ago",
-    favourite: true
-  },
-  {
-    id: "image-response-meme",
-    prompt: "Generate a daily life sarcasm meme for Facebook.",
-    response:
-      "Demo meme layout with a bright image area, high-contrast caption zone, and editable text blocks ready for Fabric.js editing.",
-    timestamp: "22 minutes ago",
-    favourite: false
-  }
-];
-
 export const demoImageSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
   <defs>

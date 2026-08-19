@@ -49,6 +49,25 @@ const toggleFavourite = asyncHandler(async (req, res) => {
   res.json(chat);
 });
 
+const updateChat = asyncHandler(async (req, res) => {
+  const chat = await AIChat.findById(req.params.id);
+
+  if (!chat) {
+    throw httpError(404, "Chat not found");
+  }
+
+  await findAccessibleProject(chat.project, req.user.id);
+
+  ["prompt", "response"].forEach((field) => {
+    if (req.body[field] !== undefined) {
+      chat[field] = typeof req.body[field] === "string" ? req.body[field].trim() : req.body[field];
+    }
+  });
+
+  await chat.save();
+  res.json(chat);
+});
+
 const deleteChat = asyncHandler(async (req, res) => {
   const chat = await AIChat.findById(req.params.id);
 
@@ -66,5 +85,6 @@ module.exports = {
   createChat,
   deleteChat,
   listProjectChats,
-  toggleFavourite
+  toggleFavourite,
+  updateChat
 };
