@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
+import PasswordField from "../common/PasswordField";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
@@ -66,19 +67,15 @@ export default function LoginScreen() {
             value={formValues.email}
           />
         </label>
-        <label>
-          <span>⌘</span>
-          <input
-            autoComplete="current-password"
-            name="password"
-            onChange={handleChange}
-            placeholder="Password"
-            required
-            type="password"
-            value={formValues.password}
-          />
-          <span>⊙</span>
-        </label>
+        <PasswordField
+          autoComplete="current-password"
+          label="Password"
+          name="password"
+          onChange={handleChange}
+          placeholder="Password"
+          required
+          value={formValues.password}
+        />
         <div className="form-row">
           <label className="remember-option">
             <input

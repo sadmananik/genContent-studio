@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
+import PasswordField from "../common/PasswordField";
+import PasswordStrength from "../common/PasswordStrength";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
@@ -13,7 +15,13 @@ export default function RegisterScreen() {
   const auth = useAppStore((state) => state.auth);
   const registerUser = useAppStore((state) => state.registerUser);
   const clearAuthError = useAppStore((state) => state.clearAuthError);
-  const [formValues, setFormValues] = useState({ name: "", email: "", password: "" });
+  const [formValues, setFormValues] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: ""
+  });
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     clearAuthError();
@@ -28,13 +36,27 @@ export default function RegisterScreen() {
   function handleChange(event) {
     const { name, value } = event.target;
     setFormValues((currentValues) => ({ ...currentValues, [name]: value }));
+
+    if (name === "password" || name === "confirmPassword") {
+      setFormError("");
+    }
   }
 
   async function handleRegister(event) {
     event.preventDefault();
 
+    if (formValues.password !== formValues.confirmPassword) {
+      setFormError("Passwords do not match");
+      return;
+    }
+
     try {
-      await registerUser(formValues);
+      const registrationDetails = {
+        name: formValues.name,
+        email: formValues.email,
+        password: formValues.password
+      };
+      await registerUser(registrationDetails);
       router.push(ROUTES.DASHBOARD);
     } catch (error) {
       // Error state is displayed from the auth store.
@@ -70,22 +92,36 @@ export default function RegisterScreen() {
             value={formValues.email}
           />
         </label>
-        <label>
-          <span>⌘</span>
-          <input
-            autoComplete="new-password"
-            minLength={8}
-            name="password"
-            onChange={handleChange}
-            placeholder="Password"
-            required
-            type="password"
-            value={formValues.password}
-          />
-          <span>⊙</span>
-        </label>
-        {auth.error && <p className="auth-error">{auth.error}</p>}
-        <Button className="full-width" disabled={auth.loading} type="submit">
+        <PasswordField
+          autoComplete="new-password"
+          label="Password"
+          minLength={8}
+          name="password"
+          onChange={handleChange}
+          placeholder="Password"
+          required
+          value={formValues.password}
+        />
+        <PasswordStrength password={formValues.password} />
+        <PasswordField
+          aria-invalid={
+            Boolean(formValues.confirmPassword) &&
+            formValues.password !== formValues.confirmPassword
+          }
+          autoComplete="new-password"
+          label="Confirm password"
+          minLength={8}
+          name="confirmPassword"
+          onChange={handleChange}
+          placeholder="Confirm password"
+          required
+          value={formValues.confirmPassword}
+        />
+        {formValues.confirmPassword &&
+          formValues.password !== formValues.confirmPassword &&
+          !formError && <p className="field-hint error">Passwords must match</p>}
+        {(formError || auth.error) && <p className="auth-error">{formError || auth.error}</p>}
+        <Button className="full-width register-submit" disabled={auth.loading} type="submit">
           {auth.loading ? "Creating account..." : "Create Account"}
         </Button>
         <p className="signup">
