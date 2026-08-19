@@ -1,5 +1,5 @@
 import { apiRequest } from "../../lib/apiClient";
-import { clearAuthState, getAuthSession, saveAuthSession, setDemoLogin } from "../../lib/auth";
+import { clearAuthState, getAuthSession, saveAuthSession } from "../../lib/auth";
 
 const initialSession = getAuthSession();
 
@@ -86,23 +86,11 @@ export function createAuthReducer(set, get) {
         get().setCurrentUser(user);
         return user;
       } catch (error) {
-        setAuthError(set, error);
+        clearAuthState();
+        get().clearUserState();
+        setAuthSessionError(set, error);
         throw error;
       }
-    },
-
-    setDemoAuthenticated: (user = { name: "Sadman Anik" }) => {
-      setDemoLogin();
-      set((state) => ({
-        auth: {
-          ...state.auth,
-          user,
-          token: null,
-          isAuthenticated: true,
-          loading: false,
-          error: null
-        }
-      }));
     }
   };
 }
@@ -134,6 +122,19 @@ function setAuthError(set, error) {
   set((state) => ({
     auth: {
       ...state.auth,
+      loading: false,
+      error: error.message || "Authentication request failed"
+    }
+  }));
+}
+
+function setAuthSessionError(set, error) {
+  set((state) => ({
+    auth: {
+      ...state.auth,
+      user: null,
+      token: null,
+      isAuthenticated: false,
       loading: false,
       error: error.message || "Authentication request failed"
     }

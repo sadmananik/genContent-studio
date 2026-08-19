@@ -1,7 +1,6 @@
 "use client";
 
 const AUTH_KEY = "gencontent-auth";
-const DEMO_AUTH_KEY = "gencontent-demo-auth";
 
 export function saveAuthSession(session) {
   if (typeof window !== "undefined") {
@@ -35,25 +34,8 @@ export function clearAuthSession() {
   }
 }
 
-export function setDemoLogin() {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(DEMO_AUTH_KEY, "true");
-  }
-}
-
-export function hasDemoLogin() {
-  return typeof window !== "undefined" && window.localStorage.getItem(DEMO_AUTH_KEY) === "true";
-}
-
-export function clearDemoLogin() {
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem(DEMO_AUTH_KEY);
-  }
-}
-
 export function clearAuthState() {
   clearAuthSession();
-  clearDemoLogin();
 }
 
 export function getDisplayUser(fallbackName = "Sadman Anik") {
