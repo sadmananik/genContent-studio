@@ -174,7 +174,7 @@ export default function FabricImageEditor({
     canvas.renderAll();
   }
 
-  function addGeneratedDemoImage(prompt) {
+  async function addGeneratedDemoImage(prompt) {
     const fabric = fabricRef.current;
     const canvas = canvasRef.current;
 
@@ -184,45 +184,49 @@ export default function FabricImageEditor({
 
     const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
     const accentColor = colors[generationRequest.id % colors.length];
+    const imageDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+      buildGeneratedDemoSvg(accentColor)
+    )}`;
+    const generatedImage = await fabric.FabricImage.fromURL(imageDataUrl);
+
+    generatedImage.set({
+      left: 488,
+      shadow: "0 18px 34px rgba(15,23,42,0.18)",
+      top: 118
+    });
+    generatedImage.scaleToWidth(320);
+
     const card = new fabric.Rect({
       fill: "#ffffff",
-      height: 230,
-      left: 490,
-      opacity: 0.92,
+      height: 86,
+      left: 510,
+      opacity: 0.94,
       rx: 24,
       ry: 24,
-      shadow: "0 18px 34px rgba(15,23,42,0.18)",
-      top: 130,
-      width: 300
-    });
-    const accent = new fabric.Circle({
-      fill: accentColor,
-      left: 668,
-      opacity: 0.88,
-      radius: 52,
-      top: 158
+      top: 358,
+      width: 276
     });
     const title = new fabric.Textbox("Generated Demo", {
       fill: "#111827",
       fontFamily: "Arial",
-      fontSize: 34,
+      fontSize: 26,
       fontWeight: 800,
-      left: 524,
-      top: 230,
+      left: 534,
+      top: 372,
       width: 230
     });
     const caption = new fabric.Textbox(prompt || "AI image concept", {
       fill: "#475569",
       fontFamily: "Arial",
-      fontSize: 18,
+      fontSize: 15,
       fontWeight: 600,
-      left: 526,
-      top: 284,
+      left: 535,
+      top: 406,
       width: 220
     });
 
-    canvas.add(card, accent, title, caption);
-    canvas.setActiveObject(title);
+    canvas.add(generatedImage, card, title, caption);
+    canvas.setActiveObject(generatedImage);
     canvas.renderAll();
     onDirtyChange?.(true);
   }
@@ -384,4 +388,32 @@ export default function FabricImageEditor({
       </div>
     </div>
   );
+}
+
+function buildGeneratedDemoSvg(accentColor) {
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <defs>
+    <linearGradient id="generated-bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#dbeafe"/>
+      <stop offset="0.48" stop-color="#f5d0fe"/>
+      <stop offset="1" stop-color="#bbf7d0"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" x2="1">
+      <stop offset="0" stop-color="${accentColor}"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" rx="28" fill="url(#generated-bg)"/>
+  <circle cx="512" cy="96" r="78" fill="${accentColor}" opacity="0.35"/>
+  <circle cx="122" cy="316" r="92" fill="#14b8a6" opacity="0.25"/>
+  <rect x="96" y="88" width="448" height="248" rx="24" fill="#ffffff" opacity="0.78"/>
+  <rect x="134" y="128" width="204" height="160" rx="18" fill="url(#screen)"/>
+  <path d="M156 250 L214 188 L256 232 L292 196 L324 250 Z" fill="#ffffff" opacity="0.82"/>
+  <circle cx="274" cy="162" r="22" fill="#fde68a"/>
+  <rect x="370" y="138" width="118" height="18" rx="9" fill="#0f172a" opacity="0.72"/>
+  <rect x="370" y="176" width="92" height="14" rx="7" fill="#475569" opacity="0.5"/>
+  <rect x="370" y="206" width="132" height="14" rx="7" fill="#475569" opacity="0.38"/>
+  <rect x="370" y="250" width="96" height="34" rx="17" fill="${accentColor}" opacity="0.86"/>
+</svg>`;
 }
