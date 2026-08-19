@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
+import { FileText, FolderKanban, Image, Users } from "lucide-react";
 import {
   CategorySummary,
   EmptyState,
@@ -123,10 +124,30 @@ function buildSummaryCards(projects) {
   const sharedCount = projects.filter((project) => (project.collaborators || []).length > 0).length;
 
   return [
-    { icon: "▣", value: String(projects.length), label: SUMMARY_CARD_LABELS.TOTAL, tone: "violet" },
-    { icon: "▤", value: String(textCount), label: SUMMARY_CARD_LABELS.TEXT, tone: "mint" },
-    { icon: "▧", value: String(imageCount), label: SUMMARY_CARD_LABELS.IMAGE, tone: "lavender" },
-    { icon: "◇", value: String(sharedCount), label: SUMMARY_CARD_LABELS.SHARED, tone: "mint" }
+    {
+      icon: <FolderKanban aria-hidden="true" size={19} strokeWidth={2.25} />,
+      value: String(projects.length),
+      label: SUMMARY_CARD_LABELS.TOTAL,
+      tone: "violet"
+    },
+    {
+      icon: <FileText aria-hidden="true" size={19} strokeWidth={2.25} />,
+      value: String(textCount),
+      label: SUMMARY_CARD_LABELS.TEXT,
+      tone: "mint"
+    },
+    {
+      icon: <Image aria-hidden="true" size={19} strokeWidth={2.25} />,
+      value: String(imageCount),
+      label: SUMMARY_CARD_LABELS.IMAGE,
+      tone: "lavender"
+    },
+    {
+      icon: <Users aria-hidden="true" size={19} strokeWidth={2.25} />,
+      value: String(sharedCount),
+      label: SUMMARY_CARD_LABELS.SHARED,
+      tone: "mint"
+    }
   ];
 }
 
