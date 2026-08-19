@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Settings2, Trash2 } from "lucide-react";
+import { Pencil, Settings, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -156,7 +155,7 @@ export default function ProjectsScreen() {
         </Button>
       </header>
 
-      <SectionHeader title="All Projects" action={<Link href={ROUTES.DASHBOARD}>Dashboard</Link>} />
+      <SectionHeader title="All Projects" />
 
       {projectState.loading && projects.length === 0 ? (
         <EmptyState title="Loading projects..." description="Your saved workspaces are loading." />
@@ -200,9 +199,9 @@ export default function ProjectsScreen() {
                   aria-label={`${project.title} actions`}
                   aria-expanded={openActionProjectId === project.id}
                   aria-haspopup="menu"
-                  className={`rounded-full border-slate-200 bg-white text-slate-500 shadow-sm hover:border-violet-200 hover:bg-violet-100 hover:text-violet-700 ${
+                  className={`rounded-lg border-violet-100 bg-violet-50 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800 ${
                     openActionProjectId === project.id
-                      ? "border-violet-200 bg-violet-100 text-violet-700"
+                      ? "border-violet-300 bg-violet-100 text-violet-800"
                       : ""
                   }`}
                   variant="icon"
@@ -214,7 +213,7 @@ export default function ProjectsScreen() {
                     );
                   }}
                 >
-                  <Settings2 aria-hidden="true" size={18} />
+                  <Settings aria-hidden="true" size={20} />
                 </Button>
                 {openActionProjectId === project.id && (
                   <div
