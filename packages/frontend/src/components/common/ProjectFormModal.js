@@ -9,14 +9,21 @@ import {
 } from "../../constants/content";
 import { DASHBOARD_TEXT, PROJECT_FORM_TEXT } from "../../constants/dashboard";
 
-export default function ProjectFormModal({ onClose, onSubmit }) {
+export default function ProjectFormModal({
+  error,
+  isSubmitting: isSaving = false,
+  onClose,
+  onSubmit
+}) {
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
-    register
+    register,
+    reset
   } = useForm({
     defaultValues: {
       title: "",
+      description: "",
       category: CONTENT_CATEGORIES.BLOG_POST,
       projectType: PROJECT_TYPE_OPTIONS[0]
     }
@@ -25,10 +32,14 @@ export default function ProjectFormModal({ onClose, onSubmit }) {
   async function submitProject(values) {
     await onSubmit?.({
       title: values.title.trim(),
+      description: values.description.trim(),
       category: values.category,
       type: values.projectType
     });
+    reset();
   }
+
+  const isBusy = isSubmitting || isSaving;
 
   return (
     <div
@@ -81,9 +92,17 @@ export default function ProjectFormModal({ onClose, onSubmit }) {
             ))}
           </select>
         </label>
+        <label className="grid gap-2 text-sm font-bold text-slate-700">
+          {PROJECT_FORM_TEXT.DESCRIPTION_LABEL}
+          <textarea
+            className="min-h-24 resize-none rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-950 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            placeholder={PROJECT_FORM_TEXT.DESCRIPTION_PLACEHOLDER}
+            {...register("description")}
+          />
+        </label>
         <fieldset className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-3 text-sm font-bold text-slate-700">
           <legend className="px-1">{PROJECT_FORM_TEXT.TYPE_LEGEND}</legend>
-          {PROJECT_TYPE_OPTIONS.map((projectType, index) => (
+          {PROJECT_TYPE_OPTIONS.map((projectType) => (
             <label
               className="flex min-h-10 items-center gap-2 rounded-md bg-slate-50 px-3"
               key={projectType}
@@ -93,12 +112,17 @@ export default function ProjectFormModal({ onClose, onSubmit }) {
             </label>
           ))}
         </fieldset>
+        {error && (
+          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+            {error}
+          </p>
+        )}
         <div className="mt-1 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="secondary" type="button" onClick={onClose}>
+          <Button variant="secondary" type="button" onClick={onClose} disabled={isBusy}>
             {PROJECT_FORM_TEXT.CANCEL}
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {DASHBOARD_TEXT.CREATE_PROJECT}
+          <Button type="submit" disabled={isBusy}>
+            {isBusy ? "Creating..." : DASHBOARD_TEXT.CREATE_PROJECT}
           </Button>
         </div>
       </form>
