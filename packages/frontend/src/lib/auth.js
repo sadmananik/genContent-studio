@@ -2,9 +2,11 @@
 
 const AUTH_KEY = "gencontent-auth";
 
-export function saveAuthSession(session) {
+export function saveAuthSession(session, rememberMe = true) {
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+    clearAuthSession();
+    const storage = rememberMe ? window.localStorage : window.sessionStorage;
+    storage.setItem(AUTH_KEY, JSON.stringify({ ...session, rememberMe }));
   }
 }
 
@@ -13,24 +15,26 @@ export function getAuthSession() {
     return null;
   }
 
-  const rawSession = window.localStorage.getItem(AUTH_KEY);
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    const rawSession = storage.getItem(AUTH_KEY);
 
-  if (!rawSession) {
-    return null;
+    if (rawSession) {
+      try {
+        const parsedSession = JSON.parse(rawSession);
+        return parsedSession?.token ? parsedSession : null;
+      } catch (error) {
+        storage.removeItem(AUTH_KEY);
+      }
+    }
   }
 
-  try {
-    const parsedSession = JSON.parse(rawSession);
-    return parsedSession?.token ? parsedSession : null;
-  } catch (error) {
-    clearAuthSession();
-    return null;
-  }
+  return null;
 }
 
 export function clearAuthSession() {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(AUTH_KEY);
+    window.sessionStorage.removeItem(AUTH_KEY);
   }
 }
 
