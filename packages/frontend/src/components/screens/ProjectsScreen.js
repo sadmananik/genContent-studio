@@ -199,12 +199,12 @@ export default function ProjectsScreen() {
                   aria-label={`${project.title} actions`}
                   aria-expanded={openActionProjectId === project.id}
                   aria-haspopup="menu"
-                  className={`rounded-lg border-violet-100 bg-violet-50 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800 ${
+                  className={`min-w-28 border-violet-100 bg-violet-50 px-3 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800 ${
                     openActionProjectId === project.id
                       ? "border-violet-300 bg-violet-100 text-violet-800"
                       : ""
                   }`}
-                  variant="icon"
+                  variant="secondary"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -213,7 +213,8 @@ export default function ProjectsScreen() {
                     );
                   }}
                 >
-                  <Settings aria-hidden="true" size={20} />
+                  <Settings aria-hidden="true" size={17} />
+                  Manage
                 </Button>
                 {openActionProjectId === project.id && (
                   <div
