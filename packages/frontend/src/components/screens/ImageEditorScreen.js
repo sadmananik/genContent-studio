@@ -5,8 +5,10 @@ import { useSearchParams } from "next/navigation";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
+import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import FabricImageEditor from "../image-workspace/FabricImageEditor";
-import { mockImageProject } from "../image-workspace/mockImageWorkspaceData";
+import ImageResponseCard from "../image-workspace/ImageResponseCard";
+import { mockImageProject, mockImageResponses } from "../image-workspace/mockImageWorkspaceData";
 import { mockPromptActions } from "../text-workspace/mockTextWorkspaceData";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
@@ -18,15 +20,26 @@ export default function ImageEditorScreen() {
   const fetchProjectById = useAppStore((state) => state.fetchProjectById);
   const sendImageGenerationRequest = useAppStore((state) => state.sendImageGenerationRequest);
   const [canvas, setCanvas] = useState(null);
+  const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [generationRequest, setGenerationRequest] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [localInvites, setLocalInvites] = useState([]);
   const [notification, setNotification] = useState(null);
   const [prompt, setPrompt] = useState("Create a clean product launch social post.");
   const [project, setProject] = useState(mockImageProject);
+  const [responses, setResponses] = useState(mockImageResponses);
+  const [selectedResponseId, setSelectedResponseId] = useState(mockImageResponses[0]?.id);
+  const selectedResponse = responses.find((response) => response.id === selectedResponseId);
+  const history = responses.map((response) => ({
+    id: response.id,
+    prompt: response.prompt,
+    timestamp: response.timestamp,
+    favourite: response.favourite
+  }));
   const invitedUsers = useMemo(() => {
     const projectUsers =
       project.collaborators?.length > 0
@@ -118,11 +131,21 @@ export default function ImageEditorScreen() {
   function handleGenerate() {
     setIsGenerating(true);
     window.setTimeout(() => {
+      const nextResponse = {
+        id: `image-response-${Date.now()}`,
+        prompt,
+        response: buildDemoImageResponse(prompt),
+        timestamp: "Just now",
+        favourite: false
+      };
+
+      setResponses((currentResponses) => [nextResponse, ...currentResponses]);
+      setSelectedResponseId(nextResponse.id);
       setGenerationRequest({ id: Date.now(), prompt });
       setIsGenerating(false);
       showNotification(
         "Image generated",
-        "Demo image concept added to the canvas.",
+        "Demo image response added and inserted into the canvas.",
         TOAST_TYPES.SUCCESS
       );
     }, 800);
@@ -152,6 +175,48 @@ export default function ImageEditorScreen() {
     setLocalInvites((currentInvites) => [...currentInvites, { email, name: nameFromEmail(email) }]);
     showNotification("Shared", `Invite prepared for ${email}.`, TOAST_TYPES.SUCCESS);
     return true;
+  }
+
+  function handleSelectHistory(responseId) {
+    setSelectedResponseId(responseId);
+  }
+
+  function handleCopyResponse(response) {
+    navigator.clipboard?.writeText(response.response).catch(() => {});
+    setCopiedResponseId(response.id);
+    showNotification("Copied", "Image response copied.", TOAST_TYPES.SUCCESS, 3000);
+    window.setTimeout(() => setCopiedResponseId(null), 1600);
+  }
+
+  function handleFavouriteResponse(responseId) {
+    const response = responses.find((item) => item.id === responseId);
+
+    setResponses((currentResponses) =>
+      currentResponses.map((item) =>
+        item.id === responseId ? { ...item, favourite: !item.favourite } : item
+      )
+    );
+    showNotification(
+      response?.favourite ? "Favourite removed" : "Favourite saved",
+      response?.favourite ? "Image response removed from favourites." : "Image response saved.",
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
+  }
+
+  function handleUpdateResponse(responseId, nextResponseText) {
+    setResponses((currentResponses) =>
+      currentResponses.map((response) =>
+        response.id === responseId ? { ...response, response: nextResponseText } : response
+      )
+    );
+    showNotification("Updated", "Image response updated.", TOAST_TYPES.SUCCESS, 3000);
+  }
+
+  function handleInsertResponse(response) {
+    setPrompt(response.prompt);
+    setGenerationRequest({ id: Date.now(), prompt: response.prompt });
+    showNotification("Inserted", "Image response inserted into the canvas.", TOAST_TYPES.SUCCESS);
   }
 
   async function handleSaveCanvas(payload) {
@@ -235,41 +300,61 @@ export default function ImageEditorScreen() {
         statusLabel={statusLabel}
       />
 
-      <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] xl:p-7">
-        <FabricImageEditor
-          generationRequest={generationRequest}
-          onDirtyChange={setHasUnsavedChanges}
-          onExport={handleCanvasExport}
-          onReady={setCanvas}
-          onSave={handleSaveCanvas}
+      <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
+        <AIHistorySidebar
+          history={history}
+          isCollapsed={isHistoryCollapsed}
+          onSelectHistory={handleSelectHistory}
+          onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
+          selectedHistoryId={selectedResponseId}
         />
 
-        <aside className="grid content-start gap-4">
-          <AIPromptPanel
-            actions={mockPromptActions}
-            isGenerating={isGenerating}
-            onGenerate={handleGenerate}
-            onPromptChange={setPrompt}
-            onQuickAction={handleQuickAction}
-            prompt={prompt}
+        <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
+          <FabricImageEditor
+            generationRequest={generationRequest}
+            onDirtyChange={setHasUnsavedChanges}
+            onExport={handleCanvasExport}
+            onReady={setCanvas}
+            onSave={handleSaveCanvas}
           />
-          <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
-            <h2 className="text-base font-bold text-slate-950">Image Generation Draft</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Demo image editing is powered by Fabric.js. AI image generation and backend save APIs
-              can connect here later.
-            </p>
-            <div className="mt-4 grid gap-3 text-sm text-slate-600">
-              <div className="rounded-md bg-slate-50 p-3">
-                Prompt: Create a clean product launch social post with bold headline text.
+
+          <aside className="grid min-w-0 content-start gap-5">
+            <AIPromptPanel
+              actions={mockPromptActions}
+              isGenerating={isGenerating}
+              onGenerate={handleGenerate}
+              onPromptChange={setPrompt}
+              onQuickAction={handleQuickAction}
+              prompt={prompt}
+            />
+
+            <section className="grid gap-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-950">Selected Image Response</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Generate a demo image, then copy, edit, favourite, or insert it into the canvas.
+                </p>
               </div>
-              <div className="rounded-md bg-slate-50 p-3">
-                Try: drag objects, resize corners, rotate handles, add text, and export PNG.
-              </div>
-            </div>
-          </section>
-        </aside>
-      </main>
+              {selectedResponse ? (
+                <ImageResponseCard
+                  copied={copiedResponseId === selectedResponse.id}
+                  key={selectedResponse.id}
+                  onCopy={handleCopyResponse}
+                  onFavourite={handleFavouriteResponse}
+                  onInsert={handleInsertResponse}
+                  onUpdate={handleUpdateResponse}
+                  response={selectedResponse}
+                  selected
+                />
+              ) : (
+                <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
+                  No image response selected yet.
+                </div>
+              )}
+            </section>
+          </aside>
+        </main>
+      </div>
 
       <ToastNotification
         duration={notification?.duration}
@@ -329,6 +414,12 @@ function nameFromEmail(email) {
     .filter(Boolean)
     .map((part) => `${part[0]?.toUpperCase() || ""}${part.slice(1)}`)
     .join(" ");
+}
+
+function buildDemoImageResponse(prompt) {
+  const cleanPrompt = prompt.trim() || "Create a polished social media image.";
+
+  return `Demo image concept for "${cleanPrompt}" with an editable generated image layer, headline card, caption block, and accent shapes ready for Fabric.js editing.`;
 }
 
 function readPendingToast() {
