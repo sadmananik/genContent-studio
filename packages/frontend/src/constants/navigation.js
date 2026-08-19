@@ -19,7 +19,6 @@ export const NAV_ITEMS = [
   { icon: "FolderKanban", label: "Projects", href: ROUTES.PROJECTS },
   { icon: "MessagesSquare", label: "AI Chat History", href: ROUTES.CHAT_HISTORY },
   { icon: "Users", label: "Shared with Me", href: ROUTES.SHARED },
-  { icon: "Star", label: "Favorites", href: ROUTES.FAVORITES },
   { icon: "PanelTop", label: "Templates", href: ROUTES.TEMPLATES },
   { icon: "Trash2", label: "Trash", href: ROUTES.TRASH }
 ];
