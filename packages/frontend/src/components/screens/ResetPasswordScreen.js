@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
 import AuthVisual from "../common/AuthVisual";
+import PasswordField from "../common/PasswordField";
+import PasswordStrength from "../common/PasswordStrength";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
@@ -26,6 +28,7 @@ export default function ResetPasswordScreen() {
   function handleChange(event) {
     const { name, value } = event.target;
     setFormValues((currentValues) => ({ ...currentValues, [name]: value }));
+    setFormError("");
   }
 
   async function handleSubmit(event) {
@@ -58,32 +61,34 @@ export default function ResetPasswordScreen() {
         <p>Choose a secure password with at least eight characters.</p>
         {!message && (
           <>
-            <label>
-              <span>⌘</span>
-              <input
-                autoComplete="new-password"
-                minLength={8}
-                name="password"
-                onChange={handleChange}
-                placeholder="New password"
-                required
-                type="password"
-                value={formValues.password}
-              />
-            </label>
-            <label>
-              <span>⌘</span>
-              <input
-                autoComplete="new-password"
-                minLength={8}
-                name="confirmPassword"
-                onChange={handleChange}
-                placeholder="Confirm new password"
-                required
-                type="password"
-                value={formValues.confirmPassword}
-              />
-            </label>
+            <PasswordField
+              autoComplete="new-password"
+              label="New password"
+              minLength={8}
+              name="password"
+              onChange={handleChange}
+              placeholder="New password"
+              required
+              value={formValues.password}
+            />
+            <PasswordStrength password={formValues.password} />
+            <PasswordField
+              aria-invalid={
+                Boolean(formValues.confirmPassword) &&
+                formValues.password !== formValues.confirmPassword
+              }
+              autoComplete="new-password"
+              label="Confirm new password"
+              minLength={8}
+              name="confirmPassword"
+              onChange={handleChange}
+              placeholder="Confirm new password"
+              required
+              value={formValues.confirmPassword}
+            />
+            {formValues.confirmPassword &&
+              formValues.password !== formValues.confirmPassword &&
+              !formError && <p className="field-hint error">Passwords must match</p>}
           </>
         )}
         {errorMessage && <p className="auth-error">{errorMessage}</p>}
