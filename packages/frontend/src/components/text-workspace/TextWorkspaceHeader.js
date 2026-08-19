@@ -1,11 +1,38 @@
-import Link from "next/link";
-import { ArrowLeft, Save, Share2 } from "lucide-react";
-import Button from "../common/Button";
-import { ROUTES } from "../../constants/navigation";
+"use client";
 
-export default function TextWorkspaceHeader({ project }) {
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Download, Save, Share2, Users } from "lucide-react";
+import Button from "../common/Button";
+import { UserAvatarStack } from "../common/UserAvatar";
+import { ROUTES } from "../../constants/navigation";
+import WorkspaceExportMenu from "./WorkspaceExportMenu";
+import WorkspaceSharePopover from "./WorkspaceSharePopover";
+
+export default function TextWorkspaceHeader({
+  invitedUsers = [],
+  onExport,
+  onInviteUser,
+  isSaving,
+  onSave,
+  project,
+  statusLabel
+}) {
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+
+  function handleInviteSubmit(event) {
+    event.preventDefault();
+    const invited = onInviteUser?.(inviteEmail);
+
+    if (invited) {
+      setInviteEmail("");
+    }
+  }
+
   return (
-    <header className="flex flex-wrap items-center gap-4 border-b border-slate-200 bg-white px-5 py-4 lg:px-7">
+    <header className="relative flex flex-wrap items-center gap-4 border-b border-slate-200 bg-white px-5 py-4 lg:px-7">
       <Link
         className="inline-flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
         href={ROUTES.DASHBOARD}
@@ -21,18 +48,60 @@ export default function TextWorkspaceHeader({ project }) {
           <span aria-hidden="true">•</span>
           <span>{project.type}</span>
           <span aria-hidden="true">•</span>
-          <span>{project.lastUpdated}</span>
+          <span>{statusLabel || project.lastUpdated}</span>
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" type="button">
-          <Share2 aria-hidden="true" size={17} />
-          Share
-        </Button>
-        <Button type="button">
+        <div className="flex min-h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-2">
+          <Users aria-hidden="true" className="mr-2 text-slate-500" size={17} />
+          <UserAvatarStack users={invitedUsers} />
+        </div>
+        <div className="relative">
+          <Button
+            onClick={() => {
+              setIsShareOpen((currentValue) => !currentValue);
+              setIsExportOpen(false);
+            }}
+            variant="secondary"
+            type="button"
+          >
+            <Share2 aria-hidden="true" size={17} />
+            Share
+          </Button>
+          {isShareOpen && (
+            <WorkspaceSharePopover
+              inviteEmail={inviteEmail}
+              invitedUsers={invitedUsers}
+              onInviteEmailChange={setInviteEmail}
+              onInviteSubmit={handleInviteSubmit}
+            />
+          )}
+        </div>
+        <div className="relative">
+          <Button
+            onClick={() => {
+              setIsExportOpen((currentValue) => !currentValue);
+              setIsShareOpen(false);
+            }}
+            variant="secondary"
+            type="button"
+          >
+            <Download aria-hidden="true" size={17} />
+            Export
+          </Button>
+          {isExportOpen && (
+            <WorkspaceExportMenu
+              onExport={(format) => {
+                onExport?.(format);
+                setIsExportOpen(false);
+              }}
+            />
+          )}
+        </div>
+        <Button disabled={isSaving} onClick={onSave} type="button">
           <Save aria-hidden="true" size={17} />
-          Save
+          {isSaving ? "Saving..." : "Save"}
         </Button>
       </div>
     </header>

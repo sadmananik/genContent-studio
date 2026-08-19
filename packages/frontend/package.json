@@ -9,7 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tiptap/extension-color": "^3.30.2",
     "@tiptap/extension-placeholder": "^3.30.2",
+    "@tiptap/extension-text-style": "^3.30.2",
     "@tiptap/react": "^3.30.2",
     "@tiptap/starter-kit": "^3.30.2",
     "lucide-react": "^0.468.0",

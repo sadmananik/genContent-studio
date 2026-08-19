@@ -44,11 +44,9 @@ export default function AIHistorySidebar({
               >
                 <span className="flex items-start gap-2 text-sm font-bold text-slate-800">
                   {item.favourite && (
-                    <Star
-                      aria-hidden="true"
-                      className="mt-0.5 fill-amber-400 text-amber-500"
-                      size={14}
-                    />
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-amber-50 text-amber-500">
+                      <Star aria-hidden="true" className="fill-amber-400" size={18} />
+                    </span>
                   )}
                   {item.prompt}
                 </span>
