@@ -43,17 +43,6 @@ export default function FabricImageEditor({
 
       canvasRef.current = canvas;
 
-      const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(demoImageSvg)}`;
-      const image = await fabric.FabricImage.fromURL(dataUrl);
-      image.set({
-        evented: false,
-        left: 0,
-        selectable: false,
-        top: 0
-      });
-      image.scaleToWidth(canvasSize.width);
-      canvas.add(image);
-
       const headline = new fabric.Textbox("Launch Campaign", {
         fill: "#111827",
         fontFamily: "Arial",
@@ -85,6 +74,7 @@ export default function FabricImageEditor({
       canvas.add(headline, badge, badgeText);
       canvas.setActiveObject(headline);
       canvas.renderAll();
+      addDemoBackgroundImage(fabric, canvas, isMounted);
 
       const markDirty = () => onDirtyChange?.(true);
       const syncSelection = () => {
@@ -184,18 +174,7 @@ export default function FabricImageEditor({
 
     const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
     const accentColor = colors[generationRequest.id % colors.length];
-    const imageDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-      buildGeneratedDemoSvg(accentColor)
-    )}`;
-    const generatedImage = await fabric.FabricImage.fromURL(imageDataUrl);
-
-    generatedImage.set({
-      left: 488,
-      shadow: "0 18px 34px rgba(15,23,42,0.18)",
-      top: 118
-    });
-    generatedImage.scaleToWidth(320);
-
+    const generatedImage = await createGeneratedImageObject(fabric, accentColor);
     const card = new fabric.Rect({
       fill: "#ffffff",
       height: 86,
@@ -388,6 +367,79 @@ export default function FabricImageEditor({
       </div>
     </div>
   );
+}
+
+async function addDemoBackgroundImage(fabric, canvas, isMounted) {
+  try {
+    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(demoImageSvg)}`;
+    const image = await fabric.FabricImage.fromURL(dataUrl);
+
+    if (!isMounted || canvas.disposed || canvas.destroyed) {
+      return;
+    }
+
+    image.set({
+      evented: false,
+      left: 0,
+      selectable: false,
+      top: 0
+    });
+    image.scaleToWidth(canvasSize.width);
+    canvas.insertAt(0, image);
+    canvas.renderAll();
+  } catch (error) {
+    canvas.renderAll();
+  }
+}
+
+async function createGeneratedImageObject(fabric, accentColor) {
+  try {
+    const imageDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+      buildGeneratedDemoSvg(accentColor)
+    )}`;
+    const generatedImage = await fabric.FabricImage.fromURL(imageDataUrl);
+
+    generatedImage.set({
+      left: 488,
+      shadow: "0 18px 34px rgba(15,23,42,0.18)",
+      top: 118
+    });
+    generatedImage.scaleToWidth(320);
+    return generatedImage;
+  } catch (error) {
+    return new fabric.Group(
+      [
+        new fabric.Rect({
+          fill: "#dbeafe",
+          height: 210,
+          rx: 22,
+          ry: 22,
+          width: 320
+        }),
+        new fabric.Circle({
+          fill: accentColor,
+          left: 208,
+          opacity: 0.72,
+          radius: 46,
+          top: 26
+        }),
+        new fabric.Rect({
+          fill: "#ffffff",
+          height: 112,
+          left: 38,
+          opacity: 0.82,
+          rx: 18,
+          ry: 18,
+          top: 58,
+          width: 162
+        })
+      ],
+      {
+        left: 488,
+        top: 118
+      }
+    );
+  }
 }
 
 function buildGeneratedDemoSvg(accentColor) {
