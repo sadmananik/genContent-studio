@@ -34,6 +34,10 @@ export function createUserReducer(set) {
             profile: user,
             loading: false,
             error: null
+          },
+          auth: {
+            ...state.auth,
+            user
           }
         }));
         return user;

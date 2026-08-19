@@ -6,6 +6,7 @@ export const ROUTES = {
   FAVORITES: "/favorites",
   TEMPLATES: "/templates",
   TRASH: "/trash",
+  PROFILE: "/profile",
   LOGIN: "/login",
   REGISTER: "/register",
   FORGOT_PASSWORD: "/forgot-password",

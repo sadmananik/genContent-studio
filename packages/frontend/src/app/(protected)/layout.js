@@ -1,13 +1,15 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ProtectedRoute from "../../components/common/ProtectedRoute";
 import { AppSidebar } from "../../components/common/Sidebar";
+import { ROUTES } from "../../constants/navigation";
 
 const PROTOTYPE_ROUTES = new Set(["/chat-history", "/collaboration", "/editor"]);
 
 export default function ProtectedLayout({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isPrototypeRoute = PROTOTYPE_ROUTES.has(pathname);
 
   if (isPrototypeRoute) {
@@ -22,7 +24,7 @@ export default function ProtectedLayout({ children }) {
     <ProtectedRoute>
       <main className="protected-stage">
         <section className="screen app-frame">
-          <AppSidebar />
+          <AppSidebar onProfile={() => router.push(ROUTES.PROFILE)} />
           {children}
         </section>
       </main>

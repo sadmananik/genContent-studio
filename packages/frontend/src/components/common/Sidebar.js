@@ -14,6 +14,7 @@ import {
   Settings,
   Star,
   Trash2,
+  UserRound,
   Users
 } from "lucide-react";
 import Brand from "./Brand";
@@ -31,10 +32,11 @@ const navIcons = {
   Settings,
   Star,
   Trash2,
+  UserRound,
   Users
 };
 
-export function AppSidebar({ active }) {
+export function AppSidebar({ active, onProfile }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -63,6 +65,10 @@ export function AppSidebar({ active }) {
         })}
       </nav>
       <div className="sidebar-footer">
+        <button type="button" onClick={onProfile}>
+          <UserRound aria-hidden="true" size={18} strokeWidth={2.25} />
+          Profile
+        </button>
         <button type="button">
           <Settings aria-hidden="true" size={18} strokeWidth={2.25} />
           Settings

@@ -58,7 +58,11 @@ export default function DashboardScreen() {
           <p className="mt-1.5 text-sm text-slate-500">{DASHBOARD_TEXT.SUBTITLE}</p>
         </div>
         <div className="hidden flex-1 sm:block" />
-        <UserProfileMenu user={user} onLogout={handleLogout} />
+        <UserProfileMenu
+          user={user}
+          onLogout={handleLogout}
+          onProfile={() => router.push(ROUTES.PROFILE)}
+        />
       </header>
 
       <WelcomePanel

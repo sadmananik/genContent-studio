@@ -24,7 +24,7 @@ export default function UserProfileMenu({ user, onLogout, onProfile }) {
   const profileRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const displayName = user?.name || "User";
-  const imageUrl = user?.profile?.imageUrl;
+  const imageUrl = user?.profile?.avatarUrl;
   const initials = useMemo(() => getInitials(displayName), [displayName]);
 
   useEffect(() => {
