@@ -26,11 +26,14 @@ export default function EditorScreen() {
   const projectId = searchParams.get("projectId") || mockTextProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const aiState = useAppStore((state) => state.aiState);
+  const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
   const fetchProjectById = useAppStore((state) => state.fetchProjectById);
   const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
+  const inviteProjectCollaborator = useAppStore((state) => state.inviteProjectCollaborator);
   const saveAiResponse = useAppStore((state) => state.saveAiResponse);
   const sendTextGenerationRequest = useAppStore((state) => state.sendTextGenerationRequest);
   const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
+  const updateAiResponse = useAppStore((state) => state.updateAiResponse);
   const [editor, setEditor] = useState(null);
   const [project, setProject] = useState(mockTextProject);
   const [editorContent, setEditorContent] = useState({
@@ -48,7 +51,6 @@ export default function EditorScreen() {
   const [responses, setResponses] = useState([]);
   const [savedDraft, setSavedDraft] = useState(null);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
-  const [localInvites, setLocalInvites] = useState([]);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
@@ -81,16 +83,9 @@ export default function EditorScreen() {
   const selectedResponse =
     responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
   const invitedUsers = useMemo(() => {
-    const projectUsers =
-      project.collaborators?.length > 0
-        ? project.collaborators
-        : [
-            { name: "Sravya Matta", email: "sravya.matta@cqumail.com" },
-            { name: "Sadman Anik", email: "sadmananik1@gmail.com" }
-          ];
     const usersByEmail = new Map();
 
-    [...projectUsers, ...localInvites].forEach((user) => {
+    (project.collaborators || []).forEach((user) => {
       const email = user.email?.toLowerCase();
 
       if (email && !usersByEmail.has(email)) {
@@ -99,7 +94,7 @@ export default function EditorScreen() {
     });
 
     return [...usersByEmail.values()];
-  }, [localInvites, project.collaborators]);
+  }, [project.collaborators]);
 
   useEffect(() => {
     const pendingToast = readPendingToast();
@@ -138,7 +133,9 @@ export default function EditorScreen() {
       return;
     }
 
-    const realResponses = aiState.chatHistory.map(formatChatAsResponse);
+    const realResponses = aiState.chatHistory
+      .filter((chat) => chat.contentType === "text")
+      .map(formatChatAsResponse);
     setResponses(realResponses);
     setSelectedHistoryId(realResponses[0]?.id || null);
   }, [aiState.chatHistory, isRealProject]);
@@ -228,24 +225,45 @@ export default function EditorScreen() {
     window.setTimeout(() => setCopiedResponseId(null), 1400);
   }
 
-  function handleFavouriteResponse(responseId) {
+  async function handleFavouriteResponse(responseId) {
     const response = responses.find((item) => item.id === responseId);
+    const nextFavouriteValue = !response?.favourite;
 
     setResponses((currentResponses) =>
-      currentResponses.map((response) =>
-        response.id === responseId ? { ...response, favourite: !response.favourite } : response
+      currentResponses.map((item) =>
+        item.id === responseId ? { ...item, favourite: nextFavouriteValue } : item
       )
-    );
-    showNotification(
-      response?.favourite ? "Favourite removed" : "Favourite saved",
-      response?.favourite ? "Response removed from favourites." : "Response added to favourites.",
-      TOAST_TYPES.SUCCESS,
-      3000
     );
 
     if (isRealProject && response?.sourceId) {
-      toggleAiResponseFavourite(response.sourceId, !response.favourite).catch(() => {});
+      try {
+        const updatedResponse = formatChatAsResponse(
+          await toggleAiResponseFavourite(response.sourceId, nextFavouriteValue)
+        );
+        setResponses((currentResponses) =>
+          currentResponses.map((item) => (item.id === responseId ? updatedResponse : item))
+        );
+      } catch (error) {
+        setResponses((currentResponses) =>
+          currentResponses.map((item) =>
+            item.id === responseId ? { ...item, favourite: response.favourite } : item
+          )
+        );
+        showNotification(
+          "Favourite failed",
+          error.message || "Favourite could not be saved.",
+          TOAST_TYPES.ERROR
+        );
+        return;
+      }
     }
+
+    showNotification(
+      nextFavouriteValue ? "Favourite saved" : "Favourite removed",
+      nextFavouriteValue ? "Response added to favourites." : "Response removed from favourites.",
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
   }
 
   function handleInsertResponse(response) {
@@ -267,16 +285,62 @@ export default function EditorScreen() {
     showNotification("Inserted", "Response replaced the editor content.", TOAST_TYPES.SUCCESS);
   }
 
-  function handleUpdateResponse(responseId, updatedResponse) {
+  async function handleUpdateResponse(responseId, updatedResponse) {
+    const response = responses.find((item) => item.id === responseId);
+
     setResponses((currentResponses) =>
       currentResponses.map((response) =>
         response.id === responseId ? { ...response, response: updatedResponse } : response
       )
     );
+
+    if (isRealProject && response?.sourceId) {
+      try {
+        const savedResponse = formatChatAsResponse(
+          await updateAiResponse(response.sourceId, { response: updatedResponse })
+        );
+        setResponses((currentResponses) =>
+          currentResponses.map((item) => (item.id === responseId ? savedResponse : item))
+        );
+      } catch (error) {
+        showNotification(
+          "Update failed",
+          error.message || "Response could not be updated.",
+          TOAST_TYPES.ERROR
+        );
+        return;
+      }
+    }
+
     showNotification("Updated", "Response updated.", TOAST_TYPES.SUCCESS, 3000);
   }
 
-  function handleInviteUser(emailValue) {
+  async function handleDeleteResponse(responseId) {
+    const response = responses.find((item) => item.id === responseId);
+
+    if (isRealProject && response?.sourceId) {
+      try {
+        await deleteAiResponse(response.sourceId);
+      } catch (error) {
+        showNotification(
+          "Delete failed",
+          error.message || "Response could not be deleted.",
+          TOAST_TYPES.ERROR
+        );
+        return;
+      }
+    }
+
+    const nextResponses = responses.filter((item) => item.id !== responseId);
+
+    setResponses(nextResponses);
+    setSelectedHistoryId((currentSelectedId) =>
+      currentSelectedId === responseId ? nextResponses[0]?.id || null : currentSelectedId
+    );
+    showNotification("Deleted", "Response deleted from history.", TOAST_TYPES.SUCCESS, 3000);
+  }
+
+  async function handleInviteUser(emailValue) {
     const email = emailValue.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -293,9 +357,28 @@ export default function EditorScreen() {
       return false;
     }
 
-    setLocalInvites((currentInvites) => [...currentInvites, { email, name: nameFromEmail(email) }]);
-    showNotification("Shared", `Invite prepared for ${email}.`, TOAST_TYPES.SUCCESS);
-    return true;
+    if (!isRealProject) {
+      showNotification(
+        "Invite unavailable",
+        "Save this project before inviting users.",
+        TOAST_TYPES.WARNING
+      );
+      return false;
+    }
+
+    try {
+      const updatedProject = await inviteProjectCollaborator(projectId, email);
+      setProject(normalizeProject(updatedProject));
+      showNotification("Shared", `${email} was invited to this project.`, TOAST_TYPES.SUCCESS);
+      return true;
+    } catch (error) {
+      showNotification(
+        "Invite failed",
+        error.message || "User could not be invited.",
+        TOAST_TYPES.ERROR
+      );
+      return false;
+    }
   }
 
   function handleExport(format) {
@@ -431,6 +514,7 @@ export default function EditorScreen() {
         <AIHistorySidebar
           history={history}
           isCollapsed={isHistoryCollapsed}
+          onDeleteHistory={handleDeleteResponse}
           onSelectHistory={handleSelectHistory}
           onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
           selectedHistoryId={selectedHistoryId}
@@ -478,6 +562,7 @@ export default function EditorScreen() {
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}
+                  onDelete={handleDeleteResponse}
                   onFavourite={handleFavouriteResponse}
                   onInsert={handleInsertResponse}
                   onUpdate={handleUpdateResponse}
@@ -595,15 +680,6 @@ function readPendingToast() {
   } catch (error) {
     return null;
   }
-}
-
-function nameFromEmail(email) {
-  return email
-    .replace(/@.*/, "")
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => `${part[0]?.toUpperCase() || ""}${part.slice(1)}`)
-    .join(" ");
 }
 
 function slugify(value) {

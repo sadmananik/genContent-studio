@@ -1,10 +1,20 @@
-import { Check, Copy, Edit3, MoreHorizontal, Save, Star, TextCursorInput } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Edit3,
+  MoreHorizontal,
+  Save,
+  Star,
+  TextCursorInput,
+  Trash2
+} from "lucide-react";
 import { useState } from "react";
 import Button from "../common/Button";
 
 export default function AIResponseCard({
   copied,
   onCopy,
+  onDelete,
   onFavourite,
   onInsert,
   onUpdate,
@@ -72,6 +82,12 @@ export default function AIResponseCard({
           <Button onClick={() => setIsEditing(true)} variant="secondary" type="button">
             <Edit3 aria-hidden="true" size={16} />
             Edit
+          </Button>
+        )}
+        {onDelete && (
+          <Button onClick={() => onDelete(response.id)} variant="ghost" type="button">
+            <Trash2 aria-hidden="true" size={16} />
+            Delete
           </Button>
         )}
         <Button aria-label="More response options" variant="icon" type="button">
