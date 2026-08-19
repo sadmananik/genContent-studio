@@ -11,9 +11,12 @@ import { DASHBOARD_TEXT, PROJECT_FORM_TEXT } from "../../constants/dashboard";
 
 export default function ProjectFormModal({
   error,
+  initialValues,
   isSubmitting: isSaving = false,
   onClose,
-  onSubmit
+  onSubmit,
+  submitLabel = DASHBOARD_TEXT.CREATE_PROJECT,
+  title = DASHBOARD_TEXT.CREATE_PROJECT
 }) {
   const {
     formState: { errors, isSubmitting },
@@ -22,10 +25,10 @@ export default function ProjectFormModal({
     reset
   } = useForm({
     defaultValues: {
-      title: "",
-      description: "",
-      category: CONTENT_CATEGORIES.BLOG_POST,
-      projectType: PROJECT_TYPE_OPTIONS[0]
+      title: initialValues?.title || "",
+      description: initialValues?.description || "",
+      category: initialValues?.category || CONTENT_CATEGORIES.BLOG_POST,
+      projectType: initialValues?.type || PROJECT_TYPE_OPTIONS[0]
     }
   });
 
@@ -52,9 +55,7 @@ export default function ProjectFormModal({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="m-0 text-2xl font-bold text-slate-950">
-              {DASHBOARD_TEXT.CREATE_PROJECT}
-            </h3>
+            <h3 className="m-0 text-2xl font-bold text-slate-950">{title}</h3>
             <p className="mt-1.5 text-slate-500">{DASHBOARD_TEXT.PROJECT_INFORMATION}</p>
           </div>
           <button
@@ -122,7 +123,7 @@ export default function ProjectFormModal({
             {PROJECT_FORM_TEXT.CANCEL}
           </Button>
           <Button type="submit" disabled={isBusy}>
-            {isBusy ? "Creating..." : DASHBOARD_TEXT.CREATE_PROJECT}
+            {isBusy ? "Saving..." : submitLabel}
           </Button>
         </div>
       </form>
