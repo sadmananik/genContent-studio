@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
@@ -8,6 +9,8 @@ import AIResponseCard from "../text-workspace/AIResponseCard";
 import EditorToolbar from "../text-workspace/EditorToolbar";
 import TipTapEditor from "../text-workspace/TipTapEditor";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
+import { apiRequest } from "../../lib/apiClient";
+import { useAppStore } from "../../store";
 import {
   mockAIResponses,
   mockPromptActions,
@@ -15,7 +18,17 @@ import {
 } from "../text-workspace/mockTextWorkspaceData";
 
 export default function EditorScreen() {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId") || mockTextProject.id;
+  const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
+  const aiState = useAppStore((state) => state.aiState);
+  const fetchProjectById = useAppStore((state) => state.fetchProjectById);
+  const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
+  const saveAiResponse = useAppStore((state) => state.saveAiResponse);
+  const sendTextGenerationRequest = useAppStore((state) => state.sendTextGenerationRequest);
+  const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
   const [editor, setEditor] = useState(null);
+  const [project, setProject] = useState(mockTextProject);
   const [editorContent, setEditorContent] = useState({
     html: mockTextProject.content,
     text: stripHtml(mockTextProject.content)
@@ -33,14 +46,15 @@ export default function EditorScreen() {
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIResponses[0]?.id || null);
+  const [shareLink, setShareLink] = useState("");
   const [workspaceMessage, setWorkspaceMessage] = useState("");
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const savePayload = useMemo(
     () => ({
-      projectId: mockTextProject.id,
+      projectId,
       content: editorContent.html
     }),
-    [editorContent.html]
+    [editorContent.html, projectId]
   );
   const statusLabel = hasUnsavedChanges
     ? "Unsaved changes"
@@ -60,6 +74,49 @@ export default function EditorScreen() {
     ],
     [responses, savedDraft]
   );
+  const selectedResponse =
+    responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
+  const invitedUsers =
+    project.collaborators?.length > 0
+      ? project.collaborators
+      : [
+          { name: "Sravya Matta", email: "sravya.matta@cqumail.com" },
+          { name: "Sadman Anik", email: "sadmananik1@gmail.com" }
+        ];
+
+  useEffect(() => {
+    if (!isRealProject) {
+      return;
+    }
+
+    fetchProjectById(projectId)
+      .then((loadedProject) => setProject(normalizeProject(loadedProject)))
+      .catch(() => {});
+
+    apiRequest(`/api/text-content/${projectId}`)
+      .then((textContent) => {
+        const html = typeof textContent.content === "string" ? textContent.content : "";
+
+        if (html && editor) {
+          editor.commands.setContent(html);
+          setEditorContent({ html, text: editor.getText() });
+          setHasUnsavedChanges(false);
+        }
+      })
+      .catch(() => {});
+
+    fetchProjectChatHistory(projectId).catch(() => {});
+  }, [editor, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
+
+  useEffect(() => {
+    if (!isRealProject || aiState.chatHistory.length === 0) {
+      return;
+    }
+
+    const realResponses = aiState.chatHistory.map(formatChatAsResponse);
+    setResponses(realResponses);
+    setSelectedHistoryId(realResponses[0]?.id || null);
+  }, [aiState.chatHistory, isRealProject]);
 
   function handleGenerate() {
     setIsGenerating(true);
@@ -77,6 +134,15 @@ export default function EditorScreen() {
       setSelectedHistoryId(responseId);
       setWorkspaceMessage("Demo response generated.");
       setIsGenerating(false);
+
+      if (isRealProject) {
+        saveAiResponse({
+          project: projectId,
+          prompt,
+          response: response.response,
+          contentType: "text"
+        }).catch(() => {});
+      }
     }, 900);
   }
 
@@ -90,24 +156,27 @@ export default function EditorScreen() {
     setWorkspaceMessage("");
   }, []);
 
-  function handleSave() {
+  async function handleSave() {
     setIsSaving(true);
-    saveCurrentDraft();
-    window.setTimeout(() => {
+    try {
+      await saveCurrentDraft();
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
-      setWorkspaceMessage("Project saved in this browser.");
+      setWorkspaceMessage(isRealProject ? "Project saved." : "Project saved in this browser.");
+    } catch (error) {
+      setWorkspaceMessage(error.message || "Project could not be saved.");
+    } finally {
       setIsSaving(false);
-    }, 450);
+    }
   }
 
   async function handleShare() {
-    const shareText = `${mockTextProject.title}\n\n${editorContent.text}`;
+    const shareText = `${project.title}\n\n${editorContent.text}`;
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: mockTextProject.title,
+          title: project.title,
           text: shareText
         });
         setWorkspaceMessage("Share sheet opened.");
@@ -129,11 +198,17 @@ export default function EditorScreen() {
   }
 
   function handleFavouriteResponse(responseId) {
+    const response = responses.find((item) => item.id === responseId);
+
     setResponses((currentResponses) =>
       currentResponses.map((response) =>
         response.id === responseId ? { ...response, favourite: !response.favourite } : response
       )
     );
+
+    if (isRealProject && response?.sourceId) {
+      toggleAiResponseFavourite(response.sourceId, !response.favourite).catch(() => {});
+    }
   }
 
   function handleInsertResponse(response) {
@@ -162,6 +237,13 @@ export default function EditorScreen() {
       )
     );
     setWorkspaceMessage("Response updated.");
+  }
+
+  async function handleGenerateLink() {
+    const link = `${window.location.origin}/editor?projectId=${projectId}&type=text`;
+    setShareLink(link);
+    await copyText(link);
+    setWorkspaceMessage("Project link copied.");
   }
 
   function handleSelectHistory(historyId) {
@@ -211,20 +293,36 @@ export default function EditorScreen() {
     return true;
   }
 
-  function handleConfirmPendingAction() {
-    saveCurrentDraft();
-    setHasUnsavedChanges(false);
-    setLastSavedAt(new Date());
-    pendingEditorAction?.();
-    setPendingEditorAction(null);
-    setWorkspaceMessage("Draft saved before switching.");
+  async function handleConfirmPendingAction() {
+    setIsSaving(true);
+
+    try {
+      await saveCurrentDraft();
+      setHasUnsavedChanges(false);
+      setLastSavedAt(new Date());
+      pendingEditorAction?.();
+      setPendingEditorAction(null);
+      setWorkspaceMessage("Draft saved before switching.");
+    } catch (error) {
+      setWorkspaceMessage(error.message || "Draft could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  function saveCurrentDraft() {
-    window.localStorage.setItem("gencontent-demo-text-workspace", JSON.stringify(savePayload));
+  async function saveCurrentDraft() {
+    if (isRealProject) {
+      await sendTextGenerationRequest({
+        project: projectId,
+        content: editorContent.html
+      });
+    } else {
+      window.localStorage.setItem("gencontent-demo-text-workspace", JSON.stringify(savePayload));
+    }
+
     setSavedDraft({
       id: "saved-draft",
-      prompt: `Saved ${mockTextProject.title}`,
+      prompt: `Saved ${project.title}`,
       timestamp: "Just now",
       favourite: false,
       type: "save",
@@ -243,10 +341,13 @@ export default function EditorScreen() {
   return (
     <section className="min-h-screen overflow-hidden bg-slate-50">
       <TextWorkspaceHeader
+        invitedUsers={invitedUsers}
         isSaving={isSaving}
+        onGenerateLink={handleGenerateLink}
         onSave={handleSave}
         onShare={handleShare}
-        project={mockTextProject}
+        project={project}
+        shareLink={shareLink}
         statusLabel={statusLabel}
       />
 
@@ -268,11 +369,10 @@ export default function EditorScreen() {
                   hasUnsavedChanges ? "text-amber-700" : "text-emerald-700"
                 }`}
               >
-                {hasUnsavedChanges ? "Unsaved changes" : mockTextProject.saveStatus} • {wordCount}{" "}
-                words
+                {hasUnsavedChanges ? "Unsaved changes" : project.saveStatus} • {wordCount} words
               </div>
               <TipTapEditor
-                editorKey={mockTextProject.id}
+                editorKey={project.id}
                 initialContent={mockTextProject.content}
                 onContentChange={handleEditorChange}
                 onEditorReady={setEditor}
@@ -295,23 +395,27 @@ export default function EditorScreen() {
 
             <section className="grid gap-4">
               <div>
-                <h2 className="text-base font-bold text-slate-950">AI Responses</h2>
+                <h2 className="text-base font-bold text-slate-950">Selected AI Response</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Mock generated responses for this project.
+                  Generate demo text, then copy, edit, favourite, or insert the selected response.
                 </p>
               </div>
-              {responses.map((response) => (
+              {selectedResponse ? (
                 <AIResponseCard
-                  copied={copiedResponseId === response.id}
-                  key={response.id}
+                  copied={copiedResponseId === selectedResponse.id}
+                  key={selectedResponse.id}
                   onCopy={handleCopyResponse}
                   onFavourite={handleFavouriteResponse}
                   onInsert={handleInsertResponse}
                   onUpdate={handleUpdateResponse}
-                  response={response}
-                  selected={selectedHistoryId === response.id}
+                  response={selectedResponse}
+                  selected
                 />
-              ))}
+              ) : (
+                <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
+                  No response selected yet.
+                </div>
+              )}
             </section>
           </aside>
         </main>
@@ -328,6 +432,31 @@ export default function EditorScreen() {
       )}
     </section>
   );
+}
+
+function normalizeProject(project) {
+  return {
+    ...mockTextProject,
+    id: project._id || project.id,
+    title: project.title || mockTextProject.title,
+    category: project.category || mockTextProject.category,
+    type: "Text Project",
+    lastUpdated: project.updatedAt
+      ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
+      : mockTextProject.lastUpdated,
+    collaborators: project.collaborators || []
+  };
+}
+
+function formatChatAsResponse(chat) {
+  return {
+    id: chat._id || chat.id,
+    sourceId: chat._id || chat.id,
+    prompt: chat.prompt,
+    response: chat.response,
+    timestamp: chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "Saved chat",
+    favourite: Boolean(chat.isFavourite)
+  };
 }
 
 function countWords(value) {
