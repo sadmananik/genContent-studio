@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Pencil, Settings, Trash2 } from "lucide-react";
 import Button from "../common/Button";
@@ -15,7 +15,6 @@ import { useAppStore } from "../../store";
 
 export default function ProjectsScreen() {
   const router = useRouter();
-  const actionMenuRef = useRef(null);
   const auth = useAppStore((state) => state.auth);
   const projectState = useAppStore((state) => state.projectState);
   const createProject = useAppStore((state) => state.createProject);
@@ -37,7 +36,7 @@ export default function ProjectsScreen() {
 
   useEffect(() => {
     function handleClickAway(event) {
-      if (!actionMenuRef.current?.contains(event.target)) {
+      if (!event.target.closest("[data-project-actions]")) {
         setOpenActionProjectId(null);
       }
     }
@@ -175,7 +174,11 @@ export default function ProjectsScreen() {
         <section className="grid gap-4">
           {projects.map((project) => (
             <article
-              className="group grid cursor-pointer gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:bg-violet-50/70 focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center"
+              className={`group grid cursor-pointer gap-4 rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:bg-violet-50/70 focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center ${
+                openActionProjectId === project.id
+                  ? "border-violet-300 bg-violet-50/70"
+                  : "border-slate-200"
+              }`}
               key={project.id}
               onClick={() => router.push(getProjectWorkspaceHref(project))}
               onKeyDown={(event) => handleProjectRowKeyDown(event, project)}
@@ -194,7 +197,7 @@ export default function ProjectsScreen() {
                   <p className="mt-2 line-clamp-2 text-sm text-slate-600">{project.description}</p>
                 )}
               </div>
-              <div className="relative flex justify-end" ref={actionMenuRef}>
+              <div className="relative flex justify-end" data-project-actions>
                 <Button
                   aria-label={`${project.title} actions`}
                   aria-expanded={openActionProjectId === project.id}
