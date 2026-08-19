@@ -1,11 +1,12 @@
 export const mockTextProject = {
+  id: "project-future-ai",
   title: "Blog Post: Future of AI",
   category: "Blog Post",
   type: "Text Project",
   lastUpdated: "Last updated 5 minutes ago",
   saveStatus: "Draft saved",
   content:
-    "Start writing your content here...\n\nArtificial Intelligence is changing the way small businesses create digital content, plan campaigns, and connect with customers. This workspace will later connect to TipTap and AI generation APIs."
+    "<p>Start writing your content here...</p><p>Artificial Intelligence is changing the way small businesses create digital content, plan campaigns, and connect with customers. This workspace is now powered by TipTap and ready for future save/API integration.</p>"
 };
 
 export const mockPromptActions = [

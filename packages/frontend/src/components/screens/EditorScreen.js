@@ -5,6 +5,7 @@ import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import AIResponseCard from "../text-workspace/AIResponseCard";
 import EditorToolbar from "../text-workspace/EditorToolbar";
+import TipTapEditor from "../text-workspace/TipTapEditor";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import {
   mockAIHistory,
@@ -14,15 +15,26 @@ import {
 } from "../text-workspace/mockTextWorkspaceData";
 
 export default function EditorScreen() {
-  const [activeTool, setActiveTool] = useState("Bold");
-  const [editorContent, setEditorContent] = useState(mockTextProject.content);
+  const [editor, setEditor] = useState(null);
+  const [editorContent, setEditorContent] = useState({
+    html: mockTextProject.content,
+    text: mockTextProject.content
+  });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
   const [prompt, setPrompt] = useState(
     "Write an introduction about how AI tools help small businesses."
   );
   const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIHistory[0]?.id || null);
-  const wordCount = useMemo(() => countWords(editorContent), [editorContent]);
+  const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
+  const savePayload = useMemo(
+    () => ({
+      projectId: mockTextProject.id,
+      content: editorContent.html
+    }),
+    [editorContent.html]
+  );
 
   function handleGenerate() {
     setIsGenerating(true);
@@ -33,6 +45,11 @@ export default function EditorScreen() {
 
   function handleQuickAction(action) {
     setPrompt(`${action}: ${prompt}`.slice(0, 1200));
+  }
+
+  function handleEditorChange(content) {
+    setEditorContent(content);
+    setHasUnsavedChanges(true);
   }
 
   return (
@@ -51,16 +68,24 @@ export default function EditorScreen() {
         <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
           <section className="grid min-w-0 gap-5">
             <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
-              <EditorToolbar activeTool={activeTool} onSelectTool={setActiveTool} />
-              <div className="border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                {mockTextProject.saveStatus} • {wordCount} words
+              <EditorToolbar editor={editor} />
+              <div
+                className={`border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide ${
+                  hasUnsavedChanges ? "text-amber-700" : "text-emerald-700"
+                }`}
+              >
+                {hasUnsavedChanges ? "Unsaved changes" : mockTextProject.saveStatus} • {wordCount}{" "}
+                words
               </div>
-              <textarea
-                className="min-h-[32rem] w-full resize-y border-0 bg-white p-5 text-base leading-8 text-slate-700 outline-none md:p-7"
-                onChange={(event) => setEditorContent(event.target.value)}
-                placeholder="Start writing your content here..."
-                value={editorContent}
+              <TipTapEditor
+                initialContent={mockTextProject.content}
+                onContentChange={handleEditorChange}
+                onEditorReady={setEditor}
               />
+              <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                Save payload prepared for project {savePayload.projectId}:{" "}
+                {savePayload.content.length} HTML characters
+              </div>
             </article>
           </section>
 
