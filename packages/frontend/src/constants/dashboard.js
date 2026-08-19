@@ -19,6 +19,8 @@ export const PROJECT_FORM_TEXT = {
   TITLE_LABEL: "Project title",
   TITLE_PLACEHOLDER: "Enter project title",
   TITLE_REQUIRED: "Project title is required",
+  DESCRIPTION_LABEL: "Description",
+  DESCRIPTION_PLACEHOLDER: "Optional project notes or brief",
   CATEGORY_LABEL: "Content category",
   TYPE_LEGEND: "Project type",
   CANCEL: "Cancel",

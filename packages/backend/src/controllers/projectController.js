@@ -3,15 +3,21 @@ const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 
 const createProject = asyncHandler(async (req, res) => {
-  const { title, type, collaborators = [] } = req.body;
+  const { title, type, category = "Other", description = "", collaborators = [] } = req.body;
 
   if (!title || !type) {
     throw httpError(400, "Project title and type are required");
   }
 
+  if (!["text", "image"].includes(type)) {
+    throw httpError(400, "Project type must be text or image");
+  }
+
   const project = await Project.create({
-    title,
+    title: title.trim(),
     type,
+    category,
+    description,
     owner: req.user.id,
     collaborators
   });
@@ -37,7 +43,7 @@ const getProjectById = asyncHandler(async (req, res) => {
 
 const updateProject = asyncHandler(async (req, res) => {
   const project = await findAccessibleProject(req.params.id, req.user.id);
-  const allowedUpdates = ["title", "type", "collaborators"];
+  const allowedUpdates = ["title", "type", "category", "description", "collaborators"];
 
   allowedUpdates.forEach((field) => {
     if (req.body[field] !== undefined) {

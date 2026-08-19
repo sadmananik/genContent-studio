@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../common/Button";
 import {
@@ -14,26 +14,40 @@ import {
 } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
 import UserProfileMenu from "../common/UserProfileMenu";
-import {
-  CATEGORY_COUNTS,
-  DASHBOARD_TEXT,
-  MOCK_RECENT_PROJECTS,
-  SUMMARY_CARDS
-} from "../../constants/dashboard";
+import { DASHBOARD_TEXT, SUMMARY_CARD_LABELS } from "../../constants/dashboard";
 import { ROUTES } from "../../constants/navigation";
-import { PROJECT_TYPES } from "../../constants/content";
+import { CONTENT_CATEGORY_SUMMARY_LABELS, PROJECT_TYPES } from "../../constants/content";
 import { useAppStore } from "../../store";
 
 export default function DashboardScreen() {
   const router = useRouter();
   const auth = useAppStore((state) => state.auth);
+  const projectState = useAppStore((state) => state.projectState);
   const createProject = useAppStore((state) => state.createProject);
+  const fetchProjects = useAppStore((state) => state.fetchProjects);
   const logoutUser = useAppStore((state) => state.logoutUser);
   const [showProjectForm, setShowProjectForm] = useState(false);
-  const [projects] = useState(MOCK_RECENT_PROJECTS);
 
   const user = auth.user || { name: "Sadman Anik" };
+  const projects = useMemo(
+    () => projectState.projects.map(formatProjectForDashboard),
+    [projectState.projects]
+  );
+  const summaryCards = useMemo(
+    () => buildSummaryCards(projectState.projects),
+    [projectState.projects]
+  );
+  const categoryCounts = useMemo(
+    () => buildCategoryCounts(projectState.projects),
+    [projectState.projects]
+  );
   const hasProjects = projects.length > 0;
+
+  useEffect(() => {
+    if (auth.token) {
+      fetchProjects().catch(() => {});
+    }
+  }, [auth.token, fetchProjects]);
 
   function handleLogout() {
     logoutUser();
@@ -41,15 +55,15 @@ export default function DashboardScreen() {
   }
 
   async function handleCreateProject(values) {
-    if (auth.token) {
-      await createProject({
-        title: values.title,
-        type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
-      });
-    }
+    const project = await createProject({
+      title: values.title,
+      description: values.description,
+      category: values.category,
+      type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+    });
 
     setShowProjectForm(false);
-    router.push(ROUTES.EDITOR);
+    router.push(getProjectWorkspaceHref(project));
   }
 
   return (
@@ -73,12 +87,12 @@ export default function DashboardScreen() {
         }
       />
 
-      <StatGrid items={SUMMARY_CARDS} label={DASHBOARD_TEXT.PROJECT_SUMMARY} />
+      <StatGrid items={summaryCards} label={DASHBOARD_TEXT.PROJECT_SUMMARY} />
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(260px,0.82fr)_minmax(360px,1.55fr)]">
         <div>
           <SectionHeader title={DASHBOARD_TEXT.CONTENT_TYPE_SUMMARY} />
-          <CategorySummary items={CATEGORY_COUNTS} />
+          <CategorySummary items={categoryCounts} />
         </div>
 
         <div>
@@ -86,10 +100,21 @@ export default function DashboardScreen() {
             title={DASHBOARD_TEXT.RECENT_PROJECTS}
             action={<Link href={ROUTES.PROJECTS}>{DASHBOARD_TEXT.VIEW_ALL_PROJECTS}</Link>}
           />
-          {hasProjects ? (
+          {projectState.loading && !hasProjects ? (
+            <EmptyState
+              title="Loading projects..."
+              description="Your project workspace is getting everything ready."
+            />
+          ) : projectState.error && !hasProjects ? (
+            <EmptyState title="Projects could not load." description={projectState.error} />
+          ) : hasProjects ? (
             <div className="grid overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)] [&>*+*]:border-t [&>*+*]:border-slate-100">
               {projects.map((project) => (
-                <RecentProjectCard project={project} href={ROUTES.EDITOR} key={project.id} />
+                <RecentProjectCard
+                  project={project}
+                  href={getProjectWorkspaceHref(project)}
+                  key={project.id}
+                />
               ))}
             </div>
           ) : (
@@ -108,6 +133,8 @@ export default function DashboardScreen() {
 
       {showProjectForm && (
         <ProjectFormModal
+          error={projectState.error}
+          isSubmitting={projectState.loading}
           onClose={() => setShowProjectForm(false)}
           onSubmit={handleCreateProject}
         />
@@ -118,4 +145,87 @@ export default function DashboardScreen() {
 
 function firstName(name = "") {
   return name.trim().split(/\s+/)[0] || "there";
+}
+
+function formatProjectForDashboard(project) {
+  const type = project.type === "image" ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
+
+  return {
+    id: project._id || project.id,
+    title: project.title,
+    category: project.category || "Other",
+    type,
+    updated: formatUpdatedAt(project.updatedAt),
+    icon: type === PROJECT_TYPES.IMAGE ? "▧" : "▤",
+    tone: type === PROJECT_TYPES.IMAGE ? "lavender" : "mint",
+    collaborators: project.collaborators || []
+  };
+}
+
+function buildSummaryCards(projects) {
+  const textCount = projects.filter((project) => project.type === "text").length;
+  const imageCount = projects.filter((project) => project.type === "image").length;
+  const sharedCount = projects.filter((project) => (project.collaborators || []).length > 0).length;
+
+  return [
+    { icon: "▣", value: String(projects.length), label: SUMMARY_CARD_LABELS.TOTAL, tone: "violet" },
+    { icon: "▤", value: String(textCount), label: SUMMARY_CARD_LABELS.TEXT, tone: "mint" },
+    { icon: "▧", value: String(imageCount), label: SUMMARY_CARD_LABELS.IMAGE, tone: "lavender" },
+    { icon: "◇", value: String(sharedCount), label: SUMMARY_CARD_LABELS.SHARED, tone: "mint" }
+  ];
+}
+
+function buildCategoryCounts(projects) {
+  const counts = projects.reduce((result, project) => {
+    const category = project.category || "Other";
+    result[category] = (result[category] || 0) + 1;
+    return result;
+  }, {});
+
+  const entries = Object.entries(counts);
+
+  if (entries.length === 0) {
+    return [{ label: "No categories yet", count: 0 }];
+  }
+
+  return entries.map(([category, count]) => ({
+    label: CONTENT_CATEGORY_SUMMARY_LABELS[category] || category,
+    count
+  }));
+}
+
+function getProjectWorkspaceHref(project) {
+  const projectId = project._id || project.id;
+  const workspace =
+    project.type === "image" || project.type === PROJECT_TYPES.IMAGE ? "image" : "text";
+
+  return `${ROUTES.EDITOR}?projectId=${projectId}&type=${workspace}`;
+}
+
+function formatUpdatedAt(value) {
+  if (!value) {
+    return "Updated just now";
+  }
+
+  const updatedAt = new Date(value);
+  const diffInSeconds = Math.max(0, Math.floor((Date.now() - updatedAt.getTime()) / 1000));
+
+  if (diffInSeconds < 60) {
+    return "Updated just now";
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+
+  if (diffInMinutes < 60) {
+    return `Updated ${diffInMinutes} minute${diffInMinutes === 1 ? "" : "s"} ago`;
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+
+  if (diffInHours < 24) {
+    return `Updated ${diffInHours} hour${diffInHours === 1 ? "" : "s"} ago`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `Updated ${diffInDays} day${diffInDays === 1 ? "" : "s"} ago`;
 }
