@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Settings, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Settings, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -222,6 +222,18 @@ export default function ProjectsScreen() {
                     onClick={(event) => event.stopPropagation()}
                     role="menu"
                   >
+                    <button
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                      onClick={() => {
+                        router.push(getProjectWorkspaceHref(project));
+                        setOpenActionProjectId(null);
+                      }}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <ExternalLink aria-hidden="true" size={16} />
+                      Open
+                    </button>
                     <button
                       className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
                       onClick={() => {
