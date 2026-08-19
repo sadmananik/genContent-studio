@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../common/Button";
+import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
@@ -21,6 +22,7 @@ export default function ProjectsScreen() {
   const updateProject = useAppStore((state) => state.updateProject);
   const [editingProject, setEditingProject] = useState(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [projectPendingDelete, setProjectPendingDelete] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
 
   useEffect(() => {
@@ -57,17 +59,16 @@ export default function ProjectsScreen() {
     setEditingProject(null);
   }
 
-  async function handleDeleteProject(project) {
-    const confirmed = window.confirm(`Delete "${project.title}"? This cannot be undone.`);
-
-    if (!confirmed) {
+  async function handleDeleteProject() {
+    if (!projectPendingDelete) {
       return;
     }
 
-    setDeletingProjectId(project.id);
+    setDeletingProjectId(projectPendingDelete.id);
 
     try {
-      await deleteProject(project.id);
+      await deleteProject(projectPendingDelete.id);
+      setProjectPendingDelete(null);
     } finally {
       setDeletingProjectId(null);
     }
@@ -151,7 +152,7 @@ export default function ProjectsScreen() {
                   disabled={deletingProjectId === project.id}
                   onClick={(event) => {
                     event.stopPropagation();
-                    handleDeleteProject(project);
+                    setProjectPendingDelete(project);
                   }}
                 >
                   {deletingProjectId === project.id ? "Deleting..." : "Delete"}
@@ -189,6 +190,18 @@ export default function ProjectsScreen() {
           onSubmit={handleUpdateProject}
           submitLabel="Save Changes"
           title="Edit Project"
+        />
+      )}
+
+      {projectPendingDelete && (
+        <ConfirmDialog
+          cancelLabel="Cancel"
+          confirmLabel="Delete Project"
+          description={`Delete "${projectPendingDelete.title}"? This cannot be undone.`}
+          isConfirming={deletingProjectId === projectPendingDelete.id}
+          onCancel={() => setProjectPendingDelete(null)}
+          onConfirm={handleDeleteProject}
+          title="Delete project?"
         />
       )}
     </main>

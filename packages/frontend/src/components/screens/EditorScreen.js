@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import ConfirmDialog from "../common/ConfirmDialog";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import AIResponseCard from "../text-workspace/AIResponseCard";
@@ -30,6 +31,7 @@ export default function EditorScreen() {
   const [responses, setResponses] = useState(mockAIResponses);
   const [saveHistory, setSaveHistory] = useState([]);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
+  const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIResponses[0]?.id || null);
   const [workspaceMessage, setWorkspaceMessage] = useState("");
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
@@ -139,12 +141,14 @@ export default function EditorScreen() {
       return;
     }
 
-    const canReplace = resolveUnsavedChangesBeforeMove();
-
-    if (!canReplace) {
+    if (queueUnsavedAction(() => insertResponse(response))) {
       return;
     }
 
+    insertResponse(response);
+  }
+
+  function insertResponse(response) {
     replaceEditorContent(response.response);
     setSelectedHistoryId(response.id);
     setPrompt(response.prompt);
@@ -169,12 +173,14 @@ export default function EditorScreen() {
       return;
     }
 
-    const canSwitch = resolveUnsavedChangesBeforeMove();
-
-    if (!canSwitch) {
+    if (queueUnsavedAction(() => loadHistoryItem(historyId))) {
       return;
     }
 
+    loadHistoryItem(historyId);
+  }
+
+  function loadHistoryItem(historyId) {
     const responseItem = responses.find((response) => response.id === historyId);
     const savedItem = saveHistory.find((item) => item.id === historyId);
 
@@ -196,21 +202,22 @@ export default function EditorScreen() {
     }
   }
 
-  function resolveUnsavedChangesBeforeMove() {
+  function queueUnsavedAction(action) {
     if (!hasUnsavedChanges) {
-      return true;
-    }
-
-    const shouldSave = window.confirm("You have unsaved editor changes. Save before switching?");
-
-    if (!shouldSave) {
       return false;
     }
 
+    setPendingEditorAction(() => action);
+    return true;
+  }
+
+  function handleConfirmPendingAction() {
     saveCurrentDraft();
     setHasUnsavedChanges(false);
     setLastSavedAt(new Date());
-    return true;
+    pendingEditorAction?.();
+    setPendingEditorAction(null);
+    setWorkspaceMessage("Draft saved before switching.");
   }
 
   function saveCurrentDraft() {
@@ -312,6 +319,16 @@ export default function EditorScreen() {
           </aside>
         </main>
       </div>
+      {pendingEditorAction && (
+        <ConfirmDialog
+          cancelLabel="Stay Here"
+          confirmLabel="Save and Continue"
+          description="Your current editor content has unsaved changes. Save this draft before loading another response?"
+          onCancel={() => setPendingEditorAction(null)}
+          onConfirm={handleConfirmPendingAction}
+          title="Save changes before switching?"
+        />
+      )}
     </section>
   );
 }
