@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
+import ImageEditorScreen from "./ImageEditorScreen";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import AIResponseCard from "../text-workspace/AIResponseCard";
@@ -20,6 +21,12 @@ import {
 
 export default function EditorScreen() {
   const searchParams = useSearchParams();
+  const workspaceType = searchParams.get("type");
+
+  if (workspaceType === "image") {
+    return <ImageEditorScreen />;
+  }
+
   const projectId = searchParams.get("projectId") || mockTextProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const aiState = useAppStore((state) => state.aiState);

@@ -10,6 +10,7 @@ import WorkspaceExportMenu from "./WorkspaceExportMenu";
 import WorkspaceSharePopover from "./WorkspaceSharePopover";
 
 export default function TextWorkspaceHeader({
+  exportOptions,
   invitedUsers = [],
   onExport,
   onInviteUser,
@@ -96,6 +97,7 @@ export default function TextWorkspaceHeader({
                 onExport?.(format);
                 setIsExportOpen(false);
               }}
+              options={exportOptions}
             />
           )}
         </div>
