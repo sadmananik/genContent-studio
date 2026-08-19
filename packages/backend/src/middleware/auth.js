@@ -1,19 +1,27 @@
 const mongoose = require("mongoose");
 const httpError = require("../utils/httpError");
+const { verifyAuthToken } = require("../utils/token");
 
 function requireUser(req, res, next) {
-  const userId = req.header("x-user-id");
+  const authorizationHeader = req.header("Authorization") || "";
+  const [scheme, token] = authorizationHeader.split(" ");
 
-  if (!userId) {
-    return next(httpError(401, "Missing x-user-id header for protected route placeholder"));
+  if (scheme !== "Bearer" || !token) {
+    return next(httpError(401, "Missing Bearer authentication token"));
   }
 
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return next(httpError(400, "Invalid x-user-id header"));
-  }
+  try {
+    const payload = verifyAuthToken(token);
 
-  req.user = { id: userId };
-  return next();
+    if (!mongoose.Types.ObjectId.isValid(payload.sub)) {
+      return next(httpError(401, "Invalid authentication token"));
+    }
+
+    req.user = { id: payload.sub };
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 }
 
 module.exports = requireUser;

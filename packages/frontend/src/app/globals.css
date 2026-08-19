@@ -201,6 +201,17 @@ a {
   outline: 0;
 }
 
+.login-panel .auth-error {
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  color: #b42318;
+  background: #fff1f0;
+  border: 1px solid #ffd5d2;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .form-row,
 .title-row,
 .editor-topbar,

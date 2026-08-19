@@ -1,46 +1,79 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
+import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const setDemoAuthenticated = useAppStore((state) => state.setDemoAuthenticated);
+  const auth = useAppStore((state) => state.auth);
+  const loginUser = useAppStore((state) => state.loginUser);
+  const [formValues, setFormValues] = useState({ email: "", password: "" });
 
-  function handleDemoLogin(event) {
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      router.replace(ROUTES.DASHBOARD);
+    }
+  }, [auth.isAuthenticated, router]);
+
+  function handleChange(event) {
+    const { name, value } = event.target;
+    setFormValues((currentValues) => ({ ...currentValues, [name]: value }));
+  }
+
+  async function handleLogin(event) {
     event.preventDefault();
-    setDemoAuthenticated();
-    router.push("/dashboard");
+
+    try {
+      await loginUser(formValues);
+      router.push(ROUTES.DASHBOARD);
+    } catch (error) {
+      // Error state is displayed from the auth store.
+    }
   }
 
   return (
     <section className="screen login-screen">
       <Brand />
-      <form className="login-panel" onSubmit={handleDemoLogin}>
+      <form className="login-panel" onSubmit={handleLogin}>
         <h2>Welcome back!</h2>
         <p>Sign in to continue to your account</p>
         <label>
           <span>✉</span>
-          <input placeholder="Email address" />
+          <input
+            autoComplete="email"
+            name="email"
+            onChange={handleChange}
+            placeholder="Email address"
+            required
+            type="email"
+            value={formValues.email}
+          />
         </label>
         <label>
           <span>⌘</span>
-          <input placeholder="Password" type="password" />
+          <input
+            autoComplete="current-password"
+            name="password"
+            onChange={handleChange}
+            placeholder="Password"
+            required
+            type="password"
+            value={formValues.password}
+          />
           <span>⊙</span>
         </label>
         <div className="form-row">
           <span>☐ Remember me</span>
           <a href="#">Forgot password?</a>
         </div>
-        <Button className="full-width" type="submit">
-          Demo Sign In
-        </Button>
-        <div className="divider">or</div>
-        <Button variant="secondary" className="full-width" type="button" onClick={handleDemoLogin}>
-          <span className="google-dot">G</span> Continue with Google
+        {auth.error && <p className="auth-error">{auth.error}</p>}
+        <Button className="full-width" disabled={auth.loading} type="submit">
+          {auth.loading ? "Signing in..." : "Sign In"}
         </Button>
         <p className="signup">
           Don&apos;t have an account? <Link href="/register">Sign up</Link>
