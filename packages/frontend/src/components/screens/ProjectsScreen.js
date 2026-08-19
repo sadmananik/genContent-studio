@@ -73,6 +73,13 @@ export default function ProjectsScreen() {
     }
   }
 
+  function handleProjectRowKeyDown(event, project) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      router.push(getProjectWorkspaceHref(project));
+    }
+  }
+
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
@@ -108,17 +115,18 @@ export default function ProjectsScreen() {
         <section className="grid gap-4">
           {projects.map((project) => (
             <article
-              className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center"
+              className="grid cursor-pointer gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center"
               key={project.id}
+              onClick={() => router.push(getProjectWorkspaceHref(project))}
+              onKeyDown={(event) => handleProjectRowKeyDown(event, project)}
+              role="link"
+              tabIndex={0}
             >
               <IconBadge tone={project.tone}>{project.icon}</IconBadge>
               <div className="min-w-0">
-                <Link
-                  className="block truncate text-sm font-bold text-slate-950 hover:text-violet-600"
-                  href={getProjectWorkspaceHref(project)}
-                >
+                <strong className="block truncate text-sm font-bold text-slate-950">
                   {project.title}
-                </Link>
+                </strong>
                 <p className="mt-1 text-xs text-slate-500">
                   {project.category} • {project.type} Project • {project.updated}
                 </p>
@@ -130,7 +138,10 @@ export default function ProjectsScreen() {
                 <Button
                   variant="secondary"
                   type="button"
-                  onClick={() => setEditingProject(project)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setEditingProject(project);
+                  }}
                 >
                   Edit
                 </Button>
@@ -138,16 +149,22 @@ export default function ProjectsScreen() {
                   variant="ghost"
                   type="button"
                   disabled={deletingProjectId === project.id}
-                  onClick={() => handleDeleteProject(project)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleDeleteProject(project);
+                  }}
                 >
                   {deletingProjectId === project.id ? "Deleting..." : "Delete"}
                 </Button>
-                <Link
-                  className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-transparent bg-gradient-to-br from-violet-500 to-indigo-600 px-4 text-sm font-bold text-white shadow-[0_10px_24px_rgba(101,69,246,0.24)] transition-colors hover:from-violet-600 hover:to-indigo-700"
-                  href={getProjectWorkspaceHref(project)}
+                <Button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    router.push(getProjectWorkspaceHref(project));
+                  }}
+                  type="button"
                 >
                   Open
-                </Link>
+                </Button>
               </div>
             </article>
           ))}
