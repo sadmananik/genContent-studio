@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "../common/Button";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
@@ -11,12 +12,15 @@ import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
 export default function ProjectsScreen() {
+  const router = useRouter();
   const auth = useAppStore((state) => state.auth);
   const projectState = useAppStore((state) => state.projectState);
+  const createProject = useAppStore((state) => state.createProject);
   const deleteProject = useAppStore((state) => state.deleteProject);
   const fetchProjects = useAppStore((state) => state.fetchProjects);
   const updateProject = useAppStore((state) => state.updateProject);
   const [editingProject, setEditingProject] = useState(null);
+  const [showProjectForm, setShowProjectForm] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
 
   useEffect(() => {
@@ -26,6 +30,18 @@ export default function ProjectsScreen() {
   }, [auth.token, fetchProjects]);
 
   const projects = useMemo(() => projectState.projects.map(formatProject), [projectState.projects]);
+
+  async function handleCreateProject(values) {
+    const project = await createProject({
+      title: values.title,
+      description: values.description,
+      category: values.category,
+      type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+    });
+
+    setShowProjectForm(false);
+    router.push(getProjectWorkspaceHref(formatProject(project)));
+  }
 
   async function handleUpdateProject(values) {
     if (!editingProject) {
@@ -59,11 +75,17 @@ export default function ProjectsScreen() {
 
   return (
     <main className="min-w-0 p-5 md:p-7">
-      <header className="-m-5 mb-6 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
-        <h1 className="m-0 text-2xl font-bold text-slate-950">Projects</h1>
-        <p className="mt-1.5 text-sm text-slate-500">
-          Manage your text and image workspaces from one place.
-        </p>
+      <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
+        <div>
+          <h1 className="m-0 text-2xl font-bold text-slate-950">Projects</h1>
+          <p className="mt-1.5 text-sm text-slate-500">
+            Manage your text and image workspaces from one place.
+          </p>
+        </div>
+        <div className="hidden flex-1 sm:block" />
+        <Button type="button" onClick={() => setShowProjectForm(true)}>
+          Create Project
+        </Button>
       </header>
 
       <SectionHeader title="All Projects" action={<Link href={ROUTES.DASHBOARD}>Dashboard</Link>} />
@@ -76,7 +98,11 @@ export default function ProjectsScreen() {
         <EmptyState
           title={DASHBOARD_TEXT.EMPTY_PROJECTS_TITLE}
           description={DASHBOARD_TEXT.EMPTY_PROJECTS_DESCRIPTION}
-          action={<Link href={ROUTES.DASHBOARD}>Create from Dashboard</Link>}
+          action={
+            <Button type="button" onClick={() => setShowProjectForm(true)}>
+              Create Project
+            </Button>
+          }
         />
       ) : (
         <section className="grid gap-4">
@@ -126,6 +152,15 @@ export default function ProjectsScreen() {
             </article>
           ))}
         </section>
+      )}
+
+      {showProjectForm && (
+        <ProjectFormModal
+          error={projectState.error}
+          isSubmitting={projectState.loading}
+          onClose={() => setShowProjectForm(false)}
+          onSubmit={handleCreateProject}
+        />
       )}
 
       {editingProject && (

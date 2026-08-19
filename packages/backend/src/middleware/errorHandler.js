@@ -19,11 +19,17 @@ function errorHandler(error, req, res, next) {
   }
 
   if (error.code === 11000) {
-    if (error.keyPattern?.email || error.keyValue?.email) {
+    const duplicateFields = Object.keys(error.keyPattern || error.keyValue || {});
+
+    if (duplicateFields.includes("email")) {
       return res.status(409).json({ message: "An account with this email already exists" });
     }
 
-    return res.status(409).json({ message: "Duplicate value already exists" });
+    return res.status(409).json({
+      message: duplicateFields.length
+        ? `Duplicate value already exists for: ${duplicateFields.join(", ")}`
+        : "Duplicate value already exists"
+    });
   }
 
   return res.status(statusCode).json({
