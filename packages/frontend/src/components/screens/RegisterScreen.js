@@ -12,7 +12,12 @@ export default function RegisterScreen() {
   const router = useRouter();
   const auth = useAppStore((state) => state.auth);
   const registerUser = useAppStore((state) => state.registerUser);
+  const clearAuthError = useAppStore((state) => state.clearAuthError);
   const [formValues, setFormValues] = useState({ name: "", email: "", password: "" });
+
+  useEffect(() => {
+    clearAuthError();
+  }, [clearAuthError]);
 
   useEffect(() => {
     if (auth.isAuthenticated) {
