@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
@@ -34,6 +35,7 @@ export default function ImageEditorScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [pendingCanvasAction, setPendingCanvasAction] = useState(null);
   const [prompt, setPrompt] = useState("Create a clean product launch social post.");
   const [project, setProject] = useState(mockImageProject);
   const [responses, setResponses] = useState([]);
@@ -243,7 +245,25 @@ export default function ImageEditorScreen() {
   }
 
   function handleSelectHistory(responseId) {
+    if (selectedResponseId === responseId) {
+      return;
+    }
+
+    if (queueUnsavedCanvasAction(() => selectHistoryResponse(responseId))) {
+      return;
+    }
+
+    selectHistoryResponse(responseId);
+  }
+
+  function selectHistoryResponse(responseId) {
     setSelectedResponseId(responseId);
+    const response = responses.find((item) => item.id === responseId);
+
+    if (response) {
+      setPrompt(response.prompt);
+      showNotification("History loaded", "Image response selected.", TOAST_TYPES.INFO, 3000);
+    }
   }
 
   function handleCopyResponse(response) {
@@ -350,6 +370,14 @@ export default function ImageEditorScreen() {
   }
 
   function handleInsertResponse(response) {
+    if (queueUnsavedCanvasAction(() => insertResponseIntoCanvas(response))) {
+      return;
+    }
+
+    insertResponseIntoCanvas(response);
+  }
+
+  function insertResponseIntoCanvas(response) {
     setPrompt(response.prompt);
     setGenerationRequest({ id: Date.now(), prompt: response.prompt });
     showNotification("Inserted", "Image response inserted into the canvas.", TOAST_TYPES.SUCCESS);
@@ -375,12 +403,16 @@ export default function ImageEditorScreen() {
     );
   }
 
+  async function saveCurrentCanvas() {
+    const payload = canvas ? JSON.stringify(canvas.toJSON()) : "{}";
+    await handleSaveCanvas(payload);
+  }
+
   function handleHeaderSave() {
     setIsSaving(true);
     window.setTimeout(async () => {
-      const payload = canvas ? JSON.stringify(canvas.toJSON()) : "{}";
       try {
-        await handleSaveCanvas(payload);
+        await saveCurrentCanvas();
       } catch (error) {
         showNotification(
           "Save failed",
@@ -391,6 +423,34 @@ export default function ImageEditorScreen() {
         setIsSaving(false);
       }
     }, 250);
+  }
+
+  function queueUnsavedCanvasAction(action) {
+    if (!hasUnsavedChanges) {
+      return false;
+    }
+
+    setPendingCanvasAction(() => action);
+    return true;
+  }
+
+  async function handleConfirmPendingAction() {
+    setIsSaving(true);
+
+    try {
+      await saveCurrentCanvas();
+      pendingCanvasAction?.();
+      setPendingCanvasAction(null);
+      showNotification("Saved", "Canvas saved before switching.", TOAST_TYPES.SUCCESS);
+    } catch (error) {
+      showNotification(
+        "Save failed",
+        error.message || "Canvas could not be saved before switching.",
+        TOAST_TYPES.ERROR
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function handleExport(format) {
@@ -486,6 +546,17 @@ export default function ImageEditorScreen() {
           </aside>
         </main>
       </div>
+
+      {pendingCanvasAction && (
+        <ConfirmDialog
+          cancelLabel="Stay Here"
+          confirmLabel="Save and Continue"
+          description="Your current canvas has unsaved changes. Save this image draft before loading another response?"
+          onCancel={() => setPendingCanvasAction(null)}
+          onConfirm={handleConfirmPendingAction}
+          title="Save changes before switching?"
+        />
+      )}
 
       <ToastNotification
         duration={notification?.duration}
