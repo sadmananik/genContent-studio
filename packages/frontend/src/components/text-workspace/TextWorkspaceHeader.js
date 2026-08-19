@@ -36,10 +36,10 @@ export default function TextWorkspaceHeader({
     <header className="relative flex flex-wrap items-center gap-4 border-b border-slate-200 bg-white px-5 py-4 lg:px-7">
       <Link
         className="inline-flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
-        href={ROUTES.DASHBOARD}
+        href={ROUTES.PROJECTS}
       >
         <ArrowLeft aria-hidden="true" size={17} />
-        Dashboard
+        Projects
       </Link>
 
       <div className="min-w-0 flex-1">

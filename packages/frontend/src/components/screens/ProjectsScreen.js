@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
+import { EllipsisVertical } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -182,6 +182,7 @@ export default function ProjectsScreen() {
               <div className="relative flex justify-end">
                 <Button
                   aria-label={`${project.title} actions`}
+                  className="rounded-full border-slate-200 bg-white text-slate-500 shadow-sm hover:border-violet-200 hover:bg-violet-100 hover:text-violet-700"
                   variant="icon"
                   type="button"
                   onClick={(event) => {
@@ -191,7 +192,7 @@ export default function ProjectsScreen() {
                     );
                   }}
                 >
-                  <MoreHorizontal aria-hidden="true" size={18} />
+                  <EllipsisVertical aria-hidden="true" size={18} />
                 </Button>
                 {openActionProjectId === project.id && (
                   <div
