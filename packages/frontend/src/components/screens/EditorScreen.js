@@ -44,9 +44,9 @@ export default function EditorScreen() {
   const [responses, setResponses] = useState(mockAIResponses);
   const [savedDraft, setSavedDraft] = useState(null);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
+  const [localInvites, setLocalInvites] = useState([]);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIResponses[0]?.id || null);
-  const [shareLink, setShareLink] = useState("");
   const [workspaceMessage, setWorkspaceMessage] = useState("");
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const savePayload = useMemo(
@@ -76,13 +76,26 @@ export default function EditorScreen() {
   );
   const selectedResponse =
     responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
-  const invitedUsers =
-    project.collaborators?.length > 0
-      ? project.collaborators
-      : [
-          { name: "Sravya Matta", email: "sravya.matta@cqumail.com" },
-          { name: "Sadman Anik", email: "sadmananik1@gmail.com" }
-        ];
+  const invitedUsers = useMemo(() => {
+    const projectUsers =
+      project.collaborators?.length > 0
+        ? project.collaborators
+        : [
+            { name: "Sravya Matta", email: "sravya.matta@cqumail.com" },
+            { name: "Sadman Anik", email: "sadmananik1@gmail.com" }
+          ];
+    const usersByEmail = new Map();
+
+    [...projectUsers, ...localInvites].forEach((user) => {
+      const email = user.email?.toLowerCase();
+
+      if (email && !usersByEmail.has(email)) {
+        usersByEmail.set(email, user);
+      }
+    });
+
+    return [...usersByEmail.values()];
+  }, [localInvites, project.collaborators]);
 
   useEffect(() => {
     if (!isRealProject) {
@@ -170,26 +183,6 @@ export default function EditorScreen() {
     }
   }
 
-  async function handleShare() {
-    const shareText = `${project.title}\n\n${editorContent.text}`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: project.title,
-          text: shareText
-        });
-        setWorkspaceMessage("Share sheet opened.");
-        return;
-      }
-
-      await copyText(shareText);
-      setWorkspaceMessage("Share text copied.");
-    } catch (error) {
-      setWorkspaceMessage("Share cancelled.");
-    }
-  }
-
   async function handleCopyResponse(response) {
     await copyText(response.response);
     setCopiedResponseId(response.id);
@@ -239,11 +232,38 @@ export default function EditorScreen() {
     setWorkspaceMessage("Response updated.");
   }
 
-  async function handleGenerateLink() {
-    const link = `${window.location.origin}/editor?projectId=${projectId}&type=text`;
-    setShareLink(link);
-    await copyText(link);
-    setWorkspaceMessage("Project link copied.");
+  function handleInviteUser(emailValue) {
+    const email = emailValue.trim().toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setWorkspaceMessage("Enter a valid email address to invite.");
+      return false;
+    }
+
+    if (invitedUsers.some((user) => user.email?.toLowerCase() === email)) {
+      setWorkspaceMessage(`${email} is already invited.`);
+      return false;
+    }
+
+    setLocalInvites((currentInvites) => [...currentInvites, { email, name: nameFromEmail(email) }]);
+    setWorkspaceMessage(`Invite prepared for ${email}.`);
+    return true;
+  }
+
+  function handleExport(format) {
+    const filename = slugify(project.title);
+
+    if (format === "pdf") {
+      downloadBlob(createPdfBlob(project.title, editorContent.text), `${filename}.pdf`);
+      setWorkspaceMessage("PDF export downloaded.");
+      return;
+    }
+
+    downloadBlob(
+      new Blob([`${project.title}\n\n${editorContent.text}`], { type: "text/plain;charset=utf-8" }),
+      `${filename}.txt`
+    );
+    setWorkspaceMessage("Text export downloaded.");
   }
 
   function handleSelectHistory(historyId) {
@@ -343,11 +363,10 @@ export default function EditorScreen() {
       <TextWorkspaceHeader
         invitedUsers={invitedUsers}
         isSaving={isSaving}
-        onGenerateLink={handleGenerateLink}
+        onExport={handleExport}
+        onInviteUser={handleInviteUser}
         onSave={handleSave}
-        onShare={handleShare}
         project={project}
-        shareLink={shareLink}
         statusLabel={statusLabel}
       />
 
@@ -498,4 +517,110 @@ function formatTime(value) {
 
 function stripHtml(value) {
   return value.replace(/<[^>]*>/g, " ");
+}
+
+function nameFromEmail(email) {
+  return email
+    .replace(/@.*/, "")
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => `${part[0]?.toUpperCase() || ""}${part.slice(1)}`)
+    .join(" ");
+}
+
+function slugify(value) {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "text-project"
+  );
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function createPdfBlob(title, text) {
+  const lines = wrapPdfText([title, "", text].join("\n"), 82).slice(0, 48);
+  const contentLines = ["BT", "/F1 12 Tf", "14 TL", "72 760 Td"];
+
+  lines.forEach((line, index) => {
+    if (index === 0) {
+      contentLines.push("/F1 16 Tf");
+    } else if (index === 1) {
+      contentLines.push("/F1 12 Tf");
+    }
+
+    contentLines.push(`(${escapePdfText(line)}) Tj`);
+
+    if (index < lines.length - 1) {
+      contentLines.push("T*");
+    }
+  });
+
+  contentLines.push("ET");
+
+  const stream = contentLines.join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return new Blob([pdf], { type: "application/pdf" });
+}
+
+function wrapPdfText(value, maxLineLength) {
+  return value.split("\n").flatMap((paragraph) => {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+
+    if (words.length === 0) {
+      return [""];
+    }
+
+    return words.reduce(
+      (lines, word) => {
+        const currentLine = lines[lines.length - 1];
+        const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+        if (nextLine.length <= maxLineLength) {
+          lines[lines.length - 1] = nextLine;
+        } else {
+          lines.push(word);
+        }
+
+        return lines;
+      },
+      [""]
+    );
+  });
+}
+
+function escapePdfText(value) {
+  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 }
