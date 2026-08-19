@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EllipsisVertical, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Settings2, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -214,7 +214,7 @@ export default function ProjectsScreen() {
                     );
                   }}
                 >
-                  <EllipsisVertical aria-hidden="true" size={18} />
+                  <Settings2 aria-hidden="true" size={18} />
                 </Button>
                 {openActionProjectId === project.id && (
                   <div
@@ -222,13 +222,8 @@ export default function ProjectsScreen() {
                     onClick={(event) => event.stopPropagation()}
                     role="menu"
                   >
-                    <div className="border-b border-slate-100 px-3 py-2">
-                      <p className="truncate text-xs font-bold uppercase text-slate-500">
-                        Project actions
-                      </p>
-                    </div>
                     <button
-                      className="mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
                       onClick={() => {
                         setEditingProject(project);
                         setOpenActionProjectId(null);
