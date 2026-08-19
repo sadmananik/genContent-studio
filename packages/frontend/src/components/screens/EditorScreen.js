@@ -8,7 +8,6 @@ import EditorToolbar from "../text-workspace/EditorToolbar";
 import TipTapEditor from "../text-workspace/TipTapEditor";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import {
-  mockAIHistory,
   mockAIResponses,
   mockPromptActions,
   mockTextProject
@@ -29,9 +28,9 @@ export default function EditorScreen() {
     "Write an introduction about how AI tools help small businesses."
   );
   const [responses, setResponses] = useState(mockAIResponses);
-  const [history, setHistory] = useState(mockAIHistory);
+  const [saveHistory, setSaveHistory] = useState([]);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
-  const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIHistory[0]?.id || null);
+  const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIResponses[0]?.id || null);
   const [workspaceMessage, setWorkspaceMessage] = useState("");
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const savePayload = useMemo(
@@ -46,12 +45,26 @@ export default function EditorScreen() {
     : lastSavedAt
       ? `Saved ${formatTime(lastSavedAt)}`
       : mockTextProject.lastUpdated;
+  const history = useMemo(
+    () => [
+      ...saveHistory,
+      ...responses.map((response) => ({
+        id: response.id,
+        prompt: response.prompt,
+        timestamp: response.timestamp,
+        favourite: response.favourite,
+        type: "response"
+      }))
+    ],
+    [responses, saveHistory]
+  );
 
   function handleGenerate() {
     setIsGenerating(true);
     window.setTimeout(() => {
+      const responseId = `response-${Date.now()}`;
       const response = {
-        id: `response-${Date.now()}`,
+        id: responseId,
         prompt,
         response: buildDemoResponse(prompt),
         timestamp: "Just now",
@@ -59,16 +72,7 @@ export default function EditorScreen() {
       };
 
       setResponses((currentResponses) => [response, ...currentResponses]);
-      setHistory((currentHistory) => [
-        {
-          id: `history-${Date.now()}`,
-          prompt: prompt.slice(0, 72),
-          timestamp: "Just now",
-          favourite: false
-        },
-        ...currentHistory
-      ]);
-      setSelectedHistoryId(response.id);
+      setSelectedHistoryId(responseId);
       setWorkspaceMessage("Demo response generated.");
       setIsGenerating(false);
     }, 900);
@@ -86,19 +90,10 @@ export default function EditorScreen() {
 
   function handleSave() {
     setIsSaving(true);
-    window.localStorage.setItem("gencontent-demo-text-workspace", JSON.stringify(savePayload));
+    saveCurrentDraft();
     window.setTimeout(() => {
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
-      setHistory((currentHistory) => [
-        {
-          id: `save-${Date.now()}`,
-          prompt: `Saved ${mockTextProject.title}`,
-          timestamp: "Just now",
-          favourite: false
-        },
-        ...currentHistory
-      ]);
       setWorkspaceMessage("Project saved in this browser.");
       setIsSaving(false);
     }, 450);
@@ -144,12 +139,10 @@ export default function EditorScreen() {
       return;
     }
 
-    editor
-      .chain()
-      .focus()
-      .insertContent(`<p>${escapeHtml(response.response)}</p>`)
-      .run();
-    setWorkspaceMessage("Response inserted into editor.");
+    replaceEditorContent(response.response);
+    setSelectedHistoryId(response.id);
+    setPrompt(response.prompt);
+    setWorkspaceMessage("Response replaced the editor content.");
   }
 
   function handleUpdateResponse(responseId, updatedResponse) {
@@ -162,12 +155,75 @@ export default function EditorScreen() {
   }
 
   function handleSelectHistory(historyId) {
-    setSelectedHistoryId(historyId);
-    const historyItem = history.find((item) => item.id === historyId);
-
-    if (historyItem) {
-      setPrompt(historyItem.prompt);
+    if (!editor) {
+      return;
     }
+
+    const canSwitch = resolveUnsavedChangesBeforeMove();
+
+    if (!canSwitch) {
+      return;
+    }
+
+    const responseItem = responses.find((response) => response.id === historyId);
+    const savedItem = saveHistory.find((item) => item.id === historyId);
+
+    setSelectedHistoryId(historyId);
+
+    if (responseItem) {
+      setPrompt(responseItem.prompt);
+      replaceEditorContent(responseItem.response, { markUnsaved: false });
+      setWorkspaceMessage("History response loaded in editor.");
+      return;
+    }
+
+    if (savedItem) {
+      setPrompt(savedItem.prompt);
+      editor.commands.setContent(savedItem.html);
+      setEditorContent({ html: savedItem.html, text: savedItem.text });
+      setHasUnsavedChanges(false);
+      setWorkspaceMessage("Saved version loaded in editor.");
+    }
+  }
+
+  function resolveUnsavedChangesBeforeMove() {
+    if (!hasUnsavedChanges) {
+      return true;
+    }
+
+    const shouldSave = window.confirm("You have unsaved editor changes. Save before switching?");
+
+    if (!shouldSave) {
+      return false;
+    }
+
+    saveCurrentDraft();
+    setHasUnsavedChanges(false);
+    setLastSavedAt(new Date());
+    return true;
+  }
+
+  function saveCurrentDraft() {
+    window.localStorage.setItem("gencontent-demo-text-workspace", JSON.stringify(savePayload));
+    setSaveHistory((currentHistory) => [
+      {
+        id: `save-${Date.now()}`,
+        prompt: `Saved ${mockTextProject.title}`,
+        timestamp: "Just now",
+        favourite: false,
+        type: "save",
+        html: editorContent.html,
+        text: editorContent.text
+      },
+      ...currentHistory
+    ]);
+  }
+
+  function replaceEditorContent(value, options = {}) {
+    const html = `<p>${escapeHtml(value)}</p>`;
+    editor.commands.setContent(html);
+    setEditorContent({ html, text: value });
+    setHasUnsavedChanges(options.markUnsaved ?? true);
   }
 
   return (
@@ -239,6 +295,7 @@ export default function EditorScreen() {
                   onInsert={handleInsertResponse}
                   onUpdate={handleUpdateResponse}
                   response={response}
+                  selected={selectedHistoryId === response.id}
                 />
               ))}
             </section>

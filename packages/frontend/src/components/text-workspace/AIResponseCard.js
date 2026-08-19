@@ -8,7 +8,8 @@ export default function AIResponseCard({
   onFavourite,
   onInsert,
   onUpdate,
-  response
+  response,
+  selected
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftResponse, setDraftResponse] = useState(response.response);
@@ -19,7 +20,11 @@ export default function AIResponseCard({
   }
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
+    <article
+      className={`rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] ${
+        selected ? "border-violet-300 ring-4 ring-violet-100" : "border-slate-200"
+      }`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase text-slate-500">Prompt</p>
