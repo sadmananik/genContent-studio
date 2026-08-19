@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
+import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import AIResponseCard from "../text-workspace/AIResponseCard";
@@ -47,7 +48,7 @@ export default function EditorScreen() {
   const [localInvites, setLocalInvites] = useState([]);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIResponses[0]?.id || null);
-  const [workspaceMessage, setWorkspaceMessage] = useState("");
+  const [notification, setNotification] = useState(null);
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const savePayload = useMemo(
     () => ({
@@ -145,7 +146,7 @@ export default function EditorScreen() {
 
       setResponses((currentResponses) => [response, ...currentResponses]);
       setSelectedHistoryId(responseId);
-      setWorkspaceMessage("Demo response generated.");
+      showNotification("AI generated", "Demo response generated.", TOAST_TYPES.SUCCESS);
       setIsGenerating(false);
 
       if (isRealProject) {
@@ -166,8 +167,15 @@ export default function EditorScreen() {
   const handleEditorChange = useCallback((content) => {
     setEditorContent(content);
     setHasUnsavedChanges(true);
-    setWorkspaceMessage("");
   }, []);
+
+  const dismissNotification = useCallback(() => {
+    setNotification(null);
+  }, []);
+
+  function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
+    setNotification({ duration, id: Date.now(), message, title, type });
+  }
 
   async function handleSave() {
     setIsSaving(true);
@@ -175,9 +183,17 @@ export default function EditorScreen() {
       await saveCurrentDraft();
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
-      setWorkspaceMessage(isRealProject ? "Project saved." : "Project saved in this browser.");
+      showNotification(
+        "Saved",
+        isRealProject ? "Project saved." : "Project saved in this browser.",
+        TOAST_TYPES.SUCCESS
+      );
     } catch (error) {
-      setWorkspaceMessage(error.message || "Project could not be saved.");
+      showNotification(
+        "Save failed",
+        error.message || "Project could not be saved.",
+        TOAST_TYPES.ERROR
+      );
     } finally {
       setIsSaving(false);
     }
@@ -186,7 +202,7 @@ export default function EditorScreen() {
   async function handleCopyResponse(response) {
     await copyText(response.response);
     setCopiedResponseId(response.id);
-    setWorkspaceMessage("Response copied.");
+    showNotification("Copied", "Response copied.", TOAST_TYPES.SUCCESS, 3000);
     window.setTimeout(() => setCopiedResponseId(null), 1400);
   }
 
@@ -197,6 +213,12 @@ export default function EditorScreen() {
       currentResponses.map((response) =>
         response.id === responseId ? { ...response, favourite: !response.favourite } : response
       )
+    );
+    showNotification(
+      response?.favourite ? "Favourite removed" : "Favourite saved",
+      response?.favourite ? "Response removed from favourites." : "Response added to favourites.",
+      TOAST_TYPES.SUCCESS,
+      3000
     );
 
     if (isRealProject && response?.sourceId) {
@@ -220,7 +242,7 @@ export default function EditorScreen() {
     replaceEditorContent(response.response);
     setSelectedHistoryId(response.id);
     setPrompt(response.prompt);
-    setWorkspaceMessage("Response replaced the editor content.");
+    showNotification("Inserted", "Response replaced the editor content.", TOAST_TYPES.SUCCESS);
   }
 
   function handleUpdateResponse(responseId, updatedResponse) {
@@ -229,24 +251,28 @@ export default function EditorScreen() {
         response.id === responseId ? { ...response, response: updatedResponse } : response
       )
     );
-    setWorkspaceMessage("Response updated.");
+    showNotification("Updated", "Response updated.", TOAST_TYPES.SUCCESS, 3000);
   }
 
   function handleInviteUser(emailValue) {
     const email = emailValue.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setWorkspaceMessage("Enter a valid email address to invite.");
+      showNotification(
+        "Invite failed",
+        "Enter a valid email address to invite.",
+        TOAST_TYPES.WARNING
+      );
       return false;
     }
 
     if (invitedUsers.some((user) => user.email?.toLowerCase() === email)) {
-      setWorkspaceMessage(`${email} is already invited.`);
+      showNotification("Already invited", `${email} is already invited.`, TOAST_TYPES.WARNING);
       return false;
     }
 
     setLocalInvites((currentInvites) => [...currentInvites, { email, name: nameFromEmail(email) }]);
-    setWorkspaceMessage(`Invite prepared for ${email}.`);
+    showNotification("Shared", `Invite prepared for ${email}.`, TOAST_TYPES.SUCCESS);
     return true;
   }
 
@@ -255,7 +281,7 @@ export default function EditorScreen() {
 
     if (format === "pdf") {
       downloadBlob(createPdfBlob(project.title, editorContent.text), `${filename}.pdf`);
-      setWorkspaceMessage("PDF export downloaded.");
+      showNotification("Exported", "PDF export downloaded.", TOAST_TYPES.SUCCESS, 3000);
       return;
     }
 
@@ -263,7 +289,7 @@ export default function EditorScreen() {
       new Blob([`${project.title}\n\n${editorContent.text}`], { type: "text/plain;charset=utf-8" }),
       `${filename}.txt`
     );
-    setWorkspaceMessage("Text export downloaded.");
+    showNotification("Exported", "Text export downloaded.", TOAST_TYPES.SUCCESS, 3000);
   }
 
   function handleSelectHistory(historyId) {
@@ -291,7 +317,12 @@ export default function EditorScreen() {
     if (responseItem) {
       setPrompt(responseItem.prompt);
       replaceEditorContent(responseItem.response, { markUnsaved: false });
-      setWorkspaceMessage("History response loaded in editor.");
+      showNotification(
+        "History loaded",
+        "History response loaded in editor.",
+        TOAST_TYPES.INFO,
+        3000
+      );
       return;
     }
 
@@ -300,7 +331,7 @@ export default function EditorScreen() {
       editor.commands.setContent(savedItem.html);
       setEditorContent({ html: savedItem.html, text: savedItem.text });
       setHasUnsavedChanges(false);
-      setWorkspaceMessage("Saved version loaded in editor.");
+      showNotification("Draft loaded", "Saved version loaded in editor.", TOAST_TYPES.INFO, 3000);
     }
   }
 
@@ -322,9 +353,13 @@ export default function EditorScreen() {
       setLastSavedAt(new Date());
       pendingEditorAction?.();
       setPendingEditorAction(null);
-      setWorkspaceMessage("Draft saved before switching.");
+      showNotification("Saved", "Draft saved before switching.", TOAST_TYPES.SUCCESS);
     } catch (error) {
-      setWorkspaceMessage(error.message || "Draft could not be saved.");
+      showNotification(
+        "Save failed",
+        error.message || "Draft could not be saved.",
+        TOAST_TYPES.ERROR
+      );
     } finally {
       setIsSaving(false);
     }
@@ -396,9 +431,6 @@ export default function EditorScreen() {
                 onContentChange={handleEditorChange}
                 onEditorReady={setEditor}
               />
-              <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
-                {workspaceMessage || "Changes are saved locally in this demo workspace."}
-              </div>
             </article>
           </section>
 
@@ -449,6 +481,14 @@ export default function EditorScreen() {
           title="Save changes before switching?"
         />
       )}
+      <ToastNotification
+        duration={notification?.duration}
+        key={notification?.id}
+        message={notification?.message}
+        onClose={dismissNotification}
+        title={notification?.title}
+        type={notification?.type}
+      />
     </section>
   );
 }

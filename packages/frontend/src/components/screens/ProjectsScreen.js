@@ -7,6 +7,7 @@ import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
+import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
 import { PROJECT_TYPES } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
@@ -24,6 +25,7 @@ export default function ProjectsScreen() {
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectPendingDelete, setProjectPendingDelete] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     if (auth.token) {
@@ -34,15 +36,24 @@ export default function ProjectsScreen() {
   const projects = useMemo(() => projectState.projects.map(formatProject), [projectState.projects]);
 
   async function handleCreateProject(values) {
-    const project = await createProject({
-      title: values.title,
-      description: values.description,
-      category: values.category,
-      type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
-    });
+    try {
+      const project = await createProject({
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+      });
 
-    setShowProjectForm(false);
-    router.push(getProjectWorkspaceHref(formatProject(project)));
+      setShowProjectForm(false);
+      showNotification("Project created", `"${project.title}" is ready.`, TOAST_TYPES.SUCCESS);
+      router.push(getProjectWorkspaceHref(formatProject(project)));
+    } catch (error) {
+      showNotification(
+        "Create failed",
+        error.message || "Project could not be created.",
+        TOAST_TYPES.ERROR
+      );
+    }
   }
 
   async function handleUpdateProject(values) {
@@ -50,13 +61,22 @@ export default function ProjectsScreen() {
       return;
     }
 
-    await updateProject(editingProject.id, {
-      title: values.title,
-      description: values.description,
-      category: values.category,
-      type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
-    });
-    setEditingProject(null);
+    try {
+      await updateProject(editingProject.id, {
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+      });
+      showNotification("Project updated", `"${values.title}" was saved.`, TOAST_TYPES.SUCCESS);
+      setEditingProject(null);
+    } catch (error) {
+      showNotification(
+        "Update failed",
+        error.message || "Project could not be updated.",
+        TOAST_TYPES.ERROR
+      );
+    }
   }
 
   async function handleDeleteProject() {
@@ -68,10 +88,25 @@ export default function ProjectsScreen() {
 
     try {
       await deleteProject(projectPendingDelete.id);
+      showNotification(
+        "Project deleted",
+        `"${projectPendingDelete.title}" was deleted.`,
+        TOAST_TYPES.SUCCESS
+      );
       setProjectPendingDelete(null);
+    } catch (error) {
+      showNotification(
+        "Delete failed",
+        error.message || "Project could not be deleted.",
+        TOAST_TYPES.ERROR
+      );
     } finally {
       setDeletingProjectId(null);
     }
+  }
+
+  function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
+    setNotification({ duration, id: Date.now(), message, title, type });
   }
 
   function handleProjectRowKeyDown(event, project) {
@@ -204,6 +239,14 @@ export default function ProjectsScreen() {
           title="Delete project?"
         />
       )}
+      <ToastNotification
+        duration={notification?.duration}
+        key={notification?.id}
+        message={notification?.message}
+        onClose={() => setNotification(null)}
+        title={notification?.title}
+        type={notification?.type}
+      />
     </main>
   );
 }
