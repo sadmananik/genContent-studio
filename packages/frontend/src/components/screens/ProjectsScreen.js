@@ -174,10 +174,10 @@ export default function ProjectsScreen() {
         <section className="grid gap-4">
           {projects.map((project) => (
             <article
-              className={`group grid cursor-pointer gap-4 rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:bg-violet-50/70 focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center ${
+              className={`group relative grid cursor-pointer gap-4 rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:bg-violet-50/70 focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center ${
                 openActionProjectId === project.id
-                  ? "border-violet-300 bg-violet-50/70"
-                  : "border-slate-200"
+                  ? "z-30 border-violet-300 bg-violet-50/70"
+                  : "z-0 border-slate-200"
               }`}
               key={project.id}
               onClick={() => router.push(getProjectWorkspaceHref(project))}
@@ -221,7 +221,7 @@ export default function ProjectsScreen() {
                 </Button>
                 {openActionProjectId === project.id && (
                   <div
-                    className="absolute right-0 top-[calc(100%+0.625rem)] z-20 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
+                    className="absolute right-0 top-[calc(100%+0.625rem)] z-50 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
                     onClick={(event) => event.stopPropagation()}
                     role="menu"
                   >
