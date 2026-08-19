@@ -12,6 +12,17 @@ const projectSchema = new mongoose.Schema(
       enum: ["text", "image"],
       required: true
     },
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "Other"
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: ""
+    },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
