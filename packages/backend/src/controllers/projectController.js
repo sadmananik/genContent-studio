@@ -45,9 +45,14 @@ const updateProject = asyncHandler(async (req, res) => {
   const project = await findAccessibleProject(req.params.id, req.user.id);
   const allowedUpdates = ["title", "type", "category", "description", "collaborators"];
 
+  if (req.body.type !== undefined && !["text", "image"].includes(req.body.type)) {
+    throw httpError(400, "Project type must be text or image");
+  }
+
   allowedUpdates.forEach((field) => {
     if (req.body[field] !== undefined) {
-      project[field] = req.body[field];
+      project[field] =
+        typeof req.body[field] === "string" ? req.body[field].trim() : req.body[field];
     }
   });
 

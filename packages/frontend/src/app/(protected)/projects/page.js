@@ -1,5 +1,5 @@
-import PlaceholderPage from "../../../components/common/PlaceholderPage";
+import ProjectsScreen from "../../../components/screens/ProjectsScreen";
 
 export default function ProjectsPage() {
-  return <PlaceholderPage title="Projects" />;
+  return <ProjectsScreen />;
 }
