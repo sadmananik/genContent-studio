@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { MoreHorizontal } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -22,6 +23,7 @@ export default function ProjectsScreen() {
   const fetchProjects = useAppStore((state) => state.fetchProjects);
   const updateProject = useAppStore((state) => state.updateProject);
   const [editingProject, setEditingProject] = useState(null);
+  const [openActionProjectId, setOpenActionProjectId] = useState(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectPendingDelete, setProjectPendingDelete] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
@@ -177,37 +179,48 @@ export default function ProjectsScreen() {
                   <p className="mt-2 line-clamp-2 text-sm text-slate-600">{project.description}</p>
                 )}
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row md:justify-end">
+              <div className="relative flex justify-end">
                 <Button
-                  variant="secondary"
+                  aria-label={`${project.title} actions`}
+                  variant="icon"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    setEditingProject(project);
+                    setOpenActionProjectId((currentId) =>
+                      currentId === project.id ? null : project.id
+                    );
                   }}
                 >
-                  Edit
+                  <MoreHorizontal aria-hidden="true" size={18} />
                 </Button>
-                <Button
-                  variant="ghost"
-                  type="button"
-                  disabled={deletingProjectId === project.id}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setProjectPendingDelete(project);
-                  }}
-                >
-                  {deletingProjectId === project.id ? "Deleting..." : "Delete"}
-                </Button>
-                <Button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    router.push(getProjectWorkspaceHref(project));
-                  }}
-                  type="button"
-                >
-                  Open
-                </Button>
+                {openActionProjectId === project.id && (
+                  <div
+                    className="absolute right-0 top-[calc(100%+0.5rem)] z-20 grid w-40 overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <button
+                      className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                      onClick={() => {
+                        setEditingProject(project);
+                        setOpenActionProjectId(null);
+                      }}
+                      type="button"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="rounded-md px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+                      disabled={deletingProjectId === project.id}
+                      onClick={() => {
+                        setProjectPendingDelete(project);
+                        setOpenActionProjectId(null);
+                      }}
+                      type="button"
+                    >
+                      {deletingProjectId === project.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                )}
               </div>
             </article>
           ))}
