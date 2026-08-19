@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
-import ToastNotification from "../common/ToastNotification";
+import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import AIResponseCard from "../text-workspace/AIResponseCard";
@@ -146,7 +146,7 @@ export default function EditorScreen() {
 
       setResponses((currentResponses) => [response, ...currentResponses]);
       setSelectedHistoryId(responseId);
-      showNotification("AI generated", "Demo response generated.", "success");
+      showNotification("AI generated", "Demo response generated.", TOAST_TYPES.SUCCESS);
       setIsGenerating(false);
 
       if (isRealProject) {
@@ -173,7 +173,7 @@ export default function EditorScreen() {
     setNotification(null);
   }, []);
 
-  function showNotification(title, message, type = "info", duration = 5000) {
+  function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
 
@@ -186,10 +186,14 @@ export default function EditorScreen() {
       showNotification(
         "Saved",
         isRealProject ? "Project saved." : "Project saved in this browser.",
-        "success"
+        TOAST_TYPES.SUCCESS
       );
     } catch (error) {
-      showNotification("Save failed", error.message || "Project could not be saved.", "error");
+      showNotification(
+        "Save failed",
+        error.message || "Project could not be saved.",
+        TOAST_TYPES.ERROR
+      );
     } finally {
       setIsSaving(false);
     }
@@ -198,7 +202,7 @@ export default function EditorScreen() {
   async function handleCopyResponse(response) {
     await copyText(response.response);
     setCopiedResponseId(response.id);
-    showNotification("Copied", "Response copied.", "success", 3000);
+    showNotification("Copied", "Response copied.", TOAST_TYPES.SUCCESS, 3000);
     window.setTimeout(() => setCopiedResponseId(null), 1400);
   }
 
@@ -213,7 +217,7 @@ export default function EditorScreen() {
     showNotification(
       response?.favourite ? "Favourite removed" : "Favourite saved",
       response?.favourite ? "Response removed from favourites." : "Response added to favourites.",
-      "success",
+      TOAST_TYPES.SUCCESS,
       3000
     );
 
@@ -238,7 +242,7 @@ export default function EditorScreen() {
     replaceEditorContent(response.response);
     setSelectedHistoryId(response.id);
     setPrompt(response.prompt);
-    showNotification("Inserted", "Response replaced the editor content.", "success");
+    showNotification("Inserted", "Response replaced the editor content.", TOAST_TYPES.SUCCESS);
   }
 
   function handleUpdateResponse(responseId, updatedResponse) {
@@ -247,24 +251,28 @@ export default function EditorScreen() {
         response.id === responseId ? { ...response, response: updatedResponse } : response
       )
     );
-    showNotification("Updated", "Response updated.", "success", 3000);
+    showNotification("Updated", "Response updated.", TOAST_TYPES.SUCCESS, 3000);
   }
 
   function handleInviteUser(emailValue) {
     const email = emailValue.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showNotification("Invite failed", "Enter a valid email address to invite.", "warning");
+      showNotification(
+        "Invite failed",
+        "Enter a valid email address to invite.",
+        TOAST_TYPES.WARNING
+      );
       return false;
     }
 
     if (invitedUsers.some((user) => user.email?.toLowerCase() === email)) {
-      showNotification("Already invited", `${email} is already invited.`, "warning");
+      showNotification("Already invited", `${email} is already invited.`, TOAST_TYPES.WARNING);
       return false;
     }
 
     setLocalInvites((currentInvites) => [...currentInvites, { email, name: nameFromEmail(email) }]);
-    showNotification("Shared", `Invite prepared for ${email}.`, "success");
+    showNotification("Shared", `Invite prepared for ${email}.`, TOAST_TYPES.SUCCESS);
     return true;
   }
 
@@ -273,7 +281,7 @@ export default function EditorScreen() {
 
     if (format === "pdf") {
       downloadBlob(createPdfBlob(project.title, editorContent.text), `${filename}.pdf`);
-      showNotification("Exported", "PDF export downloaded.", "success", 3000);
+      showNotification("Exported", "PDF export downloaded.", TOAST_TYPES.SUCCESS, 3000);
       return;
     }
 
@@ -281,7 +289,7 @@ export default function EditorScreen() {
       new Blob([`${project.title}\n\n${editorContent.text}`], { type: "text/plain;charset=utf-8" }),
       `${filename}.txt`
     );
-    showNotification("Exported", "Text export downloaded.", "success", 3000);
+    showNotification("Exported", "Text export downloaded.", TOAST_TYPES.SUCCESS, 3000);
   }
 
   function handleSelectHistory(historyId) {
@@ -309,7 +317,12 @@ export default function EditorScreen() {
     if (responseItem) {
       setPrompt(responseItem.prompt);
       replaceEditorContent(responseItem.response, { markUnsaved: false });
-      showNotification("History loaded", "History response loaded in editor.", "info", 3000);
+      showNotification(
+        "History loaded",
+        "History response loaded in editor.",
+        TOAST_TYPES.INFO,
+        3000
+      );
       return;
     }
 
@@ -318,7 +331,7 @@ export default function EditorScreen() {
       editor.commands.setContent(savedItem.html);
       setEditorContent({ html: savedItem.html, text: savedItem.text });
       setHasUnsavedChanges(false);
-      showNotification("Draft loaded", "Saved version loaded in editor.", "info", 3000);
+      showNotification("Draft loaded", "Saved version loaded in editor.", TOAST_TYPES.INFO, 3000);
     }
   }
 
@@ -340,9 +353,13 @@ export default function EditorScreen() {
       setLastSavedAt(new Date());
       pendingEditorAction?.();
       setPendingEditorAction(null);
-      showNotification("Saved", "Draft saved before switching.", "success");
+      showNotification("Saved", "Draft saved before switching.", TOAST_TYPES.SUCCESS);
     } catch (error) {
-      showNotification("Save failed", error.message || "Draft could not be saved.", "error");
+      showNotification(
+        "Save failed",
+        error.message || "Draft could not be saved.",
+        TOAST_TYPES.ERROR
+      );
     } finally {
       setIsSaving(false);
     }

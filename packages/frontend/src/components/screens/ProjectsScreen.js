@@ -7,7 +7,7 @@ import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
-import ToastNotification from "../common/ToastNotification";
+import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
 import { PROJECT_TYPES } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
@@ -45,10 +45,14 @@ export default function ProjectsScreen() {
       });
 
       setShowProjectForm(false);
-      showNotification("Project created", `"${project.title}" is ready.`, "success");
+      showNotification("Project created", `"${project.title}" is ready.`, TOAST_TYPES.SUCCESS);
       router.push(getProjectWorkspaceHref(formatProject(project)));
     } catch (error) {
-      showNotification("Create failed", error.message || "Project could not be created.", "error");
+      showNotification(
+        "Create failed",
+        error.message || "Project could not be created.",
+        TOAST_TYPES.ERROR
+      );
     }
   }
 
@@ -64,10 +68,14 @@ export default function ProjectsScreen() {
         category: values.category,
         type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
       });
-      showNotification("Project updated", `"${values.title}" was saved.`, "success");
+      showNotification("Project updated", `"${values.title}" was saved.`, TOAST_TYPES.SUCCESS);
       setEditingProject(null);
     } catch (error) {
-      showNotification("Update failed", error.message || "Project could not be updated.", "error");
+      showNotification(
+        "Update failed",
+        error.message || "Project could not be updated.",
+        TOAST_TYPES.ERROR
+      );
     }
   }
 
@@ -83,17 +91,21 @@ export default function ProjectsScreen() {
       showNotification(
         "Project deleted",
         `"${projectPendingDelete.title}" was deleted.`,
-        "success"
+        TOAST_TYPES.SUCCESS
       );
       setProjectPendingDelete(null);
     } catch (error) {
-      showNotification("Delete failed", error.message || "Project could not be deleted.", "error");
+      showNotification(
+        "Delete failed",
+        error.message || "Project could not be deleted.",
+        TOAST_TYPES.ERROR
+      );
     } finally {
       setDeletingProjectId(null);
     }
   }
 
-  function showNotification(title, message, type = "info", duration = 5000) {
+  function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
 
