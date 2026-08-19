@@ -158,6 +158,7 @@ a {
 
 .login-panel {
   align-self: center;
+  min-width: 0;
   width: min(480px, 100%);
   padding: 42px;
   margin-top: 34px;
@@ -184,7 +185,8 @@ a {
   color: var(--muted);
 }
 
-.login-panel label {
+.login-panel label,
+.login-panel .auth-field {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -195,10 +197,146 @@ a {
   border-radius: 6px;
 }
 
-.login-panel input {
-  width: 100%;
+.login-panel input,
+.login-panel .auth-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
   border: 0;
   outline: 0;
+}
+
+.login-panel .auth-field:focus-within {
+  border-color: #8b7be8;
+  box-shadow: 0 0 0 3px rgb(113 88 217 / 12%);
+}
+
+.login-panel .auth-field:has(input[aria-invalid="true"]) {
+  border-color: #d92d20;
+}
+
+.password-field > svg {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.password-toggle,
+.password-info button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  place-items: center;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible,
+.password-info button:hover,
+.password-info button:focus-visible {
+  color: var(--purple);
+  background: #f2efff;
+  outline: 0;
+}
+
+.password-strength {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.password-strength-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+.password-strength-heading strong {
+  color: #b42318;
+}
+
+.password-strength[data-strength="medium"] .password-strength-heading strong {
+  color: #946200;
+}
+
+.password-strength[data-strength="strong"] .password-strength-heading strong {
+  color: #176b45;
+}
+
+.password-strength-bars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.password-strength-bars span {
+  height: 4px;
+  background: #e4e7ec;
+  border-radius: 2px;
+}
+
+.password-strength[data-strength="low"] .password-strength-bars .active {
+  background: #d92d20;
+}
+
+.password-strength[data-strength="medium"] .password-strength-bars .active {
+  background: #d99a00;
+}
+
+.password-strength[data-strength="strong"] .password-strength-bars .active {
+  background: #239b67;
+}
+
+.password-info {
+  position: relative;
+  display: inline-flex;
+}
+
+.password-info button {
+  width: 26px;
+  height: 26px;
+}
+
+.password-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 3;
+  width: 230px;
+  padding: 9px 10px;
+  color: white;
+  pointer-events: none;
+  visibility: hidden;
+  background: #20242c;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  line-height: 1.4;
+  opacity: 0;
+}
+
+.password-info:hover .password-tooltip,
+.password-info:focus-within .password-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.field-hint {
+  margin: 7px 0 0;
+  font-size: 12px;
+}
+
+.login-panel .field-hint.error {
+  color: #b42318;
+}
+
+.register-submit {
+  margin-top: 20px;
 }
 
 .login-panel .auth-error {
