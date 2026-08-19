@@ -16,7 +16,7 @@ export default function AIHistorySidebar({
       }`}
     >
       <div className="flex items-center justify-between gap-2 border-b border-slate-200 p-4">
-        {!isCollapsed && <h2 className="text-sm font-bold text-slate-950">AI History</h2>}
+        {!isCollapsed && <h2 className="text-sm font-bold text-slate-950">AI Prompt History</h2>}
         <button
           aria-label={isCollapsed ? "Expand AI history" : "Collapse AI history"}
           className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
