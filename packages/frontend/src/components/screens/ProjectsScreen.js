@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, Pencil, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -16,6 +16,7 @@ import { useAppStore } from "../../store";
 
 export default function ProjectsScreen() {
   const router = useRouter();
+  const actionMenuRef = useRef(null);
   const auth = useAppStore((state) => state.auth);
   const projectState = useAppStore((state) => state.projectState);
   const createProject = useAppStore((state) => state.createProject);
@@ -34,6 +35,21 @@ export default function ProjectsScreen() {
       fetchProjects().catch(() => {});
     }
   }, [auth.token, fetchProjects]);
+
+  useEffect(() => {
+    function handleClickAway(event) {
+      if (!actionMenuRef.current?.contains(event.target)) {
+        setOpenActionProjectId(null);
+      }
+    }
+
+    if (!openActionProjectId) {
+      return undefined;
+    }
+
+    document.addEventListener("mousedown", handleClickAway);
+    return () => document.removeEventListener("mousedown", handleClickAway);
+  }, [openActionProjectId]);
 
   const projects = useMemo(() => projectState.projects.map(formatProject), [projectState.projects]);
 
@@ -179,10 +195,16 @@ export default function ProjectsScreen() {
                   <p className="mt-2 line-clamp-2 text-sm text-slate-600">{project.description}</p>
                 )}
               </div>
-              <div className="relative flex justify-end">
+              <div className="relative flex justify-end" ref={actionMenuRef}>
                 <Button
                   aria-label={`${project.title} actions`}
-                  className="rounded-full border-slate-200 bg-white text-slate-500 shadow-sm hover:border-violet-200 hover:bg-violet-100 hover:text-violet-700"
+                  aria-expanded={openActionProjectId === project.id}
+                  aria-haspopup="menu"
+                  className={`rounded-full border-slate-200 bg-white text-slate-500 shadow-sm hover:border-violet-200 hover:bg-violet-100 hover:text-violet-700 ${
+                    openActionProjectId === project.id
+                      ? "border-violet-200 bg-violet-100 text-violet-700"
+                      : ""
+                  }`}
                   variant="icon"
                   type="button"
                   onClick={(event) => {
@@ -196,28 +218,38 @@ export default function ProjectsScreen() {
                 </Button>
                 {openActionProjectId === project.id && (
                   <div
-                    className="absolute right-0 top-[calc(100%+0.5rem)] z-20 grid w-40 overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
+                    className="absolute right-0 top-[calc(100%+0.625rem)] z-20 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
                     onClick={(event) => event.stopPropagation()}
+                    role="menu"
                   >
+                    <div className="border-b border-slate-100 px-3 py-2">
+                      <p className="truncate text-xs font-bold uppercase text-slate-500">
+                        Project actions
+                      </p>
+                    </div>
                     <button
-                      className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                      className="mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
                       onClick={() => {
                         setEditingProject(project);
                         setOpenActionProjectId(null);
                       }}
+                      role="menuitem"
                       type="button"
                     >
+                      <Pencil aria-hidden="true" size={16} />
                       Edit
                     </button>
                     <button
-                      className="rounded-md px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50"
                       disabled={deletingProjectId === project.id}
                       onClick={() => {
                         setProjectPendingDelete(project);
                         setOpenActionProjectId(null);
                       }}
+                      role="menuitem"
                       type="button"
                     >
+                      <Trash2 aria-hidden="true" size={16} />
                       {deletingProjectId === project.id ? "Deleting..." : "Delete"}
                     </button>
                   </div>
