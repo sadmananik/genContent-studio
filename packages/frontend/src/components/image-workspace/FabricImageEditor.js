@@ -37,11 +37,13 @@ export default function FabricImageEditor({
         backgroundColor: "#f8fafc",
         height: canvasSize.height,
         preserveObjectStacking: true,
+        renderOnAddRemove: true,
         selection: true,
         width: canvasSize.width
       });
 
       canvasRef.current = canvas;
+      canvas.setDimensions(canvasSize);
 
       const headline = new fabric.Textbox("Launch Campaign", {
         fill: "#111827",
@@ -73,7 +75,8 @@ export default function FabricImageEditor({
 
       canvas.add(headline, badge, badgeText);
       canvas.setActiveObject(headline);
-      canvas.renderAll();
+      canvas.calcOffset();
+      canvas.requestRenderAll();
       addDemoBackgroundImage(fabric, canvas, isMounted);
 
       const markDirty = () => onDirtyChange?.(true);
@@ -135,7 +138,7 @@ export default function FabricImageEditor({
 
     canvas.add(text);
     canvas.setActiveObject(text);
-    canvas.renderAll();
+    canvas.requestRenderAll();
   }
 
   function addShape(shape) {
@@ -148,20 +151,29 @@ export default function FabricImageEditor({
 
     const object =
       shape === "circle"
-        ? new fabric.Circle({ fill: fillColor, left: 160, radius: 58, top: 150 })
+        ? new fabric.Circle({
+            fill: fillColor,
+            left: 160,
+            radius: 58,
+            stroke: "#312e81",
+            strokeWidth: 2,
+            top: 150
+          })
         : new fabric.Rect({
             fill: fillColor,
             height: 120,
             left: 160,
             rx: 14,
             ry: 14,
+            stroke: "#312e81",
+            strokeWidth: 2,
             top: 150,
             width: 180
           });
 
     canvas.add(object);
     canvas.setActiveObject(object);
-    canvas.renderAll();
+    canvas.requestRenderAll();
   }
 
   async function addGeneratedDemoImage(prompt) {
@@ -206,7 +218,7 @@ export default function FabricImageEditor({
 
     canvas.add(generatedImage, card, title, caption);
     canvas.setActiveObject(generatedImage);
-    canvas.renderAll();
+    canvas.requestRenderAll();
     onDirtyChange?.(true);
   }
 
@@ -221,7 +233,7 @@ export default function FabricImageEditor({
     }
 
     activeObject.set("fill", nextColor);
-    canvas.renderAll();
+    canvas.requestRenderAll();
     onDirtyChange?.(true);
   }
 
@@ -236,7 +248,7 @@ export default function FabricImageEditor({
     }
 
     activeObject.set("opacity", nextOpacity / 100);
-    canvas.renderAll();
+    canvas.requestRenderAll();
     onDirtyChange?.(true);
   }
 
@@ -246,7 +258,7 @@ export default function FabricImageEditor({
 
     activeObjects.forEach((object) => canvas.remove(object));
     canvas?.discardActiveObject();
-    canvas?.renderAll();
+    canvas?.requestRenderAll();
   }
 
   function moveLayer(direction) {
@@ -263,7 +275,7 @@ export default function FabricImageEditor({
       canvas.sendObjectToBack(activeObject);
     }
 
-    canvas.renderAll();
+    canvas.requestRenderAll();
     onDirtyChange?.(true);
   }
 
@@ -356,13 +368,11 @@ export default function FabricImageEditor({
       </div>
 
       <div className="overflow-auto rounded-lg border border-slate-200 bg-slate-100 p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
-        <div className="mx-auto w-[900px] max-w-full">
-          <canvas
-            className="h-auto w-full rounded-md border border-slate-200 bg-white"
-            height={canvasSize.height}
-            ref={canvasElementRef}
-            width={canvasSize.width}
-          />
+        <div
+          className="mx-auto rounded-md border border-slate-200 bg-white"
+          style={{ height: canvasSize.height, width: canvasSize.width }}
+        >
+          <canvas height={canvasSize.height} ref={canvasElementRef} width={canvasSize.width} />
         </div>
       </div>
     </div>
