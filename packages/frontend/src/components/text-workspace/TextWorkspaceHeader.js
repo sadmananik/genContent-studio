@@ -10,6 +10,7 @@ import WorkspaceExportMenu from "./WorkspaceExportMenu";
 import WorkspaceSharePopover from "./WorkspaceSharePopover";
 
 export default function TextWorkspaceHeader({
+  exportOptions,
   invitedUsers = [],
   onExport,
   onInviteUser,
@@ -22,9 +23,9 @@ export default function TextWorkspaceHeader({
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
 
-  function handleInviteSubmit(event) {
+  async function handleInviteSubmit(event) {
     event.preventDefault();
-    const invited = onInviteUser?.(inviteEmail);
+    const invited = await onInviteUser?.(inviteEmail);
 
     if (invited) {
       setInviteEmail("");
@@ -35,10 +36,10 @@ export default function TextWorkspaceHeader({
     <header className="relative flex flex-wrap items-center gap-4 border-b border-slate-200 bg-white px-5 py-4 lg:px-7">
       <Link
         className="inline-flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
-        href={ROUTES.DASHBOARD}
+        href={ROUTES.PROJECTS}
       >
         <ArrowLeft aria-hidden="true" size={17} />
-        Dashboard
+        Projects
       </Link>
 
       <div className="min-w-0 flex-1">
@@ -96,6 +97,7 @@ export default function TextWorkspaceHeader({
                 onExport?.(format);
                 setIsExportOpen(false);
               }}
+              options={exportOptions}
             />
           )}
         </div>

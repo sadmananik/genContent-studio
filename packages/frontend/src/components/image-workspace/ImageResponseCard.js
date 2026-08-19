@@ -1,17 +1,8 @@
-import {
-  Check,
-  Copy,
-  Edit3,
-  MoreHorizontal,
-  Save,
-  Star,
-  TextCursorInput,
-  Trash2
-} from "lucide-react";
-import { useState } from "react";
+import { Check, Copy, Edit3, ImagePlus, MoreHorizontal, Save, Star, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import Button from "../common/Button";
 
-export default function AIResponseCard({
+export default function ImageResponseCard({
   copied,
   onCopy,
   onDelete,
@@ -23,6 +14,11 @@ export default function AIResponseCard({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftResponse, setDraftResponse] = useState(response.response);
+
+  useEffect(() => {
+    setDraftResponse(response.response);
+    setIsEditing(false);
+  }, [response.id, response.response]);
 
   function handleSaveEdit() {
     onUpdate(response.id, draftResponse);
@@ -44,7 +40,7 @@ export default function AIResponseCard({
       </div>
 
       <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50 p-3">
-        <p className="text-xs font-bold uppercase text-slate-500">AI Response</p>
+        <p className="text-xs font-bold uppercase text-slate-500">Image Response</p>
         {isEditing ? (
           <textarea
             className="mt-2 min-h-32 w-full resize-y rounded-md border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
@@ -57,7 +53,7 @@ export default function AIResponseCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button onClick={() => onFavourite(response.id)} variant="secondary" type="button">
+        <Button onClick={() => onFavourite(response.id)} type="button" variant="secondary">
           <Star
             aria-hidden="true"
             className={response.favourite ? "fill-amber-400 text-amber-500" : ""}
@@ -65,32 +61,32 @@ export default function AIResponseCard({
           />
           Favourite
         </Button>
-        <Button onClick={() => onCopy(response)} variant="secondary" type="button">
+        <Button onClick={() => onCopy(response)} type="button" variant="secondary">
           {copied ? <Check aria-hidden="true" size={16} /> : <Copy aria-hidden="true" size={16} />}
           {copied ? "Copied" : "Copy"}
         </Button>
-        <Button onClick={() => onInsert(response)} variant="secondary" type="button">
-          <TextCursorInput aria-hidden="true" size={16} />
-          Insert into Editor
+        <Button onClick={() => onInsert(response)} type="button" variant="secondary">
+          <ImagePlus aria-hidden="true" size={16} />
+          Insert into Canvas
         </Button>
         {isEditing ? (
-          <Button onClick={handleSaveEdit} variant="secondary" type="button">
+          <Button onClick={handleSaveEdit} type="button" variant="secondary">
             <Save aria-hidden="true" size={16} />
             Save Edit
           </Button>
         ) : (
-          <Button onClick={() => setIsEditing(true)} variant="secondary" type="button">
+          <Button onClick={() => setIsEditing(true)} type="button" variant="secondary">
             <Edit3 aria-hidden="true" size={16} />
             Edit
           </Button>
         )}
         {onDelete && (
-          <Button onClick={() => onDelete(response.id)} variant="ghost" type="button">
+          <Button onClick={() => onDelete(response.id)} type="button" variant="ghost">
             <Trash2 aria-hidden="true" size={16} />
             Delete
           </Button>
         )}
-        <Button aria-label="More response options" variant="icon" type="button">
+        <Button aria-label="More image response options" type="button" variant="icon">
           <MoreHorizontal aria-hidden="true" size={17} />
         </Button>
       </div>

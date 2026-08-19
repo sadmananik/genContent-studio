@@ -96,7 +96,7 @@ export function ProjectCard({ icon, title, type, updated, tone = "mint", clickab
 export function RecentProjectCard({ project, href = "/editor" }) {
   return (
     <Link
-      className="grid min-h-20 grid-cols-[2.5rem_minmax(0,1fr)_2rem] items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] sm:grid-cols-[2.625rem_minmax(0,1fr)_2.125rem] sm:gap-4"
+      className="grid min-h-20 grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] sm:grid-cols-[2.625rem_minmax(0,1fr)] sm:gap-4"
       href={href}
     >
       <IconBadge tone={project.tone}>{project.icon}</IconBadge>
@@ -109,12 +109,6 @@ export function RecentProjectCard({ project, href = "/editor" }) {
         </p>
         <small className="mt-1 block text-xs text-slate-500">{project.updated}</small>
       </div>
-      <span
-        className="grid h-8 w-8 place-items-center rounded-md text-xl text-slate-500 hover:bg-slate-100"
-        aria-label={`${project.title} actions`}
-      >
-        ⋮
-      </span>
     </Link>
   );
 }

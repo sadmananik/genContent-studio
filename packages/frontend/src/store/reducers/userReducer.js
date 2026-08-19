@@ -1,4 +1,5 @@
 import { apiRequest } from "../../lib/apiClient";
+import { getAuthSession, saveAuthSession } from "../../lib/auth";
 
 const initialUserState = {
   currentUser: null,
@@ -28,6 +29,10 @@ export function createUserReducer(set) {
       try {
         const user = await apiRequest("/api/users/me");
         set((state) => ({
+          auth: {
+            ...state.auth,
+            user
+          },
           userState: {
             ...state.userState,
             currentUser: user,
@@ -36,6 +41,7 @@ export function createUserReducer(set) {
             error: null
           }
         }));
+        persistUpdatedAuthUser(user);
         return user;
       } catch (error) {
         setUserError(set, error);
@@ -52,6 +58,10 @@ export function createUserReducer(set) {
           body: JSON.stringify(updates)
         });
         set((state) => ({
+          auth: {
+            ...state.auth,
+            user
+          },
           userState: {
             ...state.userState,
             currentUser: user,
@@ -60,6 +70,7 @@ export function createUserReducer(set) {
             error: null
           }
         }));
+        persistUpdatedAuthUser(user);
         return user;
       } catch (error) {
         setUserError(set, error);
@@ -91,6 +102,14 @@ export function createUserReducer(set) {
       set({ userState: initialUserState });
     }
   };
+}
+
+function persistUpdatedAuthUser(user) {
+  const session = getAuthSession();
+
+  if (session?.token) {
+    saveAuthSession({ ...session, user }, session.rememberMe);
+  }
 }
 
 function setUserRequest(set) {

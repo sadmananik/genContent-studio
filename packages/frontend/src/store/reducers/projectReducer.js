@@ -105,6 +105,36 @@ export function createProjectReducer(set) {
       }
     },
 
+    inviteProjectCollaborator: async (projectId, email) => {
+      setProjectRequest(set);
+
+      try {
+        const project = await apiRequest(`/api/projects/${projectId}/invite`, {
+          method: "PATCH",
+          body: JSON.stringify({ email })
+        });
+        set((state) => ({
+          projectState: {
+            ...state.projectState,
+            projects: state.projectState.projects.map((item) =>
+              item._id === project._id || item.id === project.id ? project : item
+            ),
+            currentProject:
+              state.projectState.currentProject?._id === project._id ||
+              state.projectState.currentProject?.id === project.id
+                ? project
+                : state.projectState.currentProject,
+            loading: false,
+            error: null
+          }
+        }));
+        return project;
+      } catch (error) {
+        setProjectError(set, error);
+        throw error;
+      }
+    },
+
     deleteProject: async (projectId) => {
       setProjectRequest(set);
 

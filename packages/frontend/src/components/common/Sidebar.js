@@ -8,11 +8,9 @@ import {
   FolderKanban,
   LayoutDashboard,
   LogOut,
-  MessagesSquare,
   PanelTop,
   SearchCheck,
   Settings,
-  Star,
   Trash2,
   Users
 } from "lucide-react";
@@ -25,11 +23,9 @@ const navIcons = {
   FilePenLine,
   FolderKanban,
   LayoutDashboard,
-  MessagesSquare,
   PanelTop,
   SearchCheck,
   Settings,
-  Star,
   Trash2,
   Users
 };

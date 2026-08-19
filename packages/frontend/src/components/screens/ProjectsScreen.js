@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ExternalLink, Pencil, Settings, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -22,6 +22,7 @@ export default function ProjectsScreen() {
   const fetchProjects = useAppStore((state) => state.fetchProjects);
   const updateProject = useAppStore((state) => state.updateProject);
   const [editingProject, setEditingProject] = useState(null);
+  const [openActionProjectId, setOpenActionProjectId] = useState(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectPendingDelete, setProjectPendingDelete] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
@@ -32,6 +33,21 @@ export default function ProjectsScreen() {
       fetchProjects().catch(() => {});
     }
   }, [auth.token, fetchProjects]);
+
+  useEffect(() => {
+    function handleClickAway(event) {
+      if (!event.target.closest("[data-project-actions]")) {
+        setOpenActionProjectId(null);
+      }
+    }
+
+    if (!openActionProjectId) {
+      return undefined;
+    }
+
+    document.addEventListener("mousedown", handleClickAway);
+    return () => document.removeEventListener("mousedown", handleClickAway);
+  }, [openActionProjectId]);
 
   const projects = useMemo(() => projectState.projects.map(formatProject), [projectState.projects]);
 
@@ -45,7 +61,14 @@ export default function ProjectsScreen() {
       });
 
       setShowProjectForm(false);
-      showNotification("Project created", `"${project.title}" is ready.`, TOAST_TYPES.SUCCESS);
+      window.sessionStorage.setItem(
+        "gencontent-pending-toast",
+        JSON.stringify({
+          message: `"${project.title}" is ready.`,
+          title: "Project created",
+          type: TOAST_TYPES.SUCCESS
+        })
+      );
       router.push(getProjectWorkspaceHref(formatProject(project)));
     } catch (error) {
       showNotification(
@@ -131,7 +154,7 @@ export default function ProjectsScreen() {
         </Button>
       </header>
 
-      <SectionHeader title="All Projects" action={<Link href={ROUTES.DASHBOARD}>Dashboard</Link>} />
+      <SectionHeader title="All Projects" />
 
       {projectState.loading && projects.length === 0 ? (
         <EmptyState title="Loading projects..." description="Your saved workspaces are loading." />
@@ -151,7 +174,11 @@ export default function ProjectsScreen() {
         <section className="grid gap-4">
           {projects.map((project) => (
             <article
-              className="group grid cursor-pointer gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:bg-violet-50/70 focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center"
+              className={`group relative grid cursor-pointer gap-4 rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:bg-violet-50/70 focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center ${
+                openActionProjectId === project.id
+                  ? "z-30 border-violet-300 bg-violet-50/70"
+                  : "z-0 border-slate-200"
+              }`}
               key={project.id}
               onClick={() => router.push(getProjectWorkspaceHref(project))}
               onKeyDown={(event) => handleProjectRowKeyDown(event, project)}
@@ -170,37 +197,73 @@ export default function ProjectsScreen() {
                   <p className="mt-2 line-clamp-2 text-sm text-slate-600">{project.description}</p>
                 )}
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row md:justify-end">
+              <div className="relative flex justify-end" data-project-actions>
                 <Button
+                  aria-label={`${project.title} actions`}
+                  aria-expanded={openActionProjectId === project.id}
+                  aria-haspopup="menu"
+                  className={`min-w-28 border-violet-100 bg-violet-50 px-3 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800 ${
+                    openActionProjectId === project.id
+                      ? "border-violet-300 bg-violet-100 text-violet-800"
+                      : ""
+                  }`}
                   variant="secondary"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    setEditingProject(project);
+                    setOpenActionProjectId((currentId) =>
+                      currentId === project.id ? null : project.id
+                    );
                   }}
                 >
-                  Edit
+                  <Settings aria-hidden="true" size={17} />
+                  Manage
                 </Button>
-                <Button
-                  variant="ghost"
-                  type="button"
-                  disabled={deletingProjectId === project.id}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setProjectPendingDelete(project);
-                  }}
-                >
-                  {deletingProjectId === project.id ? "Deleting..." : "Delete"}
-                </Button>
-                <Button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    router.push(getProjectWorkspaceHref(project));
-                  }}
-                  type="button"
-                >
-                  Open
-                </Button>
+                {openActionProjectId === project.id && (
+                  <div
+                    className="absolute right-0 top-[calc(100%+0.625rem)] z-50 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
+                    onClick={(event) => event.stopPropagation()}
+                    role="menu"
+                  >
+                    <button
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                      onClick={() => {
+                        router.push(getProjectWorkspaceHref(project));
+                        setOpenActionProjectId(null);
+                      }}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <ExternalLink aria-hidden="true" size={16} />
+                      Open
+                    </button>
+                    <button
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                      onClick={() => {
+                        setEditingProject(project);
+                        setOpenActionProjectId(null);
+                      }}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <Pencil aria-hidden="true" size={16} />
+                      Edit
+                    </button>
+                    <button
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+                      disabled={deletingProjectId === project.id}
+                      onClick={() => {
+                        setProjectPendingDelete(project);
+                        setOpenActionProjectId(null);
+                      }}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" size={16} />
+                      {deletingProjectId === project.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                )}
               </div>
             </article>
           ))}

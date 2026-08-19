@@ -126,6 +126,54 @@ export function createAiReducer(set) {
       }
     },
 
+    updateAiResponse: async (chatId, updates) => {
+      setAiRequest(set);
+
+      try {
+        const chat = await apiRequest(`/api/chats/${chatId}`, {
+          method: "PATCH",
+          body: JSON.stringify(updates)
+        });
+        set((state) => ({
+          aiState: {
+            ...state.aiState,
+            chatHistory: state.aiState.chatHistory.map((item) =>
+              item._id === chat._id || item.id === chat.id ? chat : item
+            ),
+            loading: false,
+            error: null
+          }
+        }));
+        return chat;
+      } catch (error) {
+        setAiError(set, error);
+        throw error;
+      }
+    },
+
+    deleteAiResponse: async (chatId) => {
+      setAiRequest(set);
+
+      try {
+        await apiRequest(`/api/chats/${chatId}`, {
+          method: "DELETE"
+        });
+        set((state) => ({
+          aiState: {
+            ...state.aiState,
+            chatHistory: state.aiState.chatHistory.filter(
+              (item) => item._id !== chatId && item.id !== chatId
+            ),
+            loading: false,
+            error: null
+          }
+        }));
+      } catch (error) {
+        setAiError(set, error);
+        throw error;
+      }
+    },
+
     clearAiState: () => {
       set({ aiState: initialAiState });
     }

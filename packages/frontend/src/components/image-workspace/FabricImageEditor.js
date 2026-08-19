@@ -1,0 +1,442 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { BringToFront, Circle, ImagePlus, Square, Trash2, Type } from "lucide-react";
+import Button from "../common/Button";
+import { demoImageSvg } from "./mockImageWorkspaceData";
+
+const canvasSize = { height: 680, width: 1080 };
+
+export default function FabricImageEditor({ generationRequest, onDirtyChange, onReady }) {
+  const canvasElementRef = useRef(null);
+  const canvasRef = useRef(null);
+  const fabricRef = useRef(null);
+  const [activeObjectType, setActiveObjectType] = useState("None");
+  const [fillColor, setFillColor] = useState("#8b5cf6");
+  const [opacity, setOpacity] = useState(100);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function setupCanvas() {
+      const fabric = await import("fabric");
+
+      if (!isMounted || !canvasElementRef.current) {
+        return;
+      }
+
+      fabricRef.current = fabric;
+
+      const canvas = new fabric.Canvas(canvasElementRef.current, {
+        backgroundColor: "#f8fafc",
+        height: canvasSize.height,
+        preserveObjectStacking: true,
+        renderOnAddRemove: true,
+        selection: true,
+        width: canvasSize.width
+      });
+
+      canvasRef.current = canvas;
+      canvas.setDimensions(canvasSize);
+
+      const headline = new fabric.Textbox("Launch Campaign", {
+        fill: "#111827",
+        fontFamily: "Arial",
+        fontSize: 56,
+        fontWeight: 800,
+        left: 118,
+        top: 312,
+        width: 420
+      });
+      const badge = new fabric.Rect({
+        fill: "#8b5cf6",
+        height: 74,
+        left: 568,
+        rx: 18,
+        ry: 18,
+        top: 360,
+        width: 210
+      });
+      const badgeText = new fabric.Textbox("AI READY", {
+        fill: "#ffffff",
+        fontFamily: "Arial",
+        fontSize: 28,
+        fontWeight: 800,
+        left: 602,
+        top: 382,
+        width: 150
+      });
+
+      canvas.add(headline, badge, badgeText);
+      canvas.setActiveObject(headline);
+      canvas.calcOffset();
+      canvas.requestRenderAll();
+      addDemoBackgroundImage(fabric, canvas, isMounted);
+
+      const markDirty = () => onDirtyChange?.(true);
+      const syncSelection = () => {
+        const activeObject = canvas.getActiveObject();
+        setActiveObjectType(activeObject?.type || "None");
+
+        if (activeObject?.fill && typeof activeObject.fill === "string") {
+          setFillColor(activeObject.fill);
+        }
+
+        setOpacity(Math.round((activeObject?.opacity ?? 1) * 100));
+      };
+
+      canvas.on("object:modified", markDirty);
+      canvas.on("object:added", markDirty);
+      canvas.on("object:removed", markDirty);
+      canvas.on("selection:created", syncSelection);
+      canvas.on("selection:updated", syncSelection);
+      canvas.on("selection:cleared", syncSelection);
+
+      onReady?.(canvas);
+    }
+
+    setupCanvas();
+
+    return () => {
+      isMounted = false;
+      canvasRef.current?.dispose();
+      canvasRef.current = null;
+    };
+  }, [onDirtyChange, onReady]);
+
+  useEffect(() => {
+    if (!generationRequest || !canvasRef.current || !fabricRef.current) {
+      return;
+    }
+
+    addGeneratedDemoImage(generationRequest.prompt);
+  }, [generationRequest]);
+
+  function addText() {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+
+    if (!fabric || !canvas) {
+      return;
+    }
+
+    const text = new fabric.Textbox("Edit text", {
+      fill: fillColor,
+      fontFamily: "Arial",
+      fontSize: 42,
+      fontWeight: 700,
+      left: 120,
+      top: 120,
+      width: 260
+    });
+
+    canvas.add(text);
+    canvas.setActiveObject(text);
+    canvas.requestRenderAll();
+  }
+
+  function addShape(shape) {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+
+    if (!fabric || !canvas) {
+      return;
+    }
+
+    const object =
+      shape === "circle"
+        ? new fabric.Circle({
+            fill: fillColor,
+            left: 160,
+            radius: 58,
+            stroke: "#312e81",
+            strokeWidth: 2,
+            top: 150
+          })
+        : new fabric.Rect({
+            fill: fillColor,
+            height: 120,
+            left: 160,
+            rx: 14,
+            ry: 14,
+            stroke: "#312e81",
+            strokeWidth: 2,
+            top: 150,
+            width: 180
+          });
+
+    canvas.add(object);
+    canvas.setActiveObject(object);
+    canvas.requestRenderAll();
+  }
+
+  async function addGeneratedDemoImage(prompt) {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+
+    if (!fabric || !canvas) {
+      return;
+    }
+
+    const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
+    const accentColor = colors[generationRequest.id % colors.length];
+    const generatedImage = await createGeneratedImageObject(fabric, accentColor);
+    const card = new fabric.Rect({
+      fill: "#ffffff",
+      height: 86,
+      left: 510,
+      opacity: 0.94,
+      rx: 24,
+      ry: 24,
+      top: 358,
+      width: 276
+    });
+    const title = new fabric.Textbox("Generated Demo", {
+      fill: "#111827",
+      fontFamily: "Arial",
+      fontSize: 26,
+      fontWeight: 800,
+      left: 534,
+      top: 372,
+      width: 230
+    });
+    const caption = new fabric.Textbox(prompt || "AI image concept", {
+      fill: "#475569",
+      fontFamily: "Arial",
+      fontSize: 15,
+      fontWeight: 600,
+      left: 535,
+      top: 406,
+      width: 220
+    });
+
+    canvas.add(generatedImage, card, title, caption);
+    canvas.setActiveObject(generatedImage);
+    canvas.requestRenderAll();
+    onDirtyChange?.(true);
+  }
+
+  function applyFillColor(nextColor) {
+    const canvas = canvasRef.current;
+    const activeObject = canvas?.getActiveObject();
+
+    setFillColor(nextColor);
+
+    if (!activeObject) {
+      return;
+    }
+
+    activeObject.set("fill", nextColor);
+    canvas.requestRenderAll();
+    onDirtyChange?.(true);
+  }
+
+  function applyOpacity(nextOpacity) {
+    const canvas = canvasRef.current;
+    const activeObject = canvas?.getActiveObject();
+
+    setOpacity(nextOpacity);
+
+    if (!activeObject) {
+      return;
+    }
+
+    activeObject.set("opacity", nextOpacity / 100);
+    canvas.requestRenderAll();
+    onDirtyChange?.(true);
+  }
+
+  function deleteSelected() {
+    const canvas = canvasRef.current;
+    const activeObjects = canvas?.getActiveObjects() || [];
+
+    activeObjects.forEach((object) => canvas.remove(object));
+    canvas?.discardActiveObject();
+    canvas?.requestRenderAll();
+  }
+
+  function moveLayer(direction) {
+    const canvas = canvasRef.current;
+    const activeObject = canvas?.getActiveObject();
+
+    if (!canvas || !activeObject) {
+      return;
+    }
+
+    if (direction === "front") {
+      canvas.bringObjectToFront(activeObject);
+    } else {
+      canvas.sendObjectToBack(activeObject);
+    }
+
+    canvas.requestRenderAll();
+    onDirtyChange?.(true);
+  }
+
+  return (
+    <section className="grid min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-3">
+        <Button onClick={addText} type="button" variant="secondary">
+          <Type aria-hidden="true" size={17} />
+          Text
+        </Button>
+        <Button onClick={() => addShape("rect")} type="button" variant="secondary">
+          <Square aria-hidden="true" size={17} />
+          Rect
+        </Button>
+        <Button onClick={() => addShape("circle")} type="button" variant="secondary">
+          <Circle aria-hidden="true" size={17} />
+          Circle
+        </Button>
+        <label className="flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700">
+          Color
+          <input
+            aria-label="Selected object color"
+            className="h-6 w-8 cursor-pointer border-0 bg-transparent p-0"
+            onChange={(event) => applyFillColor(event.target.value)}
+            type="color"
+            value={fillColor}
+          />
+        </label>
+        <label className="flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700">
+          Opacity
+          <input
+            aria-label="Selected object opacity"
+            className="w-24 accent-violet-600"
+            max="100"
+            min="10"
+            onChange={(event) => applyOpacity(Number(event.target.value))}
+            type="range"
+            value={opacity}
+          />
+        </label>
+        <Button onClick={() => moveLayer("front")} type="button" variant="secondary">
+          <BringToFront aria-hidden="true" size={17} />
+          Front
+        </Button>
+        <Button onClick={() => moveLayer("back")} type="button" variant="secondary">
+          <ImagePlus aria-hidden="true" size={17} />
+          Back
+        </Button>
+        <Button onClick={deleteSelected} type="button" variant="ghost">
+          <Trash2 aria-hidden="true" size={17} />
+          Delete
+        </Button>
+        <div className="hidden flex-1 md:block" />
+        <span className="text-xs font-bold uppercase text-slate-500">
+          Selected: {activeObjectType}
+        </span>
+      </div>
+
+      <div className="overflow-auto bg-white p-3">
+        <div
+          className="mx-auto rounded-md bg-white"
+          style={{ height: canvasSize.height, width: canvasSize.width }}
+        >
+          <canvas height={canvasSize.height} ref={canvasElementRef} width={canvasSize.width} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+async function addDemoBackgroundImage(fabric, canvas, isMounted) {
+  try {
+    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(demoImageSvg)}`;
+    const image = await fabric.FabricImage.fromURL(dataUrl);
+
+    if (!isMounted || canvas.disposed || canvas.destroyed) {
+      return;
+    }
+
+    image.set({
+      evented: false,
+      left: 0,
+      selectable: false,
+      top: 0
+    });
+    image.scaleToWidth(canvasSize.width);
+    canvas.insertAt(0, image);
+    canvas.renderAll();
+  } catch (error) {
+    canvas.renderAll();
+  }
+}
+
+async function createGeneratedImageObject(fabric, accentColor) {
+  try {
+    const imageDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+      buildGeneratedDemoSvg(accentColor)
+    )}`;
+    const generatedImage = await fabric.FabricImage.fromURL(imageDataUrl);
+
+    generatedImage.set({
+      left: 488,
+      shadow: "0 18px 34px rgba(15,23,42,0.18)",
+      top: 118
+    });
+    generatedImage.scaleToWidth(320);
+    return generatedImage;
+  } catch (error) {
+    return new fabric.Group(
+      [
+        new fabric.Rect({
+          fill: "#dbeafe",
+          height: 210,
+          rx: 22,
+          ry: 22,
+          width: 320
+        }),
+        new fabric.Circle({
+          fill: accentColor,
+          left: 208,
+          opacity: 0.72,
+          radius: 46,
+          top: 26
+        }),
+        new fabric.Rect({
+          fill: "#ffffff",
+          height: 112,
+          left: 38,
+          opacity: 0.82,
+          rx: 18,
+          ry: 18,
+          top: 58,
+          width: 162
+        })
+      ],
+      {
+        left: 488,
+        top: 118
+      }
+    );
+  }
+}
+
+function buildGeneratedDemoSvg(accentColor) {
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <defs>
+    <linearGradient id="generated-bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#dbeafe"/>
+      <stop offset="0.48" stop-color="#f5d0fe"/>
+      <stop offset="1" stop-color="#bbf7d0"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" x2="1">
+      <stop offset="0" stop-color="${accentColor}"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" rx="28" fill="url(#generated-bg)"/>
+  <circle cx="512" cy="96" r="78" fill="${accentColor}" opacity="0.35"/>
+  <circle cx="122" cy="316" r="92" fill="#14b8a6" opacity="0.25"/>
+  <rect x="96" y="88" width="448" height="248" rx="24" fill="#ffffff" opacity="0.78"/>
+  <rect x="134" y="128" width="204" height="160" rx="18" fill="url(#screen)"/>
+  <path d="M156 250 L214 188 L256 232 L292 196 L324 250 Z" fill="#ffffff" opacity="0.82"/>
+  <circle cx="274" cy="162" r="22" fill="#fde68a"/>
+  <rect x="370" y="138" width="118" height="18" rx="9" fill="#0f172a" opacity="0.72"/>
+  <rect x="370" y="176" width="92" height="14" rx="7" fill="#475569" opacity="0.5"/>
+  <rect x="370" y="206" width="132" height="14" rx="7" fill="#475569" opacity="0.38"/>
+  <rect x="370" y="250" width="96" height="34" rx="17" fill="${accentColor}" opacity="0.86"/>
+</svg>`;
+}
