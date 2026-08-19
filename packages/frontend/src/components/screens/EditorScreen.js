@@ -139,6 +139,12 @@ export default function EditorScreen() {
       return;
     }
 
+    const canReplace = resolveUnsavedChangesBeforeMove();
+
+    if (!canReplace) {
+      return;
+    }
+
     replaceEditorContent(response.response);
     setSelectedHistoryId(response.id);
     setPrompt(response.prompt);
@@ -156,6 +162,10 @@ export default function EditorScreen() {
 
   function handleSelectHistory(historyId) {
     if (!editor) {
+      return;
+    }
+
+    if (selectedHistoryId === historyId) {
       return;
     }
 
