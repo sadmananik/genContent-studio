@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
+const { signAuthToken } = require("../utils/token");
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, profile } = req.body;
@@ -18,7 +19,8 @@ const register = asyncHandler(async (req, res) => {
   const user = await User.create({ name, email, passwordHash, profile });
 
   res.status(201).json({
-    user: serializeUser(user)
+    user: serializeUser(user),
+    token: signAuthToken(user)
   });
 });
 
@@ -37,7 +39,7 @@ const login = asyncHandler(async (req, res) => {
 
   res.json({
     user: serializeUser(user),
-    authPlaceholder: "Use this user id in the x-user-id header until token auth is added"
+    token: signAuthToken(user)
   });
 });
 

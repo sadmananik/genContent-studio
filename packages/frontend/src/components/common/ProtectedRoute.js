@@ -2,31 +2,49 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { clearDemoLogin, hasDemoLogin, setDemoLogin } from "../../lib/auth";
 import { useAppStore } from "../../store";
-
-export { clearDemoLogin, setDemoLogin };
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter();
-  const isAuthenticated = useAppStore((state) => state.auth.isAuthenticated);
+  const token = useAppStore((state) => state.auth.token);
+  const getAuthenticatedUser = useAppStore((state) => state.getAuthenticatedUser);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated && !hasDemoLogin()) {
-      router.replace("/login");
-      return;
+    let isMounted = true;
+
+    async function verifySession() {
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      try {
+        await getAuthenticatedUser();
+
+        if (isMounted) {
+          setIsReady(true);
+        }
+      } catch (error) {
+        if (isMounted) {
+          router.replace("/login");
+        }
+      }
     }
 
-    setIsReady(true);
-  }, [isAuthenticated, router]);
+    verifySession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [getAuthenticatedUser, router, token]);
 
   if (!isReady) {
     return (
       <main className="auth-check">
         <div className="auth-check-panel">
           <strong>Checking access...</strong>
-          <p>Protected route placeholder using the dev demo login flag.</p>
+          <p>Verifying your session...</p>
         </div>
       </main>
     );
