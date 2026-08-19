@@ -29,7 +29,7 @@ export default function EditorScreen() {
     "Write an introduction about how AI tools help small businesses."
   );
   const [responses, setResponses] = useState(mockAIResponses);
-  const [saveHistory, setSaveHistory] = useState([]);
+  const [savedDraft, setSavedDraft] = useState(null);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIResponses[0]?.id || null);
@@ -49,7 +49,7 @@ export default function EditorScreen() {
       : mockTextProject.lastUpdated;
   const history = useMemo(
     () => [
-      ...saveHistory,
+      ...(savedDraft ? [savedDraft] : []),
       ...responses.map((response) => ({
         id: response.id,
         prompt: response.prompt,
@@ -58,7 +58,7 @@ export default function EditorScreen() {
         type: "response"
       }))
     ],
-    [responses, saveHistory]
+    [responses, savedDraft]
   );
 
   function handleGenerate() {
@@ -182,7 +182,7 @@ export default function EditorScreen() {
 
   function loadHistoryItem(historyId) {
     const responseItem = responses.find((response) => response.id === historyId);
-    const savedItem = saveHistory.find((item) => item.id === historyId);
+    const savedItem = savedDraft?.id === historyId ? savedDraft : null;
 
     setSelectedHistoryId(historyId);
 
@@ -222,18 +222,15 @@ export default function EditorScreen() {
 
   function saveCurrentDraft() {
     window.localStorage.setItem("gencontent-demo-text-workspace", JSON.stringify(savePayload));
-    setSaveHistory((currentHistory) => [
-      {
-        id: `save-${Date.now()}`,
-        prompt: `Saved ${mockTextProject.title}`,
-        timestamp: "Just now",
-        favourite: false,
-        type: "save",
-        html: editorContent.html,
-        text: editorContent.text
-      },
-      ...currentHistory
-    ]);
+    setSavedDraft({
+      id: "saved-draft",
+      prompt: `Saved ${mockTextProject.title}`,
+      timestamp: "Just now",
+      favourite: false,
+      type: "save",
+      html: editorContent.html,
+      text: editorContent.text
+    });
   }
 
   function replaceEditorContent(value, options = {}) {
