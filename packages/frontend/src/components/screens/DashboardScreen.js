@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Button from "../common/Button";
 import {
   CategorySummary,
   EmptyState,
@@ -12,7 +11,6 @@ import {
   StatGrid,
   WelcomePanel
 } from "../common/Cards";
-import ProjectFormModal from "../common/ProjectFormModal";
 import UserProfileMenu from "../common/UserProfileMenu";
 import { DASHBOARD_TEXT, SUMMARY_CARD_LABELS } from "../../constants/dashboard";
 import { ROUTES } from "../../constants/navigation";
@@ -23,10 +21,8 @@ export default function DashboardScreen() {
   const router = useRouter();
   const auth = useAppStore((state) => state.auth);
   const projectState = useAppStore((state) => state.projectState);
-  const createProject = useAppStore((state) => state.createProject);
   const fetchProjects = useAppStore((state) => state.fetchProjects);
   const logoutUser = useAppStore((state) => state.logoutUser);
-  const [showProjectForm, setShowProjectForm] = useState(false);
 
   const user = auth.user || { name: "Sadman Anik" };
   const projects = useMemo(
@@ -54,18 +50,6 @@ export default function DashboardScreen() {
     router.push(ROUTES.LOGIN);
   }
 
-  async function handleCreateProject(values) {
-    const project = await createProject({
-      title: values.title,
-      description: values.description,
-      category: values.category,
-      type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
-    });
-
-    setShowProjectForm(false);
-    router.push(getProjectWorkspaceHref(project));
-  }
-
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
@@ -80,11 +64,6 @@ export default function DashboardScreen() {
       <WelcomePanel
         title={`${DASHBOARD_TEXT.WELCOME_PREFIX}, ${firstName(user.name)}!`}
         description={DASHBOARD_TEXT.WELCOME_DESCRIPTION}
-        action={
-          <Button type="button" onClick={() => setShowProjectForm(true)}>
-            <span>＋</span> {DASHBOARD_TEXT.CREATE_PROJECT}
-          </Button>
-        }
       />
 
       <StatGrid items={summaryCards} label={DASHBOARD_TEXT.PROJECT_SUMMARY} />
@@ -121,24 +100,11 @@ export default function DashboardScreen() {
             <EmptyState
               title={DASHBOARD_TEXT.EMPTY_PROJECTS_TITLE}
               description={DASHBOARD_TEXT.EMPTY_PROJECTS_DESCRIPTION}
-              action={
-                <Button type="button" onClick={() => setShowProjectForm(true)}>
-                  {DASHBOARD_TEXT.CREATE_PROJECT}
-                </Button>
-              }
+              action={<Link href={ROUTES.PROJECTS}>Go to Projects</Link>}
             />
           )}
         </div>
       </section>
-
-      {showProjectForm && (
-        <ProjectFormModal
-          error={projectState.error}
-          isSubmitting={projectState.loading}
-          onClose={() => setShowProjectForm(false)}
-          onSubmit={handleCreateProject}
-        />
-      )}
     </main>
   );
 }
