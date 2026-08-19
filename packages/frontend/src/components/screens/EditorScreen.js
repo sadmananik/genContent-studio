@@ -49,7 +49,6 @@ export default function EditorScreen() {
     "Write an introduction about how AI tools help small businesses."
   );
   const [responses, setResponses] = useState([]);
-  const [savedDraft, setSavedDraft] = useState(null);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
@@ -68,17 +67,15 @@ export default function EditorScreen() {
       ? `Saved ${formatTime(lastSavedAt)}`
       : mockTextProject.lastUpdated;
   const history = useMemo(
-    () => [
-      ...(savedDraft ? [savedDraft] : []),
-      ...responses.map((response) => ({
+    () =>
+      responses.map((response) => ({
         id: response.id,
         prompt: response.prompt,
         timestamp: response.timestamp,
         favourite: response.favourite,
         type: "response"
-      }))
-    ],
-    [responses, savedDraft]
+      })),
+    [responses]
   );
   const selectedResponse =
     responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
@@ -415,7 +412,6 @@ export default function EditorScreen() {
 
   function loadHistoryItem(historyId) {
     const responseItem = responses.find((response) => response.id === historyId);
-    const savedItem = savedDraft?.id === historyId ? savedDraft : null;
 
     setSelectedHistoryId(historyId);
 
@@ -428,15 +424,6 @@ export default function EditorScreen() {
         TOAST_TYPES.INFO,
         3000
       );
-      return;
-    }
-
-    if (savedItem) {
-      setPrompt(savedItem.prompt);
-      editor.commands.setContent(savedItem.html);
-      setEditorContent({ html: savedItem.html, text: savedItem.text });
-      setHasUnsavedChanges(false);
-      showNotification("Draft loaded", "Saved version loaded in editor.", TOAST_TYPES.INFO, 3000);
     }
   }
 
@@ -479,16 +466,6 @@ export default function EditorScreen() {
     } else {
       window.localStorage.setItem("gencontent-demo-text-workspace", JSON.stringify(savePayload));
     }
-
-    setSavedDraft({
-      id: "saved-draft",
-      prompt: `Saved ${project.title}`,
-      timestamp: "Just now",
-      favourite: false,
-      type: "save",
-      html: editorContent.html,
-      text: editorContent.text
-    });
   }
 
   function replaceEditorContent(value, options = {}) {
