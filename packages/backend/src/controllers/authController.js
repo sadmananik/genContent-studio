@@ -12,8 +12,12 @@ const DEFAULT_RESET_TOKEN_LIFETIME_MINUTES = 30;
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, profile } = req.body;
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
+  const normalizedName = String(name || "").trim();
 
-  if (!name || !email || !password) {
+  if (!normalizedName || !normalizedEmail || !password) {
     throw httpError(400, "Name, email, and password are required");
   }
 
@@ -21,8 +25,19 @@ const register = asyncHandler(async (req, res) => {
     throw httpError(400, "Password must be at least 8 characters");
   }
 
+  const existingUser = await User.findOne({ email: normalizedEmail }).select("_id");
+
+  if (existingUser) {
+    throw httpError(409, "An account with this email already exists");
+  }
+
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await User.create({ name, email, passwordHash, profile });
+  const user = await User.create({
+    name: normalizedName,
+    email: normalizedEmail,
+    passwordHash,
+    profile
+  });
 
   res.status(201).json({
     user: serializeUser(user),
