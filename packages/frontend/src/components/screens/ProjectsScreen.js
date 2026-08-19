@@ -115,7 +115,7 @@ export default function ProjectsScreen() {
         <section className="grid gap-4">
           {projects.map((project) => (
             <article
-              className="grid cursor-pointer gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center"
+              className="group grid cursor-pointer gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:bg-violet-50/70 focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center"
               key={project.id}
               onClick={() => router.push(getProjectWorkspaceHref(project))}
               onKeyDown={(event) => handleProjectRowKeyDown(event, project)}
@@ -124,7 +124,7 @@ export default function ProjectsScreen() {
             >
               <IconBadge tone={project.tone}>{project.icon}</IconBadge>
               <div className="min-w-0">
-                <strong className="block truncate text-sm font-bold text-slate-950">
+                <strong className="block truncate text-sm font-bold text-slate-950 group-hover:text-violet-700">
                   {project.title}
                 </strong>
                 <p className="mt-1 text-xs text-slate-500">
