@@ -5,7 +5,7 @@ import { BringToFront, Circle, ImagePlus, Square, Trash2, Type } from "lucide-re
 import Button from "../common/Button";
 import { demoImageSvg } from "./mockImageWorkspaceData";
 
-const canvasSize = { height: 600, width: 900 };
+const canvasSize = { height: 680, width: 1080 };
 
 export default function FabricImageEditor({ generationRequest, onDirtyChange, onReady }) {
   const canvasElementRef = useRef(null);
@@ -328,9 +328,9 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
         </span>
       </div>
 
-      <div className="min-h-[680px] overflow-auto bg-slate-100 p-4">
+      <div className="overflow-auto bg-white p-3">
         <div
-          className="mx-auto rounded-md border border-slate-200 bg-white"
+          className="mx-auto rounded-md bg-white"
           style={{ height: canvasSize.height, width: canvasSize.width }}
         >
           <canvas height={canvasSize.height} ref={canvasElementRef} width={canvasSize.width} />

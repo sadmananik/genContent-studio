@@ -32,7 +32,7 @@ export const demoImageSvg = `
     <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
       <stop offset="0" stop-color="#eef2ff"/>
       <stop offset="0.52" stop-color="#ecfeff"/>
-      <stop offset="1" stop-color="#fef3c7"/>
+      <stop offset="1" stop-color="#f8fafc"/>
     </linearGradient>
   </defs>
   <rect width="900" height="600" fill="url(#bg)"/>

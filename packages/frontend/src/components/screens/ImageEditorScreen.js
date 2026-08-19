@@ -108,7 +108,7 @@ export default function ImageEditorScreen() {
       return;
     }
 
-    const savedCanvas = window.localStorage.getItem(`gencontent-image-workspace-${projectId}`);
+    const savedCanvas = window.localStorage.getItem(getImageWorkspaceDraftKey(projectId));
 
     if (!savedCanvas) {
       return;
@@ -220,7 +220,7 @@ export default function ImageEditorScreen() {
   }
 
   async function handleSaveCanvas(payload) {
-    window.localStorage.setItem(`gencontent-image-workspace-${projectId}`, payload);
+    window.localStorage.setItem(getImageWorkspaceDraftKey(projectId), payload);
 
     if (isRealProject) {
       await sendImageGenerationRequest({
@@ -413,6 +413,10 @@ function buildDemoImageResponse(prompt) {
   const cleanPrompt = prompt.trim() || "Create a polished social media image.";
 
   return `Demo image concept for "${cleanPrompt}" with an editable generated image layer, headline card, caption block, and accent shapes ready for Fabric.js editing.`;
+}
+
+function getImageWorkspaceDraftKey(projectId) {
+  return `gencontent-image-workspace-v2-${projectId}`;
 }
 
 function readPendingToast() {
