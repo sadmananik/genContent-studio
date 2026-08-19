@@ -37,12 +37,13 @@ export function createAuthReducer(set, get) {
       setAuthRequest(set);
 
       try {
+        const { rememberMe = false, ...credentials } = payload;
         const session = await apiRequest("/api/auth/login", {
           method: "POST",
-          body: JSON.stringify(payload)
+          body: JSON.stringify(credentials)
         });
 
-        saveAuthSession(session);
+        saveAuthSession(session, rememberMe);
         setAuthSuccess(set, session);
         return session;
       } catch (error) {
@@ -69,7 +70,7 @@ export function createAuthReducer(set, get) {
         const nextSession = { token: session?.token, user };
 
         if (nextSession.token) {
-          saveAuthSession(nextSession);
+          saveAuthSession(nextSession, session?.rememberMe);
         }
 
         set((state) => ({
@@ -91,6 +92,54 @@ export function createAuthReducer(set, get) {
         setAuthSessionError(set, error);
         throw error;
       }
+    },
+
+    requestPasswordReset: async (email) => {
+      setAuthRequest(set);
+
+      try {
+        const response = await apiRequest("/api/auth/forgot-password", {
+          method: "POST",
+          body: JSON.stringify({ email })
+        });
+
+        finishAuthRequest(set);
+        return response;
+      } catch (error) {
+        setAuthError(set, error);
+        throw error;
+      }
+    },
+
+    resetPassword: async (payload) => {
+      setAuthRequest(set);
+
+      try {
+        const response = await apiRequest("/api/auth/reset-password", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+
+        clearAuthState();
+        set((state) => ({
+          auth: {
+            ...state.auth,
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            loading: false,
+            error: null
+          }
+        }));
+        return response;
+      } catch (error) {
+        setAuthError(set, error);
+        throw error;
+      }
+    },
+
+    clearAuthError: () => {
+      set((state) => ({ auth: { ...state.auth, error: null } }));
     }
   };
 }
@@ -112,6 +161,16 @@ function setAuthSuccess(set, session) {
       user: session.user,
       token: session.token,
       isAuthenticated: Boolean(session.token),
+      loading: false,
+      error: null
+    }
+  }));
+}
+
+function finishAuthRequest(set) {
+  set((state) => ({
+    auth: {
+      ...state.auth,
       loading: false,
       error: null
     }

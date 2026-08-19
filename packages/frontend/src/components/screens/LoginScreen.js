@@ -12,7 +12,16 @@ export default function LoginScreen() {
   const router = useRouter();
   const auth = useAppStore((state) => state.auth);
   const loginUser = useAppStore((state) => state.loginUser);
-  const [formValues, setFormValues] = useState({ email: "", password: "" });
+  const clearAuthError = useAppStore((state) => state.clearAuthError);
+  const [formValues, setFormValues] = useState({
+    email: "",
+    password: "",
+    rememberMe: false
+  });
+
+  useEffect(() => {
+    clearAuthError();
+  }, [clearAuthError]);
 
   useEffect(() => {
     if (auth.isAuthenticated) {
@@ -21,8 +30,11 @@ export default function LoginScreen() {
   }, [auth.isAuthenticated, router]);
 
   function handleChange(event) {
-    const { name, value } = event.target;
-    setFormValues((currentValues) => ({ ...currentValues, [name]: value }));
+    const { checked, name, type, value } = event.target;
+    setFormValues((currentValues) => ({
+      ...currentValues,
+      [name]: type === "checkbox" ? checked : value
+    }));
   }
 
   async function handleLogin(event) {
@@ -68,15 +80,23 @@ export default function LoginScreen() {
           <span>⊙</span>
         </label>
         <div className="form-row">
-          <span>☐ Remember me</span>
-          <a href="#">Forgot password?</a>
+          <label className="remember-option">
+            <input
+              checked={formValues.rememberMe}
+              name="rememberMe"
+              onChange={handleChange}
+              type="checkbox"
+            />
+            <span>Remember me</span>
+          </label>
+          <Link href={ROUTES.FORGOT_PASSWORD}>Forgot password?</Link>
         </div>
         {auth.error && <p className="auth-error">{auth.error}</p>}
         <Button className="full-width" disabled={auth.loading} type="submit">
           {auth.loading ? "Signing in..." : "Sign In"}
         </Button>
         <p className="signup">
-          Don&apos;t have an account? <Link href="/register">Sign up</Link>
+          Don&apos;t have an account? <Link href={ROUTES.REGISTER}>Sign up</Link>
         </p>
       </form>
       <div className="robot-scene" aria-hidden="true">
