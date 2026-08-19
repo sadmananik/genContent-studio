@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import {
   CategorySummary,
   EmptyState,
@@ -11,18 +10,15 @@ import {
   StatGrid,
   WelcomePanel
 } from "../common/Cards";
-import UserProfileMenu from "../common/UserProfileMenu";
 import { DASHBOARD_TEXT, SUMMARY_CARD_LABELS } from "../../constants/dashboard";
 import { ROUTES } from "../../constants/navigation";
 import { CONTENT_CATEGORY_SUMMARY_LABELS, PROJECT_TYPES } from "../../constants/content";
 import { useAppStore } from "../../store";
 
 export default function DashboardScreen() {
-  const router = useRouter();
   const auth = useAppStore((state) => state.auth);
   const projectState = useAppStore((state) => state.projectState);
   const fetchProjects = useAppStore((state) => state.fetchProjects);
-  const logoutUser = useAppStore((state) => state.logoutUser);
 
   const user = auth.user || { name: "Sadman Anik" };
   const projects = useMemo(
@@ -45,24 +41,13 @@ export default function DashboardScreen() {
     }
   }, [auth.token, fetchProjects]);
 
-  function handleLogout() {
-    logoutUser();
-    router.push(ROUTES.LOGIN);
-  }
-
-  function handleProfile() {
-    router.push(ROUTES.PROFILE);
-  }
-
   return (
     <main className="min-w-0 p-5 md:p-7">
-      <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
+      <header className="mb-6 flex flex-wrap items-center gap-4 md:mb-7">
         <div>
           <h1 className="m-0 text-2xl font-bold text-slate-950">{DASHBOARD_TEXT.TITLE}</h1>
           <p className="mt-1.5 text-sm text-slate-500">{DASHBOARD_TEXT.SUBTITLE}</p>
         </div>
-        <div className="hidden flex-1 sm:block" />
-        <UserProfileMenu user={user} onLogout={handleLogout} onProfile={handleProfile} />
       </header>
 
       <WelcomePanel

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import AppHeader from "../../components/common/AppHeader";
 import ProtectedRoute from "../../components/common/ProtectedRoute";
 import { AppSidebar } from "../../components/common/Sidebar";
 
@@ -23,7 +24,10 @@ export default function ProtectedLayout({ children }) {
       <main className="protected-stage">
         <section className="screen app-frame">
           <AppSidebar />
-          {children}
+          <div className="min-w-0">
+            <AppHeader />
+            {children}
+          </div>
         </section>
       </main>
     </ProtectedRoute>
