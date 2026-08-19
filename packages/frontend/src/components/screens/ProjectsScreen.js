@@ -45,7 +45,14 @@ export default function ProjectsScreen() {
       });
 
       setShowProjectForm(false);
-      showNotification("Project created", `"${project.title}" is ready.`, TOAST_TYPES.SUCCESS);
+      window.sessionStorage.setItem(
+        "gencontent-pending-toast",
+        JSON.stringify({
+          message: `"${project.title}" is ready.`,
+          title: "Project created",
+          type: TOAST_TYPES.SUCCESS
+        })
+      );
       router.push(getProjectWorkspaceHref(formatProject(project)));
     } catch (error) {
       showNotification(

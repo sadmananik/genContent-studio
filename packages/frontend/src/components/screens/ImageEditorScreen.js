@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
+import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import FabricImageEditor from "../image-workspace/FabricImageEditor";
 import { mockImageProject } from "../image-workspace/mockImageWorkspaceData";
+import { mockPromptActions } from "../text-workspace/mockTextWorkspaceData";
+import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
 
 export default function ImageEditorScreen() {
@@ -13,12 +16,16 @@ export default function ImageEditorScreen() {
   const projectId = searchParams.get("projectId") || mockImageProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const fetchProjectById = useAppStore((state) => state.fetchProjectById);
+  const sendImageGenerationRequest = useAppStore((state) => state.sendImageGenerationRequest);
   const [canvas, setCanvas] = useState(null);
+  const [generationRequest, setGenerationRequest] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [localInvites, setLocalInvites] = useState([]);
   const [notification, setNotification] = useState(null);
+  const [prompt, setPrompt] = useState("Create a clean product launch social post.");
   const [project, setProject] = useState(mockImageProject);
   const invitedUsers = useMemo(() => {
     const projectUsers =
@@ -47,6 +54,14 @@ export default function ImageEditorScreen() {
       : project.lastUpdated;
 
   useEffect(() => {
+    const pendingToast = readPendingToast();
+
+    if (pendingToast) {
+      setNotification({ duration: 5000, id: Date.now(), ...pendingToast });
+    }
+  }, []);
+
+  useEffect(() => {
     if (!isRealProject) {
       return;
     }
@@ -55,6 +70,25 @@ export default function ImageEditorScreen() {
       .then((loadedProject) => setProject(normalizeProject(loadedProject)))
       .catch(() => {});
   }, [fetchProjectById, isRealProject, projectId]);
+
+  useEffect(() => {
+    if (!canvas || !isRealProject) {
+      return;
+    }
+
+    apiRequest(`/api/image-content/${projectId}`)
+      .then((imageContent) => {
+        if (!imageContent.canvasState) {
+          return null;
+        }
+
+        return canvas.loadFromJSON(imageContent.canvasState).then(() => {
+          canvas.requestRenderAll();
+          setHasUnsavedChanges(false);
+        });
+      })
+      .catch(() => {});
+  }, [canvas, isRealProject, projectId]);
 
   useEffect(() => {
     if (!canvas) {
@@ -81,6 +115,23 @@ export default function ImageEditorScreen() {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
 
+  function handleGenerate() {
+    setIsGenerating(true);
+    window.setTimeout(() => {
+      setGenerationRequest({ id: Date.now(), prompt });
+      setIsGenerating(false);
+      showNotification(
+        "Image generated",
+        "Demo image concept added to the canvas.",
+        TOAST_TYPES.SUCCESS
+      );
+    }, 800);
+  }
+
+  function handleQuickAction(action) {
+    setPrompt(`${action}: ${prompt}`.slice(0, 1200));
+  }
+
   function handleInviteUser(emailValue) {
     const email = emailValue.trim().toLowerCase();
 
@@ -103,19 +154,41 @@ export default function ImageEditorScreen() {
     return true;
   }
 
-  function handleSaveCanvas(payload) {
+  async function handleSaveCanvas(payload) {
     window.localStorage.setItem(`gencontent-image-workspace-${projectId}`, payload);
+
+    if (isRealProject) {
+      await sendImageGenerationRequest({
+        canvasState: safeParseJson(payload),
+        generationPrompt: prompt,
+        project: projectId
+      });
+    }
+
     setHasUnsavedChanges(false);
     setLastSavedAt(new Date());
-    showNotification("Saved", "Image canvas saved in this browser.", TOAST_TYPES.SUCCESS);
+    showNotification(
+      "Saved",
+      isRealProject ? "Image canvas saved." : "Image canvas saved in this browser.",
+      TOAST_TYPES.SUCCESS
+    );
   }
 
   function handleHeaderSave() {
     setIsSaving(true);
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
       const payload = canvas ? JSON.stringify(canvas.toJSON()) : "{}";
-      handleSaveCanvas(payload);
-      setIsSaving(false);
+      try {
+        await handleSaveCanvas(payload);
+      } catch (error) {
+        showNotification(
+          "Save failed",
+          error.message || "Image could not be saved.",
+          TOAST_TYPES.ERROR
+        );
+      } finally {
+        setIsSaving(false);
+      }
     }, 250);
   }
 
@@ -164,6 +237,7 @@ export default function ImageEditorScreen() {
 
       <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] xl:p-7">
         <FabricImageEditor
+          generationRequest={generationRequest}
           onDirtyChange={setHasUnsavedChanges}
           onExport={handleCanvasExport}
           onReady={setCanvas}
@@ -171,6 +245,14 @@ export default function ImageEditorScreen() {
         />
 
         <aside className="grid content-start gap-4">
+          <AIPromptPanel
+            actions={mockPromptActions}
+            isGenerating={isGenerating}
+            onGenerate={handleGenerate}
+            onPromptChange={setPrompt}
+            onQuickAction={handleQuickAction}
+            prompt={prompt}
+          />
           <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
             <h2 className="text-base font-bold text-slate-950">Image Generation Draft</h2>
             <p className="mt-2 text-sm text-slate-500">
@@ -247,6 +329,30 @@ function nameFromEmail(email) {
     .filter(Boolean)
     .map((part) => `${part[0]?.toUpperCase() || ""}${part.slice(1)}`)
     .join(" ");
+}
+
+function readPendingToast() {
+  const rawToast = window.sessionStorage.getItem("gencontent-pending-toast");
+
+  if (!rawToast) {
+    return null;
+  }
+
+  window.sessionStorage.removeItem("gencontent-pending-toast");
+
+  try {
+    return JSON.parse(rawToast);
+  } catch (error) {
+    return null;
+  }
+}
+
+function safeParseJson(value) {
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return {};
+  }
 }
 
 function slugify(value) {

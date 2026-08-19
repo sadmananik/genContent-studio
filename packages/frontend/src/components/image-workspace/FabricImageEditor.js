@@ -7,7 +7,13 @@ import { demoImageSvg } from "./mockImageWorkspaceData";
 
 const canvasSize = { height: 600, width: 900 };
 
-export default function FabricImageEditor({ onDirtyChange, onExport, onReady, onSave }) {
+export default function FabricImageEditor({
+  generationRequest,
+  onDirtyChange,
+  onExport,
+  onReady,
+  onSave
+}) {
   const canvasElementRef = useRef(null);
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
@@ -111,6 +117,14 @@ export default function FabricImageEditor({ onDirtyChange, onExport, onReady, on
     };
   }, [onDirtyChange, onReady]);
 
+  useEffect(() => {
+    if (!generationRequest || !canvasRef.current || !fabricRef.current) {
+      return;
+    }
+
+    addGeneratedDemoImage(generationRequest.prompt);
+  }, [generationRequest]);
+
   function addText() {
     const fabric = fabricRef.current;
     const canvas = canvasRef.current;
@@ -158,6 +172,59 @@ export default function FabricImageEditor({ onDirtyChange, onExport, onReady, on
     canvas.add(object);
     canvas.setActiveObject(object);
     canvas.renderAll();
+  }
+
+  function addGeneratedDemoImage(prompt) {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+
+    if (!fabric || !canvas) {
+      return;
+    }
+
+    const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
+    const accentColor = colors[generationRequest.id % colors.length];
+    const card = new fabric.Rect({
+      fill: "#ffffff",
+      height: 230,
+      left: 490,
+      opacity: 0.92,
+      rx: 24,
+      ry: 24,
+      shadow: "0 18px 34px rgba(15,23,42,0.18)",
+      top: 130,
+      width: 300
+    });
+    const accent = new fabric.Circle({
+      fill: accentColor,
+      left: 668,
+      opacity: 0.88,
+      radius: 52,
+      top: 158
+    });
+    const title = new fabric.Textbox("Generated Demo", {
+      fill: "#111827",
+      fontFamily: "Arial",
+      fontSize: 34,
+      fontWeight: 800,
+      left: 524,
+      top: 230,
+      width: 230
+    });
+    const caption = new fabric.Textbox(prompt || "AI image concept", {
+      fill: "#475569",
+      fontFamily: "Arial",
+      fontSize: 18,
+      fontWeight: 600,
+      left: 526,
+      top: 284,
+      width: 220
+    });
+
+    canvas.add(card, accent, title, caption);
+    canvas.setActiveObject(title);
+    canvas.renderAll();
+    onDirtyChange?.(true);
   }
 
   function applyFillColor(nextColor) {

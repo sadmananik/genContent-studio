@@ -75,13 +75,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <main className="min-w-0 p-5 md:p-7">
-      <header className="-m-5 mb-6 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
+    <main className="grid min-w-0 justify-items-center p-5 md:p-7">
+      <header className="mb-6 w-full max-w-2xl text-center md:mb-7">
         <h1 className="m-0 text-2xl font-bold text-slate-950">Profile</h1>
         <p className="mt-1.5 text-sm text-slate-500">View and update your account details.</p>
       </header>
 
-      <section className="max-w-2xl rounded-lg border border-slate-200 bg-white p-5 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
+      <section className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-5 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
         <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 pb-5">
           {imageUrl ? (
             <img alt="" className="h-16 w-16 rounded-full object-cover" src={imageUrl} />

@@ -13,11 +13,7 @@ import TipTapEditor from "../text-workspace/TipTapEditor";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
-import {
-  mockAIResponses,
-  mockPromptActions,
-  mockTextProject
-} from "../text-workspace/mockTextWorkspaceData";
+import { mockPromptActions, mockTextProject } from "../text-workspace/mockTextWorkspaceData";
 
 export default function EditorScreen() {
   const searchParams = useSearchParams();
@@ -49,12 +45,12 @@ export default function EditorScreen() {
   const [prompt, setPrompt] = useState(
     "Write an introduction about how AI tools help small businesses."
   );
-  const [responses, setResponses] = useState(mockAIResponses);
+  const [responses, setResponses] = useState([]);
   const [savedDraft, setSavedDraft] = useState(null);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [localInvites, setLocalInvites] = useState([]);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
-  const [selectedHistoryId, setSelectedHistoryId] = useState(mockAIResponses[0]?.id || null);
+  const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const savePayload = useMemo(
@@ -104,6 +100,14 @@ export default function EditorScreen() {
 
     return [...usersByEmail.values()];
   }, [localInvites, project.collaborators]);
+
+  useEffect(() => {
+    const pendingToast = readPendingToast();
+
+    if (pendingToast) {
+      setNotification({ duration: 5000, id: Date.now(), ...pendingToast });
+    }
+  }, []);
 
   useEffect(() => {
     if (!isRealProject) {
@@ -162,7 +166,18 @@ export default function EditorScreen() {
           prompt,
           response: response.response,
           contentType: "text"
-        }).catch(() => {});
+        })
+          .then((savedResponse) => {
+            const formattedResponse = formatChatAsResponse(savedResponse);
+
+            setResponses((currentResponses) =>
+              currentResponses.map((item) =>
+                item.id === responseId ? { ...formattedResponse, timestamp: "Just now" } : item
+              )
+            );
+            setSelectedHistoryId(formattedResponse.id);
+          })
+          .catch(() => {});
       }
     }, 900);
   }
@@ -564,6 +579,22 @@ function formatTime(value) {
 
 function stripHtml(value) {
   return value.replace(/<[^>]*>/g, " ");
+}
+
+function readPendingToast() {
+  const rawToast = window.sessionStorage.getItem("gencontent-pending-toast");
+
+  if (!rawToast) {
+    return null;
+  }
+
+  window.sessionStorage.removeItem("gencontent-pending-toast");
+
+  try {
+    return JSON.parse(rawToast);
+  } catch (error) {
+    return null;
+  }
 }
 
 function nameFromEmail(email) {
