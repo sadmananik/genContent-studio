@@ -112,7 +112,12 @@ function formatProjectForDashboard(project) {
     category: project.category || "Other",
     type,
     updated: formatUpdatedAt(project.updatedAt),
-    icon: type === PROJECT_TYPES.IMAGE ? "▧" : "▤",
+    icon:
+      type === PROJECT_TYPES.IMAGE ? (
+        <Image aria-hidden="true" size={18} strokeWidth={2.25} />
+      ) : (
+        <FileText aria-hidden="true" size={18} strokeWidth={2.25} />
+      ),
     tone: type === PROJECT_TYPES.IMAGE ? "lavender" : "mint",
     collaborators: project.collaborators || []
   };
