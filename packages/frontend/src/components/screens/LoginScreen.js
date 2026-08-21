@@ -7,6 +7,7 @@ import Brand from "../common/Brand";
 import Button from "../common/Button";
 import PasswordField from "../common/PasswordField";
 import { ROUTES } from "../../constants/navigation";
+import { DEV_AUTH_BYPASS_ENABLED, ensureDevAuthSession } from "../../lib/devAuth";
 import { useAppStore } from "../../store";
 
 export default function LoginScreen() {
@@ -47,6 +48,25 @@ export default function LoginScreen() {
     } catch (error) {
       // Error state is displayed from the auth store.
     }
+  }
+
+  function handleDevBypass() {
+    const session = ensureDevAuthSession();
+    if (!session) {
+      return;
+    }
+
+    useAppStore.setState((state) => ({
+      auth: {
+        ...state.auth,
+        user: session.user,
+        token: session.token,
+        isAuthenticated: true,
+        loading: false,
+        error: null
+      }
+    }));
+    router.push(ROUTES.DASHBOARD);
   }
 
   return (
@@ -92,6 +112,11 @@ export default function LoginScreen() {
         <Button className="full-width" disabled={auth.loading} type="submit">
           {auth.loading ? "Signing in..." : "Sign In"}
         </Button>
+        {DEV_AUTH_BYPASS_ENABLED ? (
+          <Button className="full-width" onClick={handleDevBypass} type="button">
+            Skip login (dev preview)
+          </Button>
+        ) : null}
         <p className="signup">
           Don&apos;t have an account? <Link href={ROUTES.REGISTER}>Sign up</Link>
         </p>

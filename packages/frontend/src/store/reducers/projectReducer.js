@@ -1,4 +1,13 @@
 import { apiRequest } from "../../lib/apiClient";
+import { DEV_AUTH_BYPASS_ENABLED } from "../../lib/devAuth";
+import {
+  createLocalProject,
+  deleteLocalProject,
+  getLocalProjectById,
+  inviteLocalProjectCollaborator,
+  listLocalProjects,
+  updateLocalProject
+} from "../../lib/localProjectStore";
 
 const initialProjectState = {
   projects: [],
@@ -15,7 +24,10 @@ export function createProjectReducer(set) {
       setProjectRequest(set);
 
       try {
-        const projects = await apiRequest("/api/projects");
+        const projects = DEV_AUTH_BYPASS_ENABLED
+          ? listLocalProjects()
+          : await apiRequest("/api/projects");
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -35,7 +47,10 @@ export function createProjectReducer(set) {
       setProjectRequest(set);
 
       try {
-        const project = await apiRequest(`/api/projects/${projectId}`);
+        const project = DEV_AUTH_BYPASS_ENABLED
+          ? getLocalProjectById(projectId)
+          : await apiRequest(`/api/projects/${projectId}`);
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -55,10 +70,13 @@ export function createProjectReducer(set) {
       setProjectRequest(set);
 
       try {
-        const project = await apiRequest("/api/projects", {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
+        const project = DEV_AUTH_BYPASS_ENABLED
+          ? createLocalProject(payload)
+          : await apiRequest("/api/projects", {
+              method: "POST",
+              body: JSON.stringify(payload)
+            });
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -79,10 +97,13 @@ export function createProjectReducer(set) {
       setProjectRequest(set);
 
       try {
-        const project = await apiRequest(`/api/projects/${projectId}`, {
-          method: "PUT",
-          body: JSON.stringify(updates)
-        });
+        const project = DEV_AUTH_BYPASS_ENABLED
+          ? updateLocalProject(projectId, updates)
+          : await apiRequest(`/api/projects/${projectId}`, {
+              method: "PUT",
+              body: JSON.stringify(updates)
+            });
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -109,10 +130,13 @@ export function createProjectReducer(set) {
       setProjectRequest(set);
 
       try {
-        const project = await apiRequest(`/api/projects/${projectId}/invite`, {
-          method: "PATCH",
-          body: JSON.stringify({ email })
-        });
+        const project = DEV_AUTH_BYPASS_ENABLED
+          ? inviteLocalProjectCollaborator(projectId, email)
+          : await apiRequest(`/api/projects/${projectId}/invite`, {
+              method: "PATCH",
+              body: JSON.stringify({ email })
+            });
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -139,9 +163,14 @@ export function createProjectReducer(set) {
       setProjectRequest(set);
 
       try {
-        await apiRequest(`/api/projects/${projectId}`, {
-          method: "DELETE"
-        });
+        if (DEV_AUTH_BYPASS_ENABLED) {
+          deleteLocalProject(projectId);
+        } else {
+          await apiRequest(`/api/projects/${projectId}`, {
+            method: "DELETE"
+          });
+        }
+
         set((state) => ({
           projectState: {
             ...state.projectState,
