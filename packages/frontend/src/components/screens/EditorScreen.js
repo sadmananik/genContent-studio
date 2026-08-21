@@ -31,6 +31,8 @@ export default function EditorScreen() {
   const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
   const inviteProjectCollaborator = useAppStore((state) => state.inviteProjectCollaborator);
   const saveAiResponse = useAppStore((state) => state.saveAiResponse);
+  const generateTextFromPrompt = useAppStore((state) => state.generateTextFromPrompt);
+  const clearAiError = useAppStore((state) => state.clearAiError);
   const sendTextGenerationRequest = useAppStore((state) => state.sendTextGenerationRequest);
   const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
   const updateAiResponse = useAppStore((state) => state.updateAiResponse);
@@ -137,43 +139,70 @@ export default function EditorScreen() {
     setSelectedHistoryId(realResponses[0]?.id || null);
   }, [aiState.chatHistory, isRealProject]);
 
-  function handleGenerate() {
+  async function handleGenerate() {
+    const trimmedPrompt = String(prompt || "").trim();
+
+    if (!trimmedPrompt) {
+      showNotification("Prompt required", "Enter a prompt before generating.", TOAST_TYPES.ERROR);
+      return;
+    }
+
+    clearAiError();
     setIsGenerating(true);
-    window.setTimeout(() => {
+
+    try {
+      const result = await generateTextFromPrompt({ prompt: trimmedPrompt });
+      const generatedText = result?.text || "";
       const responseId = `response-${Date.now()}`;
       const response = {
         id: responseId,
-        prompt,
-        response: buildDemoResponse(prompt),
+        prompt: trimmedPrompt,
+        response: generatedText,
         timestamp: "Just now",
         favourite: false
       };
 
       setResponses((currentResponses) => [response, ...currentResponses]);
       setSelectedHistoryId(responseId);
-      showNotification("AI generated", "Demo response generated.", TOAST_TYPES.SUCCESS);
-      setIsGenerating(false);
+      showNotification(
+        "AI generated",
+        "Content is ready. Insert it into the editor or edit it first.",
+        TOAST_TYPES.SUCCESS
+      );
 
       if (isRealProject) {
-        saveAiResponse({
-          project: projectId,
-          prompt,
-          response: response.response,
-          contentType: "text"
-        })
-          .then((savedResponse) => {
-            const formattedResponse = formatChatAsResponse(savedResponse);
+        try {
+          const savedResponse = await saveAiResponse({
+            project: projectId,
+            prompt: trimmedPrompt,
+            response: generatedText,
+            contentType: "text"
+          });
+          const formattedResponse = formatChatAsResponse(savedResponse);
 
-            setResponses((currentResponses) =>
-              currentResponses.map((item) =>
-                item.id === responseId ? { ...formattedResponse, timestamp: "Just now" } : item
-              )
-            );
-            setSelectedHistoryId(formattedResponse.id);
-          })
-          .catch(() => {});
+          setResponses((currentResponses) =>
+            currentResponses.map((item) =>
+              item.id === responseId ? { ...formattedResponse, timestamp: "Just now" } : item
+            )
+          );
+          setSelectedHistoryId(formattedResponse.id);
+        } catch (persistError) {
+          showNotification(
+            "Saved locally only",
+            persistError.message || "Generated text could not be saved to project history.",
+            TOAST_TYPES.INFO
+          );
+        }
       }
-    }, 900);
+    } catch (error) {
+      showNotification(
+        "Generation failed",
+        error.message || "Could not generate text from OpenAI.",
+        TOAST_TYPES.ERROR
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   function handleQuickAction(action) {
@@ -520,9 +549,15 @@ export default function EditorScreen() {
           <aside className="grid min-w-0 content-start gap-5">
             <AIPromptPanel
               actions={mockPromptActions}
+              error={aiState.error}
               isGenerating={isGenerating}
               onGenerate={handleGenerate}
-              onPromptChange={setPrompt}
+              onPromptChange={(value) => {
+                if (aiState.error) {
+                  clearAiError();
+                }
+                setPrompt(value);
+              }}
               onQuickAction={handleQuickAction}
               prompt={prompt}
             />
@@ -531,7 +566,8 @@ export default function EditorScreen() {
               <div>
                 <h2 className="text-base font-bold text-slate-950">Selected AI Response</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Generate demo text, then copy, edit, favourite, or insert the selected response.
+                  Generate with OpenAI, then copy, edit, favourite, or insert the selected response into
+                  TipTap.
                 </p>
               </div>
               {selectedResponse ? (
@@ -605,10 +641,6 @@ function formatChatAsResponse(chat) {
 function countWords(value) {
   const words = value.trim().match(/\S+/g);
   return words ? words.length : 0;
-}
-
-function buildDemoResponse(prompt) {
-  return `Demo response for: ${prompt}\n\nAI tools help small businesses create clearer content, save production time, and test stronger campaign ideas without needing a large team. This response is editable, copyable, and can be inserted into the editor.`;
 }
 
 async function copyText(value) {

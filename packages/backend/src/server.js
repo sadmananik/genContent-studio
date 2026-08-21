@@ -8,6 +8,7 @@ const imageContentRoutes = require("./routes/imageContentRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const textContentRoutes = require("./routes/textContentRoutes");
 const userRoutes = require("./routes/userRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 
 dotenv.config();
@@ -35,7 +36,8 @@ app.get("/api", (req, res) => {
       "/api/projects",
       "/api/chats",
       "/api/text-content",
-      "/api/image-content"
+      "/api/image-content",
+      "/api/ai/generate-text"
     ]
   });
 });
@@ -46,6 +48,7 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/text-content", textContentRoutes);
 app.use("/api/image-content", imageContentRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

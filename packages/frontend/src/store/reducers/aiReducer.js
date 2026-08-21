@@ -12,6 +12,44 @@ export function createAiReducer(set) {
   return {
     aiState: initialAiState,
 
+    /**
+     * Generate text via backend OpenAI integration.
+     * API key never leaves the server.
+     */
+    generateTextFromPrompt: async (payload) => {
+      setAiRequest(set);
+
+      try {
+        const response = await apiRequest("/api/ai/generate-text", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+
+        set((state) => ({
+          aiState: {
+            ...state.aiState,
+            textResponse: response,
+            loading: false,
+            error: null
+          }
+        }));
+        return response;
+      } catch (error) {
+        setAiError(set, error);
+        throw error;
+      }
+    },
+
+    clearAiError: () => {
+      set((state) => ({
+        aiState: {
+          ...state.aiState,
+          error: null
+        }
+      }));
+    },
+
+    /** Persist TipTap document HTML for a project (not LLM generation). */
     sendTextGenerationRequest: async (payload) => {
       setAiRequest(set);
 
