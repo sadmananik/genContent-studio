@@ -10,3 +10,5 @@ coverage
 yarn.lock
 .env
 .env*.local
+.env.example
+**/.env.example

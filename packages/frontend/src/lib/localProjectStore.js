@@ -116,8 +116,7 @@ export function updateLocalProject(projectId, updates = {}) {
 
   allowed.forEach((field) => {
     if (updates[field] !== undefined) {
-      next[field] =
-        typeof updates[field] === "string" ? updates[field].trim() : updates[field];
+      next[field] = typeof updates[field] === "string" ? updates[field].trim() : updates[field];
     }
   });
 

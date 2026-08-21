@@ -566,8 +566,8 @@ export default function EditorScreen() {
               <div>
                 <h2 className="text-base font-bold text-slate-950">Selected AI Response</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Generate with OpenAI, then copy, edit, favourite, or insert the selected response into
-                  TipTap.
+                  Generate with OpenAI, then copy, edit, favourite, or insert the selected response
+                  into TipTap.
                 </p>
               </div>
               {selectedResponse ? (

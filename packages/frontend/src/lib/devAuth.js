@@ -2,8 +2,7 @@
 
 import { saveAuthSession } from "./auth";
 
-export const DEV_AUTH_BYPASS_ENABLED =
-  process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true";
+export const DEV_AUTH_BYPASS_ENABLED = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true";
 
 export const DEV_AUTH_SESSION = {
   token: "dev-bypass-token",

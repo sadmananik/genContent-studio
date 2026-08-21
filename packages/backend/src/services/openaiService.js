@@ -24,8 +24,7 @@ function createClient() {
 
 function mapOpenAiError(error) {
   const statusCode = error.status || error.statusCode || 502;
-  const message =
-    error?.error?.message || error.message || "OpenAI API request failed.";
+  const message = error?.error?.message || error.message || "OpenAI API request failed.";
   const mapped = httpError(statusCode >= 400 && statusCode < 600 ? statusCode : 502, message);
   mapped.code = error.code || "OPENAI_ERROR";
   return mapped;
