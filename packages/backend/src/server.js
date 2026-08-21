@@ -58,5 +58,14 @@ connectDatabase()
   })
   .catch((error) => {
     console.error("Failed to connect to MongoDB", error);
+
+    if (process.env.DEV_ALLOW_NO_DB === "true") {
+      console.warn("DEV_ALLOW_NO_DB=true — starting backend without database.");
+      app.listen(port, () => {
+        console.log(`Backend API running on http://localhost:${port} (no database)`);
+      });
+      return;
+    }
+
     process.exit(1);
   });
