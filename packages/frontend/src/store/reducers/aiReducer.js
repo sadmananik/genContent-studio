@@ -9,35 +9,123 @@ const initialAiState = {
 };
 
 export function createAiReducer(set) {
+  async function runAiRequest(request, applySuccess) {
+    setAiRequest(set);
+
+    try {
+      const response = await request();
+
+      set((state) => ({
+        aiState: {
+          ...state.aiState,
+          ...applySuccess(state.aiState, response),
+          loading: false,
+          error: null
+        }
+      }));
+      return response;
+    } catch (error) {
+      setAiError(set, error);
+      throw error;
+    }
+  }
+
   return {
     aiState: initialAiState,
 
-    /**
-     * Generate text via backend OpenAI integration.
-     * API key never leaves the server.
-     */
     generateTextFromPrompt: async (payload) => {
-      setAiRequest(set);
+      return runAiRequest(
+        () =>
+          apiRequest("/api/ai/generate-text", {
+            method: "POST",
+            body: JSON.stringify(payload)
+          }),
+        (aiState, response) => ({ textResponse: response })
+      );
+    },
 
-      try {
-        const response = await apiRequest("/api/ai/generate-text", {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
+    sendTextGenerationRequest: async (payload) => {
+      return runAiRequest(
+        () =>
+          apiRequest("/api/text-content", {
+            method: "PUT",
+            body: JSON.stringify(payload)
+          }),
+        (aiState, response) => ({ textResponse: response })
+      );
+    },
 
-        set((state) => ({
-          aiState: {
-            ...state.aiState,
-            textResponse: response,
-            loading: false,
-            error: null
-          }
-        }));
-        return response;
-      } catch (error) {
-        setAiError(set, error);
-        throw error;
-      }
+    sendImageGenerationRequest: async (payload) => {
+      return runAiRequest(
+        () =>
+          apiRequest("/api/image-content", {
+            method: "PUT",
+            body: JSON.stringify(payload)
+          }),
+        (aiState, response) => ({ imageResponse: response })
+      );
+    },
+
+    fetchProjectChatHistory: async (projectId) => {
+      return runAiRequest(
+        () => apiRequest(`/api/projects/${projectId}/chats`),
+        (aiState, chatHistory) => ({ chatHistory })
+      );
+    },
+
+    saveAiResponse: async (payload) => {
+      return runAiRequest(
+        () =>
+          apiRequest("/api/chats", {
+            method: "POST",
+            body: JSON.stringify(payload)
+          }),
+        (aiState, chat) => ({ chatHistory: [chat, ...aiState.chatHistory] })
+      );
+    },
+
+    toggleAiResponseFavourite: async (chatId, isFavourite) => {
+      return runAiRequest(
+        () =>
+          apiRequest(`/api/chats/${chatId}/favourite`, {
+            method: "PATCH",
+            body: JSON.stringify({ isFavourite })
+          }),
+        (aiState, chat) => ({
+          chatHistory: aiState.chatHistory.map((item) =>
+            item._id === chat._id || item.id === chat.id ? chat : item
+          )
+        })
+      );
+    },
+
+    updateAiResponse: async (chatId, updates) => {
+      return runAiRequest(
+        () =>
+          apiRequest(`/api/chats/${chatId}`, {
+            method: "PATCH",
+            body: JSON.stringify(updates)
+          }),
+        (aiState, chat) => ({
+          chatHistory: aiState.chatHistory.map((item) =>
+            item._id === chat._id || item.id === chat.id ? chat : item
+          )
+        })
+      );
+    },
+
+    deleteAiResponse: async (chatId) => {
+      return runAiRequest(
+        () =>
+          apiRequest(`/api/chats/${chatId}`, {
+            method: "DELETE"
+          }),
+        (aiState) => ({
+          chatHistory: aiState.chatHistory.filter(
+            (item) => item._id !== chatId && item.id !== chatId
+          )
+        })
+      );
     },
 
     clearAiError: () => {
@@ -47,169 +135,6 @@ export function createAiReducer(set) {
           error: null
         }
       }));
-    },
-
-    /** Persist TipTap document HTML for a project (not LLM generation). */
-    sendTextGenerationRequest: async (payload) => {
-      setAiRequest(set);
-
-      try {
-        const response = await apiRequest("/api/text-content", {
-          method: "PUT",
-          body: JSON.stringify(payload)
-        });
-        set((state) => ({
-          aiState: {
-            ...state.aiState,
-            textResponse: response,
-            loading: false,
-            error: null
-          }
-        }));
-        return response;
-      } catch (error) {
-        setAiError(set, error);
-        throw error;
-      }
-    },
-
-    sendImageGenerationRequest: async (payload) => {
-      setAiRequest(set);
-
-      try {
-        const response = await apiRequest("/api/image-content", {
-          method: "PUT",
-          body: JSON.stringify(payload)
-        });
-        set((state) => ({
-          aiState: {
-            ...state.aiState,
-            imageResponse: response,
-            loading: false,
-            error: null
-          }
-        }));
-        return response;
-      } catch (error) {
-        setAiError(set, error);
-        throw error;
-      }
-    },
-
-    fetchProjectChatHistory: async (projectId) => {
-      setAiRequest(set);
-
-      try {
-        const chatHistory = await apiRequest(`/api/projects/${projectId}/chats`);
-        set((state) => ({
-          aiState: {
-            ...state.aiState,
-            chatHistory,
-            loading: false,
-            error: null
-          }
-        }));
-        return chatHistory;
-      } catch (error) {
-        setAiError(set, error);
-        throw error;
-      }
-    },
-
-    saveAiResponse: async (payload) => {
-      setAiRequest(set);
-
-      try {
-        const chat = await apiRequest("/api/chats", {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
-        set((state) => ({
-          aiState: {
-            ...state.aiState,
-            chatHistory: [chat, ...state.aiState.chatHistory],
-            loading: false,
-            error: null
-          }
-        }));
-        return chat;
-      } catch (error) {
-        setAiError(set, error);
-        throw error;
-      }
-    },
-
-    toggleAiResponseFavourite: async (chatId, isFavourite) => {
-      setAiRequest(set);
-
-      try {
-        const chat = await apiRequest(`/api/chats/${chatId}/favourite`, {
-          method: "PATCH",
-          body: JSON.stringify({ isFavourite })
-        });
-        set((state) => ({
-          aiState: {
-            ...state.aiState,
-            chatHistory: state.aiState.chatHistory.map((item) =>
-              item._id === chat._id || item.id === chat.id ? chat : item
-            ),
-            loading: false,
-            error: null
-          }
-        }));
-        return chat;
-      } catch (error) {
-        setAiError(set, error);
-        throw error;
-      }
-    },
-
-    updateAiResponse: async (chatId, updates) => {
-      setAiRequest(set);
-
-      try {
-        const chat = await apiRequest(`/api/chats/${chatId}`, {
-          method: "PATCH",
-          body: JSON.stringify(updates)
-        });
-        set((state) => ({
-          aiState: {
-            ...state.aiState,
-            chatHistory: state.aiState.chatHistory.map((item) =>
-              item._id === chat._id || item.id === chat.id ? chat : item
-            ),
-            loading: false,
-            error: null
-          }
-        }));
-        return chat;
-      } catch (error) {
-        setAiError(set, error);
-        throw error;
-      }
-    },
-
-    deleteAiResponse: async (chatId) => {
-      setAiRequest(set);
-
-      try {
-        await apiRequest(`/api/chats/${chatId}`, {
-          method: "DELETE"
-        });
-        set((state) => ({
-          aiState: {
-            ...state.aiState,
-            chatHistory: state.aiState.chatHistory.filter(
-              (item) => item._id !== chatId && item.id !== chatId
-            ),
-            loading: false,
-            error: null
-          }
-        }));
-      } catch (error) {
-        setAiError(set, error);
-        throw error;
-      }
     },
 
     clearAiState: () => {

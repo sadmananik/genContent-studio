@@ -9,8 +9,8 @@ router.post(
   "/generate-text",
   requireUser,
   asyncHandler(async (req, res) => {
-    const { prompt, systemPrompt, model } = req.body || {};
-    const result = await generateText({ prompt, systemPrompt, model });
+    const { prompt } = req.body || {};
+    const result = await generateText({ prompt });
     res.json(result);
   })
 );
