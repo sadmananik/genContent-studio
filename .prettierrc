@@ -2,5 +2,6 @@
   "printWidth": 100,
   "singleQuote": false,
   "trailingComma": "none",
-  "semi": true
+  "semi": true,
+  "endOfLine": "lf"
 }

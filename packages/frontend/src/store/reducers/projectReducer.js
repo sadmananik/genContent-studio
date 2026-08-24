@@ -16,6 +16,7 @@ export function createProjectReducer(set) {
 
       try {
         const projects = await apiRequest("/api/projects");
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -36,6 +37,7 @@ export function createProjectReducer(set) {
 
       try {
         const project = await apiRequest(`/api/projects/${projectId}`);
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -59,6 +61,7 @@ export function createProjectReducer(set) {
           method: "POST",
           body: JSON.stringify(payload)
         });
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -83,6 +86,7 @@ export function createProjectReducer(set) {
           method: "PUT",
           body: JSON.stringify(updates)
         });
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -113,6 +117,7 @@ export function createProjectReducer(set) {
           method: "PATCH",
           body: JSON.stringify({ email })
         });
+
         set((state) => ({
           projectState: {
             ...state.projectState,
@@ -142,6 +147,7 @@ export function createProjectReducer(set) {
         await apiRequest(`/api/projects/${projectId}`, {
           method: "DELETE"
         });
+
         set((state) => ({
           projectState: {
             ...state.projectState,
