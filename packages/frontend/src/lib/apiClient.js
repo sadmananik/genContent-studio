@@ -1,7 +1,6 @@
 "use client";
 
 import { clearAuthSession, getAuthSession } from "./auth";
-import { DEV_AUTH_BYPASS_ENABLED } from "./devAuth";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
@@ -27,12 +26,6 @@ export async function apiRequest(path, options = {}) {
 
     if (!response.ok) {
       if (response.status === 401) {
-        if (DEV_AUTH_BYPASS_ENABLED) {
-          throw new Error(
-            "Dev login bypass cannot call protected APIs. Whitelist your IP in MongoDB Atlas, restart the backend, then register/login with a real account."
-          );
-        }
-
         clearAuthSession();
       }
 

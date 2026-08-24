@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "../../store";
-import { DEV_AUTH_BYPASS_ENABLED, ensureDevAuthSession } from "../../lib/devAuth";
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter();
@@ -15,25 +14,6 @@ export default function ProtectedRoute({ children }) {
     let isMounted = true;
 
     async function verifySession() {
-      if (DEV_AUTH_BYPASS_ENABLED) {
-        const session = ensureDevAuthSession();
-        useAppStore.setState((state) => ({
-          auth: {
-            ...state.auth,
-            user: session.user,
-            token: session.token,
-            isAuthenticated: true,
-            loading: false,
-            error: null
-          }
-        }));
-
-        if (isMounted) {
-          setIsReady(true);
-        }
-        return;
-      }
-
       if (!token) {
         router.replace("/login");
         return;
