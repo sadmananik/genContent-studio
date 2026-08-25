@@ -2,8 +2,10 @@ import { apiRequest } from "../../lib/apiClient";
 
 const initialProjectState = {
   projects: [],
+  sharedProjects: [],
   currentProject: null,
   loading: false,
+  sharedLoading: false,
   error: null
 };
 
@@ -49,6 +51,39 @@ export function createProjectReducer(set) {
         return project;
       } catch (error) {
         setProjectError(set, error);
+        throw error;
+      }
+    },
+
+    fetchSharedProjects: async () => {
+      set((state) => ({
+        projectState: {
+          ...state.projectState,
+          sharedLoading: true,
+          error: null
+        }
+      }));
+
+      try {
+        const sharedProjects = await apiRequest("/api/projects/shared");
+
+        set((state) => ({
+          projectState: {
+            ...state.projectState,
+            sharedProjects,
+            sharedLoading: false,
+            error: null
+          }
+        }));
+        return sharedProjects;
+      } catch (error) {
+        set((state) => ({
+          projectState: {
+            ...state.projectState,
+            sharedLoading: false,
+            error: error.message || "Shared projects request failed"
+          }
+        }));
         throw error;
       }
     },
@@ -134,6 +169,35 @@ export function createProjectReducer(set) {
           }
         }));
         return project;
+      } catch (error) {
+        setProjectError(set, error);
+        throw error;
+      }
+    },
+
+    leaveSharedProject: async (projectId) => {
+      try {
+        await apiRequest(`/api/projects/${projectId}/collaborators/me`, {
+          method: "DELETE"
+        });
+
+        set((state) => ({
+          projectState: {
+            ...state.projectState,
+            projects: state.projectState.projects.filter(
+              (project) => project._id !== projectId && project.id !== projectId
+            ),
+            sharedProjects: state.projectState.sharedProjects.filter(
+              (project) => project._id !== projectId && project.id !== projectId
+            ),
+            currentProject:
+              state.projectState.currentProject?._id === projectId ||
+              state.projectState.currentProject?.id === projectId
+                ? null
+                : state.projectState.currentProject,
+            error: null
+          }
+        }));
       } catch (error) {
         setProjectError(set, error);
         throw error;
