@@ -3,50 +3,52 @@ const nodemailer = require("nodemailer");
 let transporter;
 
 async function sendPasswordResetEmail({ email, expiresInMinutes, name, resetUrl }) {
-  const mailer = getTransporter();
-  const from = process.env.EMAIL_FROM;
+  const subject = "Reset your GenContent Studio password";
+  const text = [
+    `Hello ${name},`,
+    "",
+    "Use the link below to reset your GenContent Studio password:",
+    resetUrl,
+    "",
+    getLinkExpiryCopy(expiresInMinutes),
+    "If you did not request this change, you can ignore this email."
+  ].join("\n");
 
-  if (!from) {
-    throw new Error("EMAIL_FROM is not configured");
+  if (shouldUseConsoleDelivery()) {
+    logEmailToConsole({ email, subject, text });
+    return;
   }
 
-  await mailer.sendMail({
-    from,
+  await getTransporter().sendMail({
+    from: requireEmailFrom(),
     to: email,
-    subject: "Reset your GenContent Studio password",
-    text: [
-      `Hello ${name},`,
-      "",
-      "Use the link below to reset your GenContent Studio password:",
-      resetUrl,
-      "",
-      getLinkExpiryCopy(expiresInMinutes),
-      "If you did not request this change, you can ignore this email."
-    ].join("\n")
+    subject,
+    text
   });
 }
 
 async function sendEmailVerificationEmail({ email, expiresInMinutes, name, verificationUrl }) {
-  const mailer = getTransporter();
-  const from = process.env.EMAIL_FROM;
+  const subject = "Verify your GenContent Studio account";
+  const text = [
+    `Hello ${name},`,
+    "",
+    "Use the link below to verify your GenContent Studio account:",
+    verificationUrl,
+    "",
+    getLinkExpiryCopy(expiresInMinutes),
+    "If you did not create this account, you can ignore this email."
+  ].join("\n");
 
-  if (!from) {
-    throw new Error("EMAIL_FROM is not configured");
+  if (shouldUseConsoleDelivery()) {
+    logEmailToConsole({ email, subject, text });
+    return;
   }
 
-  await mailer.sendMail({
-    from,
+  await getTransporter().sendMail({
+    from: requireEmailFrom(),
     to: email,
-    subject: "Verify your GenContent Studio account",
-    text: [
-      `Hello ${name},`,
-      "",
-      "Use the link below to verify your GenContent Studio account:",
-      verificationUrl,
-      "",
-      getLinkExpiryCopy(expiresInMinutes),
-      "If you did not create this account, you can ignore this email."
-    ].join("\n")
+    subject,
+    text
   });
 }
 
@@ -80,6 +82,41 @@ function getTransporter() {
   });
 
   return transporter;
+}
+
+function requireEmailFrom() {
+  const from = process.env.EMAIL_FROM;
+
+  if (!from) {
+    throw new Error("EMAIL_FROM is not configured");
+  }
+
+  return from;
+}
+
+function shouldUseConsoleDelivery() {
+  const mode = String(process.env.EMAIL_DELIVERY_MODE || "")
+    .trim()
+    .toLowerCase();
+
+  if (mode) {
+    return mode === "console";
+  }
+
+  return !process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS;
+}
+
+function logEmailToConsole({ email, subject, text }) {
+  console.log(
+    [
+      "----- GenContent Studio email -----",
+      `To: ${email}`,
+      `Subject: ${subject}`,
+      "",
+      text,
+      "-----------------------------------"
+    ].join("\n")
+  );
 }
 
 module.exports = {

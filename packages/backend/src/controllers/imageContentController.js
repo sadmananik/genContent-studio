@@ -10,7 +10,11 @@ const upsertImageContent = asyncHandler(async (req, res) => {
     throw httpError(400, "Project is required");
   }
 
-  await findAccessibleProject(project, req.user.id);
+  const accessibleProject = await findAccessibleProject(project, req.user.id);
+
+  if (accessibleProject.type !== "image") {
+    throw httpError(400, "Image content can only be saved for image projects");
+  }
 
   const imageContent = await ImageContent.findOneAndUpdate(
     { project },
@@ -22,7 +26,11 @@ const upsertImageContent = asyncHandler(async (req, res) => {
 });
 
 const getImageContent = asyncHandler(async (req, res) => {
-  await findAccessibleProject(req.params.projectId, req.user.id);
+  const accessibleProject = await findAccessibleProject(req.params.projectId, req.user.id);
+
+  if (accessibleProject.type !== "image") {
+    throw httpError(400, "Image content is only available for image projects");
+  }
 
   const imageContent = await ImageContent.findOne({ project: req.params.projectId }).populate(
     "lastUpdatedBy",

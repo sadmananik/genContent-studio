@@ -2,12 +2,23 @@ const AIChat = require("../models/AIChat");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const { findAccessibleProject } = require("./projectController");
+const { normalizeString, requireTrimmedString } = require("../utils/validation");
+
+const VALID_CONTENT_TYPES = ["text", "image", "other"];
 
 const createChat = asyncHandler(async (req, res) => {
-  const { project, prompt, response, contentType } = req.body;
+  const { project, prompt, response, contentType = "text" } = req.body;
 
-  if (!project || !prompt || !response) {
-    throw httpError(400, "Project, prompt, and response are required");
+  if (!project) {
+    throw httpError(400, "Project is required");
+  }
+
+  const normalizedPrompt = requireTrimmedString(prompt, "Prompt");
+  const normalizedResponse = requireTrimmedString(response, "Response");
+  const normalizedContentType = normalizeString(contentType, "text") || "text";
+
+  if (!VALID_CONTENT_TYPES.includes(normalizedContentType)) {
+    throw httpError(400, "Content type must be text, image, or other");
   }
 
   await findAccessibleProject(project, req.user.id);
@@ -15,9 +26,9 @@ const createChat = asyncHandler(async (req, res) => {
   const chat = await AIChat.create({
     project,
     user: req.user.id,
-    prompt,
-    response,
-    contentType
+    prompt: normalizedPrompt,
+    response: normalizedResponse,
+    contentType: normalizedContentType
   });
 
   res.status(201).json(chat);
@@ -60,7 +71,10 @@ const updateChat = asyncHandler(async (req, res) => {
 
   ["prompt", "response"].forEach((field) => {
     if (req.body[field] !== undefined) {
-      chat[field] = typeof req.body[field] === "string" ? req.body[field].trim() : req.body[field];
+      chat[field] =
+        field === "prompt"
+          ? requireTrimmedString(req.body[field], "Prompt")
+          : requireTrimmedString(req.body[field], "Response");
     }
   });
 
