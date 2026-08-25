@@ -163,8 +163,13 @@ export const VERIFY_EMAIL_TEXT = {
 };
 
 export const SHARE_POPOVER_TEXT = {
-  INVITE_EMAIL_LABEL: "Invite by email",
-  INVITE_BUTTON: "Invite",
+  CREATE_ACCOUNT_HINT:
+    "No account found. They need to create an account before access can be added.",
+  EMAIL_PLACEHOLDER: "teammate@example.com",
   INVITED_COLLABORATORS_LABEL: "Invited collaborators",
-  EMAIL_PLACEHOLDER: "teammate@example.com"
+  INVITE_BUTTON: "Invite",
+  INVITE_EMAIL_LABEL: "Invite by email",
+  INVITE_TYPED_EMAIL_LABEL: "Invite this email",
+  MATCHING_ACCOUNT_LABEL: "Matching account",
+  SEARCHING_USERS: "Checking users..."
 };

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Save, Share2, Users } from "lucide-react";
 import Button from "../common/Button";
 import { UserAvatarStack } from "../common/UserAvatar";
 import { ACCESS_LEVEL_LABELS, ACCESS_LEVELS } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
+import { useAppStore } from "../../store";
 import WorkspaceExportMenu from "./WorkspaceExportMenu";
 import WorkspaceSharePopover from "./WorkspaceSharePopover";
 
@@ -25,10 +26,19 @@ export default function TextWorkspaceHeader({
   const [inviteEmail, setInviteEmail] = useState("");
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const auth = useAppStore((state) => state.auth);
+  const listUsers = useAppStore((state) => state.listUsers);
+  const userState = useAppStore((state) => state.userState);
 
-  async function handleInviteSubmit(event) {
+  useEffect(() => {
+    if (isShareOpen && userState.users.length === 0 && !userState.loading) {
+      listUsers().catch(() => {});
+    }
+  }, [isShareOpen, listUsers, userState.loading, userState.users.length]);
+
+  async function handleInviteSubmit(event, emailOverride) {
     event.preventDefault();
-    const invited = await onInviteUser?.(inviteEmail);
+    const invited = await onInviteUser?.(emailOverride || inviteEmail);
 
     if (invited) {
       setInviteEmail("");
@@ -84,10 +94,13 @@ export default function TextWorkspaceHeader({
             </Button>
             {isShareOpen && (
               <WorkspaceSharePopover
+                excludedEmails={[auth.user?.email, project.owner?.email]}
                 inviteEmail={inviteEmail}
                 invitedUsers={invitedUsers}
+                isLoadingUsers={userState.loading}
                 onInviteEmailChange={setInviteEmail}
                 onInviteSubmit={handleInviteSubmit}
+                users={userState.users}
               />
             )}
           </div>
