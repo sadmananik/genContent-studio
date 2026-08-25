@@ -35,7 +35,9 @@ export default function ForgotPasswordScreen() {
       <Brand />
       <form className="login-panel" onSubmit={handleSubmit}>
         <h2>Reset password</h2>
-        <p>Enter your account email and we&apos;ll send you a secure reset link.</p>
+        <p>
+          Enter your account email and we&apos;ll send you a secure reset link valid for 5 minutes.
+        </p>
         <label>
           <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
           <input
