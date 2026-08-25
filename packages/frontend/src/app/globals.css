@@ -340,6 +340,17 @@ a {
   margin-top: 20px;
 }
 
+.verify-resend-fields {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.verify-resend-fields .auth-success,
+.verify-resend-fields label {
+  margin: 0;
+}
+
 .login-panel .auth-error {
   padding: 10px 12px;
   margin: 0 0 14px;

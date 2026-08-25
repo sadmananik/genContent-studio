@@ -150,3 +150,14 @@ export const PROFILE_ALERTS = {
 export const AI_HISTORY_TEXT = {
   LOADING: "Loading AI history..."
 };
+
+export const VERIFY_EMAIL_TEXT = {
+  CHECKING_LINK: "Checking verification link...",
+  EXPIRED_HINT: "Account verification links expire in 5 minutes.",
+  INVALID_LINK: "This verification link is invalid or incomplete",
+  RESEND_BUTTON: "Send New Verification Link",
+  RESEND_BUTTON_LOADING: "Sending...",
+  SIGN_IN_BACK: "Back to sign in",
+  SIGN_IN_CONTINUE: "Continue to sign in",
+  TITLE: "Verify email"
+};
