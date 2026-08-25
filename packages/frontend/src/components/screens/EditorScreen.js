@@ -803,6 +803,7 @@ export default function EditorScreen() {
         onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
         onExport={handleExport}
         onInviteUser={handleInviteUser}
+        onNotify={showNotification}
         onSave={handleSave}
         project={project}
         statusLabel={statusLabel}

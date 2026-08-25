@@ -633,6 +633,7 @@ export default function ImageEditorScreen() {
         onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
         onExport={handleExport}
         onInviteUser={handleInviteUser}
+        onNotify={showNotification}
         onSave={handleHeaderSave}
         project={project}
         statusLabel={statusLabel}

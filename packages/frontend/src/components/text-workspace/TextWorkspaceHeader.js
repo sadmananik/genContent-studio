@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Download, Save, Share2, ShieldCheck, Users } from "lucide-react";
 import AppModal from "../common/AppModal";
 import Button from "../common/Button";
+import { TOAST_TYPES } from "../common/ToastNotification";
 import { UserAvatar, UserAvatarStack } from "../common/UserAvatar";
 import { ACCESS_LEVEL_LABELS, ACCESS_LEVELS } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
@@ -20,6 +21,7 @@ export default function TextWorkspaceHeader({
   invitedUsers = [],
   onExport,
   onInviteUser,
+  onNotify,
   onProjectUpdated,
   isSaving,
   onSave,
@@ -68,31 +70,67 @@ export default function TextWorkspaceHeader({
   }
 
   function handlePermissionChange(userId, accessLevel) {
-    setPermissionDrafts((currentDrafts) => ({ ...currentDrafts, [userId]: accessLevel }));
+    setPermissionDrafts((currentDrafts) => {
+      if (currentDrafts[userId] === accessLevel) {
+        return currentDrafts;
+      }
+
+      onNotify?.(
+        SHARE_POPOVER_TEXT.PERMISSION_CHANGED_TITLE,
+        SHARE_POPOVER_TEXT.PERMISSION_CHANGED_MESSAGE,
+        TOAST_TYPES.INFO,
+        3000
+      );
+
+      return { ...currentDrafts, [userId]: accessLevel };
+    });
   }
 
   function handleRemovePermission(userId) {
     setPermissionDrafts((currentDrafts) => {
+      if (!currentDrafts[userId]) {
+        return currentDrafts;
+      }
+
       const nextDrafts = { ...currentDrafts };
       delete nextDrafts[userId];
+      onNotify?.(
+        SHARE_POPOVER_TEXT.PERMISSION_REMOVED_TITLE,
+        SHARE_POPOVER_TEXT.PERMISSION_REMOVED_MESSAGE,
+        TOAST_TYPES.WARNING,
+        3000
+      );
       return nextDrafts;
     });
   }
 
   async function handleSavePermissions() {
-    const collaboratorIds = invitedUsers
-      .map(getUserId)
-      .filter((userId) => permissionDrafts[userId]);
-    const collaboratorPermissions = collaboratorIds.map((userId) => ({
-      accessLevel: permissionDrafts[userId],
-      user: userId
-    }));
-    const updatedProject = await updateProject(project.id || project._id, {
-      collaborators: collaboratorIds,
-      collaboratorPermissions
-    });
-    onProjectUpdated?.(updatedProject);
-    setIsPermissionsOpen(false);
+    try {
+      const collaboratorIds = invitedUsers
+        .map(getUserId)
+        .filter((userId) => permissionDrafts[userId]);
+      const collaboratorPermissions = collaboratorIds.map((userId) => ({
+        accessLevel: permissionDrafts[userId],
+        user: userId
+      }));
+      const updatedProject = await updateProject(project.id || project._id, {
+        collaborators: collaboratorIds,
+        collaboratorPermissions
+      });
+      onProjectUpdated?.(updatedProject);
+      setIsPermissionsOpen(false);
+      onNotify?.(
+        SHARE_POPOVER_TEXT.PERMISSIONS_UPDATED_TITLE,
+        SHARE_POPOVER_TEXT.PERMISSIONS_UPDATED_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
+    } catch (error) {
+      onNotify?.(
+        SHARE_POPOVER_TEXT.PERMISSIONS_UPDATE_FAILED_TITLE,
+        error.message || SHARE_POPOVER_TEXT.PERMISSIONS_UPDATE_FAILED_MESSAGE,
+        TOAST_TYPES.ERROR
+      );
+    }
   }
 
   return (
