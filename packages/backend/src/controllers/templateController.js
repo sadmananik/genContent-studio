@@ -81,7 +81,13 @@ const listRecentTemplates = asyncHandler(async (req, res) => {
     .select("favorites recentlyUsed");
   const favoriteIds = new Set((preference?.favorites || []).map(String));
   const templates = (preference?.recentlyUsed || [])
-    .filter((entry) => entry.template)
+    .filter(
+      (entry) =>
+        entry.template &&
+        (entry.template.visibility === TEMPLATE_VISIBILITY.PUBLIC ||
+          String(entry.template.creator?._id || entry.template.creator || "") ===
+            String(req.user.id))
+    )
     .slice(0, RECENT_TEMPLATE_LIMIT)
     .map((entry) => ({
       ...serializeTemplate(entry.template, favoriteIds, req.user.id),
@@ -234,8 +240,10 @@ const useTemplate = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  await Promise.all([
-    Template.updateOne({ _id: template._id }, { $inc: { useCount: 1 } }),
+  const [updatedTemplate] = await Promise.all([
+    Template.findByIdAndUpdate(template._id, { $inc: { useCount: 1 } }, { new: true }).select(
+      "useCount"
+    ),
     recordRecentTemplate(req.user.id, template._id)
   ]);
 
@@ -249,7 +257,7 @@ const useTemplate = asyncHandler(async (req, res) => {
       canDelete: true,
       isSharedWithCurrentUser: false
     },
-    template: { id: String(template._id), useCount: template.useCount + 1 }
+    template: { id: String(template._id), useCount: updatedTemplate.useCount }
   });
 });
 
@@ -402,9 +410,10 @@ function normalizeTags(value) {
 
 function serializeTemplate(template, favoriteIds, userId) {
   const value = template.toObject ? template.toObject() : template;
+  const { sourceProject, systemKey, ...publicValue } = value;
 
   return {
-    ...value,
+    ...publicValue,
     id: String(value._id),
     creator: value.isSystem
       ? { id: null, name: "GenContent Studio" }

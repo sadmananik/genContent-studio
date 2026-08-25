@@ -1,5 +1,5 @@
-import PlaceholderPage from "../../../components/common/PlaceholderPage";
+import TemplatesScreen from "../../../components/screens/TemplatesScreen";
 
 export default function TemplatesPage() {
-  return <PlaceholderPage title="Templates" />;
+  return <TemplatesScreen />;
 }

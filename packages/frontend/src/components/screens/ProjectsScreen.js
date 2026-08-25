@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, LayoutTemplate, Pencil, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, SectionHeader } from "../common/Cards";
 import ProjectListCard from "../common/ProjectListCard";
 import ProjectFormModal from "../common/ProjectFormModal";
+import TemplateFormModal from "../templates/TemplateFormModal";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
 import {
@@ -18,6 +19,7 @@ import {
 } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
 import { COMMON_UI_TEXT, PROJECT_ALERTS } from "../../constants/notifications";
+import { TEMPLATE_CATEGORIES, TEMPLATE_TEXT, TEMPLATE_VISIBILITY } from "../../constants/templates";
 import { useAppStore } from "../../store";
 
 export default function ProjectsScreen() {
@@ -28,11 +30,14 @@ export default function ProjectsScreen() {
   const deleteProject = useAppStore((state) => state.deleteProject);
   const fetchProjects = useAppStore((state) => state.fetchProjects);
   const updateProject = useAppStore((state) => state.updateProject);
+  const publishTemplate = useAppStore((state) => state.publishTemplate);
   const [editingProject, setEditingProject] = useState(null);
   const [openActionProjectId, setOpenActionProjectId] = useState(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectPendingDelete, setProjectPendingDelete] = useState(null);
+  const [projectPendingPublish, setProjectPendingPublish] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [notification, setNotification] = useState(null);
 
   useEffect(() => {
@@ -139,6 +144,31 @@ export default function ProjectsScreen() {
     }
   }
 
+  async function handlePublishTemplate(values) {
+    if (!projectPendingPublish) return;
+    setIsPublishing(true);
+
+    try {
+      await publishTemplate(projectPendingPublish.id, values);
+      setProjectPendingPublish(null);
+      showNotification(
+        TEMPLATE_TEXT.PUBLISHED_TITLE,
+        values.visibility === TEMPLATE_VISIBILITY.PUBLIC
+          ? TEMPLATE_TEXT.PUBLISHED_MESSAGE
+          : TEMPLATE_TEXT.PUBLISHED_PRIVATE_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
+    } catch (error) {
+      showNotification(
+        TEMPLATE_TEXT.PUBLISH_FAILED_TITLE,
+        error.message || TEMPLATE_TEXT.PUBLISH_FAILED_MESSAGE,
+        TOAST_TYPES.ERROR
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  }
+
   function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
@@ -240,6 +270,20 @@ export default function ProjectsScreen() {
                         <Pencil aria-hidden="true" size={16} />
                         Edit
                       </button>
+                      {project.canPublish && (
+                        <button
+                          className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                          onClick={() => {
+                            setProjectPendingPublish(project);
+                            setOpenActionProjectId(null);
+                          }}
+                          role="menuitem"
+                          type="button"
+                        >
+                          <LayoutTemplate aria-hidden="true" size={16} />
+                          Publish as Template
+                        </button>
+                      )}
                       {project.canDelete && (
                         <button
                           className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:text-red-300"
@@ -303,6 +347,24 @@ export default function ProjectsScreen() {
           title={PROJECT_ALERTS.DELETE_CONFIRM_TITLE}
         />
       )}
+      {projectPendingPublish && (
+        <TemplateFormModal
+          error={null}
+          initialValues={{
+            ...projectPendingPublish,
+            category: getTemplateCategory(projectPendingPublish.category),
+            projectType:
+              projectPendingPublish.type === PROJECT_TYPES.IMAGE
+                ? API_PROJECT_TYPES.IMAGE
+                : API_PROJECT_TYPES.TEXT,
+            title: `${projectPendingPublish.title} Template`,
+            visibility: TEMPLATE_VISIBILITY.PUBLIC
+          }}
+          isSubmitting={isPublishing}
+          onClose={() => setProjectPendingPublish(null)}
+          onSubmit={handlePublishTemplate}
+        />
+      )}
       <ToastNotification
         duration={notification?.duration}
         key={notification?.id}
@@ -326,11 +388,26 @@ function formatProject(project) {
     accessLevel: project.accessLevel,
     canDelete: project.canDelete !== false,
     canManageSharing: project.canManageSharing !== false,
+    canPublish: project.currentUserRole === "owner",
+    starterPrompt: project.starterPrompt || "",
+    style: project.style || "",
+    tone: project.tone || "",
     type,
     updated: formatUpdatedAt(project.updatedAt),
     icon: type === PROJECT_TYPES.IMAGE ? "▧" : "▤",
     tone: type === PROJECT_TYPES.IMAGE ? "lavender" : "mint"
   };
+}
+
+function getTemplateCategory(projectCategory) {
+  if (TEMPLATE_CATEGORIES.includes(projectCategory)) return projectCategory;
+
+  const normalizedCategory = String(projectCategory || "").toLowerCase();
+
+  return (
+    TEMPLATE_CATEGORIES.find((category) => normalizedCategory.includes(category.toLowerCase())) ||
+    "Other"
+  );
 }
 
 function getProjectWorkspaceHref(project) {

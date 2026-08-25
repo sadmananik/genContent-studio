@@ -98,7 +98,12 @@ export default function ImageEditorScreen() {
     }
 
     fetchProjectById(projectId)
-      .then((loadedProject) => setProject(normalizeProject(loadedProject)))
+      .then((loadedProject) => {
+        setProject(normalizeProject(loadedProject));
+        if (loadedProject.starterPrompt) {
+          setPrompt(loadedProject.starterPrompt);
+        }
+      })
       .catch((error) => {
         showNotification(
           TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_TITLE,
@@ -140,6 +145,10 @@ export default function ImageEditorScreen() {
 
     apiRequest(`/api/image-content/${projectId}`)
       .then((imageContent) => {
+        if (imageContent.generationPrompt) {
+          setPrompt(imageContent.generationPrompt);
+        }
+
         if (!imageContent.canvasState) {
           return null;
         }

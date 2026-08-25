@@ -9,6 +9,8 @@ const ImageContent = require("../src/models/ImageContent");
 const Project = require("../src/models/Project");
 const ProjectInvite = require("../src/models/ProjectInvite");
 const TextContent = require("../src/models/TextContent");
+const Template = require("../src/models/Template");
+const TemplatePreference = require("../src/models/TemplatePreference");
 const User = require("../src/models/User");
 
 const CONFIRM_FLAG = "--confirm-clear";
@@ -27,7 +29,16 @@ async function main() {
 
   await mongoose.connect(process.env.MONGODB_URI);
 
-  const models = [AIChat, ImageContent, TextContent, Project, ProjectInvite, User];
+  const models = [
+    AIChat,
+    ImageContent,
+    TextContent,
+    TemplatePreference,
+    Template,
+    Project,
+    ProjectInvite,
+    User
+  ];
   const results = await Promise.all(
     models.map(async (model) => ({
       collection: model.collection.name,

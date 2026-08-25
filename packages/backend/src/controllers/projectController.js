@@ -3,6 +3,7 @@ const AIChat = require("../models/AIChat");
 const ImageContent = require("../models/ImageContent");
 const ProjectInvite = require("../models/ProjectInvite");
 const TextContent = require("../models/TextContent");
+const Template = require("../models/Template");
 const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
@@ -279,7 +280,8 @@ const deleteProject = asyncHandler(async (req, res) => {
     AIChat.deleteMany({ project: project._id }),
     ImageContent.deleteMany({ project: project._id }),
     ProjectInvite.deleteMany({ project: project._id }),
-    TextContent.deleteMany({ project: project._id })
+    TextContent.deleteMany({ project: project._id }),
+    Template.updateMany({ sourceProject: project._id }, { $set: { sourceProject: null } })
   ]);
   await project.deleteOne();
   res.status(204).send();
