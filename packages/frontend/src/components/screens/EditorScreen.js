@@ -20,6 +20,7 @@ import {
   PERMISSION_MESSAGES,
   PROJECT_ROLES
 } from "../../constants/content";
+import { TEXT_EDITOR_ALERTS } from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
 import { textPromptActions } from "../text-workspace/promptActions";
@@ -187,8 +188,8 @@ export default function EditorScreen() {
       .catch((error) => {
         if (isActive) {
           showNotification(
-            "Project load failed",
-            error.message || "Project details could not be loaded.",
+            TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_TITLE,
+            error.message || TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_MESSAGE,
             TOAST_TYPES.ERROR
           );
         }
@@ -227,10 +228,10 @@ export default function EditorScreen() {
           return;
         }
 
-        setSaveError(error.message || "Saved content could not be loaded.");
+        setSaveError(error.message || TEXT_EDITOR_ALERTS.CONTENT_LOAD_FAILED_MESSAGE);
         showNotification(
-          "Content load failed",
-          error.message || "Saved content could not be loaded.",
+          TEXT_EDITOR_ALERTS.CONTENT_LOAD_FAILED_TITLE,
+          error.message || TEXT_EDITOR_ALERTS.CONTENT_LOAD_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
       })
@@ -290,7 +291,11 @@ export default function EditorScreen() {
     const trimmedPrompt = String(promptOverride || prompt || "").trim();
 
     if (!trimmedPrompt) {
-      showNotification("Prompt required", "Enter a prompt before generating.", TOAST_TYPES.ERROR);
+      showNotification(
+        TEXT_EDITOR_ALERTS.PROMPT_REQUIRED_TITLE,
+        TEXT_EDITOR_ALERTS.PROMPT_REQUIRED_MESSAGE,
+        TOAST_TYPES.ERROR
+      );
       return;
     }
 
@@ -314,8 +319,8 @@ export default function EditorScreen() {
       setSelectedHistoryId(responseId);
       replaceEditorWithResponse(response);
       showNotification(
-        "AI generated",
-        "Content is ready and shown in the editor.",
+        TEXT_EDITOR_ALERTS.AI_GENERATED_TITLE,
+        TEXT_EDITOR_ALERTS.AI_GENERATED_MESSAGE,
         TOAST_TYPES.SUCCESS
       );
 
@@ -337,16 +342,16 @@ export default function EditorScreen() {
           setSelectedHistoryId(formattedResponse.id);
         } catch (persistError) {
           showNotification(
-            "Saved locally only",
-            persistError.message || "Generated text could not be saved to project history.",
+            TEXT_EDITOR_ALERTS.SAVED_LOCAL_ONLY_TITLE,
+            persistError.message || TEXT_EDITOR_ALERTS.SAVED_LOCAL_ONLY_MESSAGE,
             TOAST_TYPES.INFO
           );
         }
       }
     } catch (error) {
       showNotification(
-        "Generation failed",
-        error.message || "Could not generate text from OpenAI.",
+        TEXT_EDITOR_ALERTS.GENERATION_FAILED_TITLE,
+        error.message || TEXT_EDITOR_ALERTS.GENERATION_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
     } finally {
@@ -368,8 +373,8 @@ export default function EditorScreen() {
 
     if (!sourceContent) {
       showNotification(
-        "Content required",
-        "Write or select text in the editor before using a quick action.",
+        TEXT_EDITOR_ALERTS.CONTENT_REQUIRED_TITLE,
+        TEXT_EDITOR_ALERTS.CONTENT_REQUIRED_MESSAGE,
         TOAST_TYPES.WARNING
       );
       return;
@@ -430,15 +435,17 @@ export default function EditorScreen() {
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
       showNotification(
-        "Saved",
-        isRealProject ? "Project saved." : "Project saved in this browser.",
+        TEXT_EDITOR_ALERTS.SAVED_TITLE,
+        isRealProject
+          ? TEXT_EDITOR_ALERTS.SAVE_PROJECT_MESSAGE
+          : TEXT_EDITOR_ALERTS.SAVE_LOCAL_MESSAGE,
         TOAST_TYPES.SUCCESS
       );
     } catch (error) {
-      setSaveError(error.message || "Project could not be saved.");
+      setSaveError(error.message || TEXT_EDITOR_ALERTS.SAVE_FAILED_MESSAGE);
       showNotification(
-        "Save failed",
-        error.message || "Project could not be saved.",
+        TEXT_EDITOR_ALERTS.SAVE_FAILED_TITLE,
+        error.message || TEXT_EDITOR_ALERTS.SAVE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
     } finally {
@@ -449,7 +456,12 @@ export default function EditorScreen() {
   async function handleCopyResponse(response) {
     await copyText(response.response);
     setCopiedResponseId(response.id);
-    showNotification("Copied", "Response copied.", TOAST_TYPES.SUCCESS, 3000);
+    showNotification(
+      TEXT_EDITOR_ALERTS.COPIED_TITLE,
+      TEXT_EDITOR_ALERTS.COPIED_MESSAGE,
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
     window.setTimeout(() => setCopiedResponseId(null), 1400);
   }
 
@@ -478,8 +490,8 @@ export default function EditorScreen() {
           )
         );
         showNotification(
-          "Favourite failed",
-          error.message || "Favourite could not be saved.",
+          TEXT_EDITOR_ALERTS.FAVOURITE_FAILED_TITLE,
+          error.message || TEXT_EDITOR_ALERTS.FAVOURITE_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
         return;
@@ -487,8 +499,12 @@ export default function EditorScreen() {
     }
 
     showNotification(
-      nextFavouriteValue ? "Favourite saved" : "Favourite removed",
-      nextFavouriteValue ? "Response added to favourites." : "Response removed from favourites.",
+      nextFavouriteValue
+        ? TEXT_EDITOR_ALERTS.FAVOURITE_SAVED_TITLE
+        : TEXT_EDITOR_ALERTS.FAVOURITE_REMOVED_TITLE,
+      nextFavouriteValue
+        ? TEXT_EDITOR_ALERTS.FAVOURITE_SAVED_MESSAGE
+        : TEXT_EDITOR_ALERTS.FAVOURITE_REMOVED_MESSAGE,
       TOAST_TYPES.SUCCESS,
       3000
     );
@@ -526,15 +542,20 @@ export default function EditorScreen() {
         );
       } catch (error) {
         showNotification(
-          "Update failed",
-          error.message || "Response could not be updated.",
+          TEXT_EDITOR_ALERTS.UPDATE_FAILED_TITLE,
+          error.message || TEXT_EDITOR_ALERTS.UPDATE_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
         return;
       }
     }
 
-    showNotification("Updated", "Response updated.", TOAST_TYPES.SUCCESS, 3000);
+    showNotification(
+      TEXT_EDITOR_ALERTS.UPDATED_TITLE,
+      TEXT_EDITOR_ALERTS.UPDATED_MESSAGE,
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
   }
 
   async function handleDeleteResponse(responseId) {
@@ -554,8 +575,8 @@ export default function EditorScreen() {
         await deleteAiResponse(response.sourceId);
       } catch (error) {
         showNotification(
-          "Delete failed",
-          error.message || "Response could not be deleted.",
+          TEXT_EDITOR_ALERTS.DELETE_FAILED_TITLE,
+          error.message || TEXT_EDITOR_ALERTS.DELETE_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
         return;
@@ -578,13 +599,18 @@ export default function EditorScreen() {
       clearEditorContent();
     }
 
-    showNotification("Deleted", "Response deleted from history.", TOAST_TYPES.SUCCESS, 3000);
+    showNotification(
+      TEXT_EDITOR_ALERTS.DELETED_TITLE,
+      TEXT_EDITOR_ALERTS.DELETED_MESSAGE,
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
   }
 
   async function handleInviteUser(emailValue) {
     if (!canManageSharing) {
       showNotification(
-        "Sharing unavailable",
+        TEXT_EDITOR_ALERTS.SHARING_UNAVAILABLE_TITLE,
         PERMISSION_MESSAGES.SHARING_OWNER_ONLY,
         TOAST_TYPES.WARNING
       );
@@ -595,22 +621,26 @@ export default function EditorScreen() {
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showNotification(
-        "Invite failed",
-        "Enter a valid email address to invite.",
+        TEXT_EDITOR_ALERTS.INVITE_FAILED_TITLE,
+        TEXT_EDITOR_ALERTS.INVITE_INVALID_EMAIL_MESSAGE,
         TOAST_TYPES.WARNING
       );
       return false;
     }
 
     if (invitedUsers.some((user) => user.email?.toLowerCase() === email)) {
-      showNotification("Already invited", `${email} is already invited.`, TOAST_TYPES.WARNING);
+      showNotification(
+        TEXT_EDITOR_ALERTS.ALREADY_INVITED_TITLE,
+        TEXT_EDITOR_ALERTS.alreadyInvitedMessage(email),
+        TOAST_TYPES.WARNING
+      );
       return false;
     }
 
     if (!isRealProject) {
       showNotification(
-        "Invite unavailable",
-        "Save this project before inviting users.",
+        TEXT_EDITOR_ALERTS.INVITE_UNAVAILABLE_TITLE,
+        TEXT_EDITOR_ALERTS.INVITE_UNAVAILABLE_MESSAGE,
         TOAST_TYPES.WARNING
       );
       return false;
@@ -619,12 +649,16 @@ export default function EditorScreen() {
     try {
       const updatedProject = await inviteProjectCollaborator(projectId, email);
       setProject(normalizeProject(updatedProject));
-      showNotification("Shared", `${email} was invited to this project.`, TOAST_TYPES.SUCCESS);
+      showNotification(
+        TEXT_EDITOR_ALERTS.SHARED_TITLE,
+        TEXT_EDITOR_ALERTS.sharedMessage(email),
+        TOAST_TYPES.SUCCESS
+      );
       return true;
     } catch (error) {
       showNotification(
-        "Invite failed",
-        error.message || "User could not be invited.",
+        TEXT_EDITOR_ALERTS.INVITE_FAILED_TITLE,
+        error.message || TEXT_EDITOR_ALERTS.INVITE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
       return false;
@@ -636,7 +670,12 @@ export default function EditorScreen() {
 
     if (format === "pdf") {
       downloadBlob(createPdfBlob(project.title, editorContent.text), `${filename}.pdf`);
-      showNotification("Exported", "PDF export downloaded.", TOAST_TYPES.SUCCESS, 3000);
+      showNotification(
+        TEXT_EDITOR_ALERTS.EXPORTED_TITLE,
+        TEXT_EDITOR_ALERTS.EXPORT_PDF_MESSAGE,
+        TOAST_TYPES.SUCCESS,
+        3000
+      );
       return;
     }
 
@@ -644,7 +683,12 @@ export default function EditorScreen() {
       new Blob([`${project.title}\n\n${editorContent.text}`], { type: "text/plain;charset=utf-8" }),
       `${filename}.txt`
     );
-    showNotification("Exported", "Text export downloaded.", TOAST_TYPES.SUCCESS, 3000);
+    showNotification(
+      TEXT_EDITOR_ALERTS.EXPORTED_TITLE,
+      TEXT_EDITOR_ALERTS.EXPORT_TEXT_MESSAGE,
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
   }
 
   function handleSelectHistory(historyId) {
@@ -685,12 +729,16 @@ export default function EditorScreen() {
       pendingEditorAction?.();
       setPendingEditorAction(null);
       setPendingEditorActionCopy(null);
-      showNotification("Saved", "Draft saved before switching.", TOAST_TYPES.SUCCESS);
-    } catch (error) {
-      setSaveError(error.message || "Draft could not be saved.");
       showNotification(
-        "Save failed",
-        error.message || "Draft could not be saved.",
+        TEXT_EDITOR_ALERTS.SAVED_TITLE,
+        TEXT_EDITOR_ALERTS.SWITCH_SAVE_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
+    } catch (error) {
+      setSaveError(error.message || TEXT_EDITOR_ALERTS.DRAFT_SAVE_FAILED_MESSAGE);
+      showNotification(
+        TEXT_EDITOR_ALERTS.SAVE_FAILED_TITLE,
+        error.message || TEXT_EDITOR_ALERTS.DRAFT_SAVE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
     } finally {
@@ -830,7 +878,7 @@ export default function EditorScreen() {
                 />
               ) : (
                 <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
-                  No response selected yet.
+                  {TEXT_EDITOR_ALERTS.NO_RESPONSE_SELECTED}
                 </div>
               )}
             </section>
@@ -959,19 +1007,19 @@ function getSaveStatusLabel({
   saveError
 }) {
   if (isLoadingContent) {
-    return "Loading content...";
+    return TEXT_EDITOR_ALERTS.CONTENT_LOAD_STATUS;
   }
 
   if (isSaving) {
-    return "Saving...";
+    return TEXT_EDITOR_ALERTS.SAVING_STATUS;
   }
 
   if (saveError) {
-    return "Save failed";
+    return TEXT_EDITOR_ALERTS.SAVE_FAILED_STATUS;
   }
 
   if (hasUnsavedChanges) {
-    return "Unsaved changes";
+    return TEXT_EDITOR_ALERTS.UNSAVED_CHANGES_STATUS;
   }
 
   if (lastSavedAt) {

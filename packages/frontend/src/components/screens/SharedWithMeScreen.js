@@ -15,6 +15,7 @@ import {
   PROJECT_TYPES
 } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
+import { COMMON_UI_TEXT, SHARED_PROJECT_ALERTS } from "../../constants/notifications";
 import { useAppStore } from "../../store";
 
 export default function SharedWithMeScreen() {
@@ -67,12 +68,16 @@ export default function SharedWithMeScreen() {
 
     try {
       await leaveSharedProject(leavingProject.id);
-      showNotification("Project left", `You left "${leavingProject.title}".`, TOAST_TYPES.SUCCESS);
+      showNotification(
+        SHARED_PROJECT_ALERTS.PAGE_TITLE,
+        SHARED_PROJECT_ALERTS.leftMessage(leavingProject.title),
+        TOAST_TYPES.SUCCESS
+      );
       setLeavingProject(null);
     } catch (error) {
       showNotification(
-        "Unable to leave this project.",
-        error.message || "Please try again.",
+        SHARED_PROJECT_ALERTS.LEAVE_FAILED_TITLE,
+        error.message || SHARED_PROJECT_ALERTS.LEAVE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
     } finally {
@@ -88,38 +93,42 @@ export default function SharedWithMeScreen() {
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
         <div>
-          <h1 className="m-0 text-2xl font-bold text-slate-950">Shared with Me</h1>
-          <p className="mt-1.5 text-sm text-slate-500">
-            Projects shared with you by other users will appear here.
-          </p>
+          <h1 className="m-0 text-2xl font-bold text-slate-950">
+            {SHARED_PROJECT_ALERTS.PAGE_TITLE}
+          </h1>
+          <p className="mt-1.5 text-sm text-slate-500">{SHARED_PROJECT_ALERTS.PAGE_DESCRIPTION}</p>
         </div>
       </header>
 
-      <SectionHeader title={`Shared Projects${projects.length ? ` (${projects.length})` : ""}`} />
+      <SectionHeader
+        title={`${SHARED_PROJECT_ALERTS.PROJECTS_SECTION_TITLE}${
+          projects.length ? ` (${projects.length})` : ""
+        }`}
+      />
 
       {projectState.sharedLoading ? (
         <EmptyState
-          title="Loading shared projects..."
-          description="Projects shared with you are loading."
+          title={SHARED_PROJECT_ALERTS.LOADING_TITLE}
+          description={SHARED_PROJECT_ALERTS.LOADING_DESCRIPTION}
         />
       ) : projectState.error && projects.length === 0 ? (
         <EmptyState
-          title="Unable to load shared projects."
-          description={projectState.error || "Please try again."}
+          title={SHARED_PROJECT_ALERTS.LOAD_FAILED_TITLE}
+          description={projectState.error || SHARED_PROJECT_ALERTS.LEAVE_FAILED_MESSAGE}
           action={
             <button
               className="font-bold text-violet-700 hover:text-violet-900"
               onClick={() => fetchSharedProjects().catch(() => {})}
               type="button"
             >
-              Try Again
+              {COMMON_UI_TEXT.TRY_AGAIN}
             </button>
           }
         />
       ) : projects.length === 0 ? (
         <EmptyState
-          title="No shared projects yet"
-          description="Projects that other users share with you will appear here."
+          title={SHARED_PROJECT_ALERTS.EMPTY_TITLE}
+          description={SHARED_PROJECT_ALERTS.EMPTY_DESCRIPTION}
           action={<button onClick={() => router.push(ROUTES.PROJECTS)}>View My Projects</button>}
         />
       ) : (
@@ -230,11 +239,11 @@ export default function SharedWithMeScreen() {
         <ConfirmDialog
           cancelLabel="Cancel"
           confirmLabel="Leave Project"
-          description={`You will lose access to "${leavingProject.title}". The project owner will need to share this project with you again if you want access later.`}
+          description={SHARED_PROJECT_ALERTS.leaveConfirmDescription(leavingProject.title)}
           isConfirming={leavingProjectId === leavingProject.id}
           onCancel={() => setLeavingProject(null)}
           onConfirm={handleLeaveProject}
-          title="Leave shared project?"
+          title={SHARED_PROJECT_ALERTS.LEAVE_CONFIRM_TITLE}
         />
       )}
 
@@ -351,13 +360,13 @@ function getAccessBadgeClassName(accessLevel) {
 
 function formatUpdatedAt(value) {
   if (!value) {
-    return "Updated just now";
+    return COMMON_UI_TEXT.UPDATED_JUST_NOW;
   }
 
   const diffInSeconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
 
   if (diffInSeconds < 60) {
-    return "Updated just now";
+    return COMMON_UI_TEXT.UPDATED_JUST_NOW;
   }
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);

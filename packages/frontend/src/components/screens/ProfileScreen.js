@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Button from "../common/Button";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { getInitials } from "../common/UserProfileMenu";
+import { PROFILE_ALERTS } from "../../constants/notifications";
 import { useAppStore } from "../../store";
 
 export default function ProfileScreen() {
@@ -43,10 +44,10 @@ export default function ProfileScreen() {
     const avatarUrl = formValues.avatarUrl.trim();
 
     if (name.length < 2) {
-      setFormError("Name must be at least 2 characters.");
+      setFormError(PROFILE_ALERTS.NAME_TOO_SHORT_MESSAGE);
       showNotification(
-        "Profile not saved",
-        "Name must be at least 2 characters.",
+        PROFILE_ALERTS.NOT_SAVED_TITLE,
+        PROFILE_ALERTS.NAME_TOO_SHORT_MESSAGE,
         TOAST_TYPES.WARNING
       );
       return;
@@ -60,11 +61,15 @@ export default function ProfileScreen() {
           avatarUrl
         }
       });
-      showNotification("Profile updated", "Your profile changes were saved.", TOAST_TYPES.SUCCESS);
+      showNotification(
+        PROFILE_ALERTS.UPDATED_TITLE,
+        PROFILE_ALERTS.UPDATED_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
     } catch (error) {
       showNotification(
-        "Update failed",
-        error.message || "Profile could not be updated.",
+        PROFILE_ALERTS.UPDATE_FAILED_TITLE,
+        error.message || PROFILE_ALERTS.UPDATE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
     }

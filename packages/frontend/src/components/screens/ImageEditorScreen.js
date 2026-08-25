@@ -18,6 +18,7 @@ import {
   PERMISSION_MESSAGES,
   PROJECT_ROLES
 } from "../../constants/content";
+import { IMAGE_EDITOR_ALERTS, TEXT_EDITOR_ALERTS } from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
 
@@ -69,7 +70,7 @@ export default function ImageEditorScreen() {
     return [...usersByEmail.values()];
   }, [project.collaborators]);
   const statusLabel = hasUnsavedChanges
-    ? "Unsaved changes"
+    ? TEXT_EDITOR_ALERTS.UNSAVED_CHANGES_STATUS
     : lastSavedAt
       ? `Saved ${formatTime(lastSavedAt)}`
       : project.lastUpdated;
@@ -113,8 +114,8 @@ export default function ImageEditorScreen() {
       })
       .catch((error) => {
         showNotification(
-          "History unavailable",
-          error.message || "Image history could not be loaded.",
+          IMAGE_EDITOR_ALERTS.HISTORY_UNAVAILABLE_TITLE,
+          error.message || IMAGE_EDITOR_ALERTS.HISTORY_UNAVAILABLE_MESSAGE,
           TOAST_TYPES.ERROR
         );
       });
@@ -155,7 +156,12 @@ export default function ImageEditorScreen() {
       .then(() => {
         canvas.requestRenderAll();
         setHasUnsavedChanges(false);
-        showNotification("Draft restored", "Saved image canvas loaded.", TOAST_TYPES.INFO, 3000);
+        showNotification(
+          IMAGE_EDITOR_ALERTS.DRAFT_RESTORED_TITLE,
+          IMAGE_EDITOR_ALERTS.DRAFT_RESTORED_MESSAGE,
+          TOAST_TYPES.INFO,
+          3000
+        );
       })
       .catch(() => {});
   }, [canvas, projectId]);
@@ -201,16 +207,16 @@ export default function ImageEditorScreen() {
         setSelectedResponseId(savedResponse.id);
         setGenerationRequest({ id: Date.now(), prompt });
         showNotification(
-          "Image generated",
+          IMAGE_EDITOR_ALERTS.GENERATED_TITLE,
           isRealProject
-            ? "Demo image response saved to history and inserted into the canvas."
-            : "Demo image response inserted into the canvas.",
+            ? IMAGE_EDITOR_ALERTS.GENERATED_SAVED_MESSAGE
+            : IMAGE_EDITOR_ALERTS.GENERATED_LOCAL_MESSAGE,
           TOAST_TYPES.SUCCESS
         );
       } catch (error) {
         showNotification(
-          "Generate failed",
-          error.message || "Demo image response could not be saved.",
+          IMAGE_EDITOR_ALERTS.GENERATE_FAILED_TITLE,
+          error.message || IMAGE_EDITOR_ALERTS.GENERATE_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
       } finally {
@@ -235,7 +241,7 @@ export default function ImageEditorScreen() {
   async function handleInviteUser(emailValue) {
     if (!canManageSharing) {
       showNotification(
-        "Sharing unavailable",
+        TEXT_EDITOR_ALERTS.INVITE_UNAVAILABLE_TITLE,
         PERMISSION_MESSAGES.SHARING_OWNER_ONLY,
         TOAST_TYPES.WARNING
       );
@@ -246,22 +252,26 @@ export default function ImageEditorScreen() {
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showNotification(
-        "Invite failed",
-        "Enter a valid email address to invite.",
+        TEXT_EDITOR_ALERTS.INVITE_FAILED_TITLE,
+        TEXT_EDITOR_ALERTS.INVITE_INVALID_EMAIL_MESSAGE,
         TOAST_TYPES.WARNING
       );
       return false;
     }
 
     if (invitedUsers.some((user) => user.email?.toLowerCase() === email)) {
-      showNotification("Already invited", `${email} is already invited.`, TOAST_TYPES.WARNING);
+      showNotification(
+        TEXT_EDITOR_ALERTS.ALREADY_INVITED_TITLE,
+        TEXT_EDITOR_ALERTS.alreadyInvitedMessage(email),
+        TOAST_TYPES.WARNING
+      );
       return false;
     }
 
     if (!isRealProject) {
       showNotification(
-        "Invite unavailable",
-        "Save this project before inviting users.",
+        TEXT_EDITOR_ALERTS.INVITE_UNAVAILABLE_TITLE,
+        TEXT_EDITOR_ALERTS.INVITE_UNAVAILABLE_MESSAGE,
         TOAST_TYPES.WARNING
       );
       return false;
@@ -270,12 +280,16 @@ export default function ImageEditorScreen() {
     try {
       const updatedProject = await inviteProjectCollaborator(projectId, email);
       setProject(normalizeProject(updatedProject));
-      showNotification("Shared", `${email} was invited to this project.`, TOAST_TYPES.SUCCESS);
+      showNotification(
+        TEXT_EDITOR_ALERTS.SHARED_TITLE,
+        TEXT_EDITOR_ALERTS.sharedMessage(email),
+        TOAST_TYPES.SUCCESS
+      );
       return true;
     } catch (error) {
       showNotification(
-        "Invite failed",
-        error.message || "User could not be invited.",
+        TEXT_EDITOR_ALERTS.INVITE_FAILED_TITLE,
+        error.message || TEXT_EDITOR_ALERTS.INVITE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
       return false;
@@ -300,14 +314,24 @@ export default function ImageEditorScreen() {
 
     if (response) {
       setPrompt(response.prompt);
-      showNotification("History loaded", "Image response selected.", TOAST_TYPES.INFO, 3000);
+      showNotification(
+        IMAGE_EDITOR_ALERTS.HISTORY_LOADED_TITLE,
+        IMAGE_EDITOR_ALERTS.HISTORY_LOADED_MESSAGE,
+        TOAST_TYPES.INFO,
+        3000
+      );
     }
   }
 
   function handleCopyResponse(response) {
     navigator.clipboard?.writeText(response.response).catch(() => {});
     setCopiedResponseId(response.id);
-    showNotification("Copied", "Image response copied.", TOAST_TYPES.SUCCESS, 3000);
+    showNotification(
+      TEXT_EDITOR_ALERTS.COPIED_TITLE,
+      IMAGE_EDITOR_ALERTS.COPIED_MESSAGE,
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
     window.setTimeout(() => setCopiedResponseId(null), 1600);
   }
 
@@ -345,8 +369,8 @@ export default function ImageEditorScreen() {
           )
         );
         showNotification(
-          "Favourite failed",
-          error.message || "Favourite could not be saved.",
+          TEXT_EDITOR_ALERTS.FAVOURITE_FAILED_TITLE,
+          error.message || TEXT_EDITOR_ALERTS.FAVOURITE_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
         return;
@@ -354,8 +378,12 @@ export default function ImageEditorScreen() {
     }
 
     showNotification(
-      nextFavouriteValue ? "Favourite saved" : "Favourite removed",
-      nextFavouriteValue ? "Image response saved." : "Image response removed from favourites.",
+      nextFavouriteValue
+        ? TEXT_EDITOR_ALERTS.FAVOURITE_SAVED_TITLE
+        : TEXT_EDITOR_ALERTS.FAVOURITE_REMOVED_TITLE,
+      nextFavouriteValue
+        ? IMAGE_EDITOR_ALERTS.RESPONSE_FAVOURITE_SAVED_MESSAGE
+        : IMAGE_EDITOR_ALERTS.RESPONSE_FAVOURITE_REMOVED_MESSAGE,
       TOAST_TYPES.SUCCESS,
       3000
     );
@@ -389,15 +417,20 @@ export default function ImageEditorScreen() {
         );
       } catch (error) {
         showNotification(
-          "Update failed",
-          error.message || "Image response could not be updated.",
+          TEXT_EDITOR_ALERTS.UPDATE_FAILED_TITLE,
+          error.message || IMAGE_EDITOR_ALERTS.RESPONSE_UPDATE_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
         return;
       }
     }
 
-    showNotification("Updated", "Image response updated.", TOAST_TYPES.SUCCESS, 3000);
+    showNotification(
+      TEXT_EDITOR_ALERTS.UPDATED_TITLE,
+      IMAGE_EDITOR_ALERTS.UPDATED_MESSAGE,
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
   }
 
   async function handleDeleteResponse(responseId) {
@@ -417,8 +450,8 @@ export default function ImageEditorScreen() {
         await deleteAiResponse(response.sourceId);
       } catch (error) {
         showNotification(
-          "Delete failed",
-          error.message || "Image response could not be deleted.",
+          TEXT_EDITOR_ALERTS.DELETE_FAILED_TITLE,
+          error.message || IMAGE_EDITOR_ALERTS.RESPONSE_DELETE_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
         return;
@@ -431,7 +464,12 @@ export default function ImageEditorScreen() {
     setSelectedResponseId((currentSelectedId) =>
       currentSelectedId === responseId ? nextResponses[0]?.id || null : currentSelectedId
     );
-    showNotification("Deleted", "Image response deleted from history.", TOAST_TYPES.SUCCESS, 3000);
+    showNotification(
+      TEXT_EDITOR_ALERTS.DELETED_TITLE,
+      IMAGE_EDITOR_ALERTS.DELETED_MESSAGE,
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
   }
 
   function handleInsertResponse(response) {
@@ -454,7 +492,11 @@ export default function ImageEditorScreen() {
   function insertResponseIntoCanvas(response) {
     setPrompt(response.prompt);
     setGenerationRequest({ id: Date.now(), prompt: response.prompt });
-    showNotification("Inserted", "Image response inserted into the canvas.", TOAST_TYPES.SUCCESS);
+    showNotification(
+      IMAGE_EDITOR_ALERTS.INSERTED_TITLE,
+      IMAGE_EDITOR_ALERTS.INSERTED_MESSAGE,
+      TOAST_TYPES.SUCCESS
+    );
   }
 
   async function handleSaveCanvas(payload) {
@@ -480,8 +522,10 @@ export default function ImageEditorScreen() {
     setHasUnsavedChanges(false);
     setLastSavedAt(new Date());
     showNotification(
-      "Saved",
-      isRealProject ? "Image canvas saved." : "Image canvas saved in this browser.",
+      TEXT_EDITOR_ALERTS.SAVED_TITLE,
+      isRealProject
+        ? IMAGE_EDITOR_ALERTS.CANVAS_SAVED_MESSAGE
+        : IMAGE_EDITOR_ALERTS.CANVAS_SAVED_LOCAL_MESSAGE,
       TOAST_TYPES.SUCCESS
     );
   }
@@ -498,8 +542,8 @@ export default function ImageEditorScreen() {
         await saveCurrentCanvas();
       } catch (error) {
         showNotification(
-          "Save failed",
-          error.message || "Image could not be saved.",
+          TEXT_EDITOR_ALERTS.SAVE_FAILED_TITLE,
+          error.message || IMAGE_EDITOR_ALERTS.CANVAS_SAVE_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
       } finally {
@@ -524,11 +568,15 @@ export default function ImageEditorScreen() {
       await saveCurrentCanvas();
       pendingCanvasAction?.();
       setPendingCanvasAction(null);
-      showNotification("Saved", "Canvas saved before switching.", TOAST_TYPES.SUCCESS);
+      showNotification(
+        TEXT_EDITOR_ALERTS.SAVED_TITLE,
+        IMAGE_EDITOR_ALERTS.CANVAS_SAVED_BEFORE_SWITCHING_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
     } catch (error) {
       showNotification(
-        "Save failed",
-        error.message || "Canvas could not be saved before switching.",
+        TEXT_EDITOR_ALERTS.SAVE_FAILED_TITLE,
+        error.message || IMAGE_EDITOR_ALERTS.CANVAS_SAVE_FAILED_BEFORE_SWITCHING_MESSAGE,
         TOAST_TYPES.ERROR
       );
     } finally {
@@ -550,12 +598,22 @@ export default function ImageEditorScreen() {
         }),
         `${slugify(project.title)}-canvas.json`
       );
-      showNotification("Exported", "Canvas JSON exported.", TOAST_TYPES.SUCCESS, 3000);
+      showNotification(
+        TEXT_EDITOR_ALERTS.EXPORTED_TITLE,
+        IMAGE_EDITOR_ALERTS.CANVAS_JSON_EXPORTED_MESSAGE,
+        TOAST_TYPES.SUCCESS,
+        3000
+      );
       return;
     }
 
     downloadDataUrl(dataUrl, `${slugify(project.title)}.png`);
-    showNotification("Exported", "Image PNG exported.", TOAST_TYPES.SUCCESS, 3000);
+    showNotification(
+      TEXT_EDITOR_ALERTS.EXPORTED_TITLE,
+      IMAGE_EDITOR_ALERTS.IMAGE_PNG_EXPORTED_MESSAGE,
+      TOAST_TYPES.SUCCESS,
+      3000
+    );
   }
 
   return (
@@ -627,7 +685,7 @@ export default function ImageEditorScreen() {
                 />
               ) : (
                 <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
-                  No image response selected yet.
+                  {IMAGE_EDITOR_ALERTS.NO_RESPONSE_SELECTED}
                 </div>
               )}
             </section>
@@ -639,10 +697,10 @@ export default function ImageEditorScreen() {
         <ConfirmDialog
           cancelLabel="Stay Here"
           confirmLabel="Save and Continue"
-          description="Your current canvas has unsaved changes. Save this image draft before loading another response?"
+          description={IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION}
           onCancel={() => setPendingCanvasAction(null)}
           onConfirm={handleConfirmPendingAction}
-          title="Save changes before switching?"
+          title={IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE}
         />
       )}
 
