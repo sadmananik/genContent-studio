@@ -27,6 +27,7 @@ export default function TemplatesScreen() {
   const auth = useAppStore((state) => state.auth);
   const templateState = useAppStore((state) => state.templateState);
   const deleteTemplate = useAppStore((state) => state.deleteTemplate);
+  const fetchFavoriteTemplates = useAppStore((state) => state.fetchFavoriteTemplates);
   const fetchMyTemplates = useAppStore((state) => state.fetchMyTemplates);
   const fetchRecentTemplates = useAppStore((state) => state.fetchRecentTemplates);
   const fetchTemplateTagSuggestions = useAppStore((state) => state.fetchTemplateTagSuggestions);
@@ -72,6 +73,12 @@ export default function TemplatesScreen() {
   }, [activeTab, auth.token, fetchMyTemplates]);
 
   useEffect(() => {
+    if (auth.token && activeTab === TEMPLATE_TABS.FAVORITES) {
+      fetchFavoriteTemplates().catch(() => {});
+    }
+  }, [activeTab, auth.token, fetchFavoriteTemplates]);
+
+  useEffect(() => {
     if (!auth.token || activeTab !== TEMPLATE_TABS.BROWSE || !isSearchFocused || !search.trim()) {
       setSearchTagSuggestions([]);
       return undefined;
@@ -88,9 +95,17 @@ export default function TemplatesScreen() {
 
   const isFiltered = Boolean(search.trim()) || type !== "all" || category !== "all";
   const visibleTemplates =
-    activeTab === TEMPLATE_TABS.BROWSE ? templateState.templates : templateState.myTemplates;
+    activeTab === TEMPLATE_TABS.BROWSE
+      ? templateState.templates
+      : activeTab === TEMPLATE_TABS.FAVORITES
+        ? templateState.favoriteTemplates
+        : templateState.myTemplates;
   const loading =
-    activeTab === TEMPLATE_TABS.BROWSE ? templateState.loading : templateState.myLoading;
+    activeTab === TEMPLATE_TABS.BROWSE
+      ? templateState.loading
+      : activeTab === TEMPLATE_TABS.FAVORITES
+        ? templateState.favoriteLoading
+        : templateState.myLoading;
   async function handleFavorite(template) {
     setFavoritePendingId(template.id);
 
@@ -243,6 +258,7 @@ export default function TemplatesScreen() {
       <div className="mb-6 flex w-full max-w-md rounded-md border border-slate-200 bg-white p-1">
         {[
           [TEMPLATE_TABS.BROWSE, TEMPLATE_TEXT.BROWSE_TAB],
+          [TEMPLATE_TABS.FAVORITES, TEMPLATE_TEXT.FAVORITES_TAB],
           [TEMPLATE_TABS.MINE, TEMPLATE_TEXT.MY_TAB]
         ].map(([tab, label]) => (
           <button
@@ -319,9 +335,7 @@ export default function TemplatesScreen() {
         </>
       )}
 
-      <SectionHeader
-        title={activeTab === TEMPLATE_TABS.BROWSE ? TEMPLATE_TEXT.BROWSE_TAB : TEMPLATE_TEXT.MY_TAB}
-      />
+      <SectionHeader title={getTemplateTabLabel(activeTab)} />
 
       {loading && visibleTemplates.length === 0 ? (
         <EmptyState
@@ -329,7 +343,9 @@ export default function TemplatesScreen() {
           title={
             activeTab === TEMPLATE_TABS.BROWSE
               ? TEMPLATE_TEXT.LOADING_BROWSE
-              : TEMPLATE_TEXT.LOADING_MINE
+              : activeTab === TEMPLATE_TABS.FAVORITES
+                ? TEMPLATE_TEXT.LOADING_FAVORITES
+                : TEMPLATE_TEXT.LOADING_MINE
           }
         />
       ) : templateState.error && visibleTemplates.length === 0 ? (
@@ -339,7 +355,9 @@ export default function TemplatesScreen() {
               onClick={() =>
                 activeTab === TEMPLATE_TABS.BROWSE
                   ? fetchTemplates({ category, search, type })
-                  : fetchMyTemplates()
+                  : activeTab === TEMPLATE_TABS.FAVORITES
+                    ? fetchFavoriteTemplates()
+                    : fetchMyTemplates()
               }
               type="button"
               variant="secondary"
@@ -357,7 +375,7 @@ export default function TemplatesScreen() {
               <Button onClick={() => router.push(ROUTES.PROJECTS)} type="button">
                 {TEMPLATE_TEXT.VIEW_PROJECTS}
               </Button>
-            ) : isFiltered ? (
+            ) : activeTab === TEMPLATE_TABS.BROWSE && isFiltered ? (
               <Button onClick={clearFilters} type="button" variant="secondary">
                 {TEMPLATE_TEXT.CLEAR_FILTERS}
               </Button>
@@ -366,15 +384,19 @@ export default function TemplatesScreen() {
           description={
             activeTab === TEMPLATE_TABS.BROWSE
               ? TEMPLATE_TEXT.EMPTY_BROWSE_DESCRIPTION
-              : TEMPLATE_TEXT.EMPTY_MINE_DESCRIPTION
+              : activeTab === TEMPLATE_TABS.FAVORITES
+                ? TEMPLATE_TEXT.EMPTY_FAVORITES_DESCRIPTION
+                : TEMPLATE_TEXT.EMPTY_MINE_DESCRIPTION
           }
           title={
             activeTab === TEMPLATE_TABS.BROWSE
               ? TEMPLATE_TEXT.EMPTY_BROWSE_TITLE
-              : TEMPLATE_TEXT.EMPTY_MINE_TITLE
+              : activeTab === TEMPLATE_TABS.FAVORITES
+                ? TEMPLATE_TEXT.EMPTY_FAVORITES_TITLE
+                : TEMPLATE_TEXT.EMPTY_MINE_TITLE
           }
         />
-      ) : activeTab === TEMPLATE_TABS.BROWSE ? (
+      ) : activeTab === TEMPLATE_TABS.BROWSE || activeTab === TEMPLATE_TABS.FAVORITES ? (
         <TemplateGrid
           favoritePendingId={favoritePendingId}
           isUsingId={usingTemplateId}
@@ -468,6 +490,14 @@ function TemplateSection(props) {
       <TemplateGrid {...props} />
     </section>
   );
+}
+
+function getTemplateTabLabel(tab) {
+  return tab === TEMPLATE_TABS.BROWSE
+    ? TEMPLATE_TEXT.BROWSE_TAB
+    : tab === TEMPLATE_TABS.FAVORITES
+      ? TEMPLATE_TEXT.FAVORITES_TAB
+      : TEMPLATE_TEXT.MY_TAB;
 }
 
 function TemplateGrid({

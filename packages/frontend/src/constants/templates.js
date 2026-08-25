@@ -1,5 +1,6 @@
 export const TEMPLATE_TABS = {
   BROWSE: "browse",
+  FAVORITES: "favorites",
   MINE: "mine"
 };
 
@@ -45,6 +46,8 @@ export const TEMPLATE_TEXT = {
   EDIT_MODAL_TITLE: "Edit Template",
   EMPTY_BROWSE_DESCRIPTION: "Try changing your search or filters.",
   EMPTY_BROWSE_TITLE: "No templates found",
+  EMPTY_FAVORITES_DESCRIPTION: "Favorite templates from Browse Templates will appear here.",
+  EMPTY_FAVORITES_TITLE: "No favorite templates yet",
   EMPTY_MINE_DESCRIPTION:
     "Publish one of your projects as a reusable template and it will appear here.",
   EMPTY_MINE_TITLE: "No published templates yet",
@@ -63,8 +66,10 @@ export const TEMPLATE_TEXT = {
   LOAD_FAILED_DESCRIPTION: "Please try again.",
   LOAD_FAILED_TITLE: "Unable to load templates.",
   LOADING_BROWSE: "Loading templates...",
+  LOADING_FAVORITES: "Loading favorite templates...",
   LOADING_MINE: "Loading your templates...",
   MY_TAB: "My Published Templates",
+  FAVORITES_TAB: "Favorites",
   PAGE_DESCRIPTION: "Create faster with reusable Text and Image project starting points.",
   PAGE_TITLE: "Templates",
   PREVIEW_ACTION: "Preview",
