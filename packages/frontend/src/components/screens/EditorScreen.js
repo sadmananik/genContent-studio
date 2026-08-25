@@ -100,6 +100,8 @@ export default function EditorScreen() {
   const [notification, setNotification] = useState(null);
   const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
+  const characterCount = useMemo(() => countCharacters(editorContent.text), [editorContent.text]);
+  const readingTimeLabel = useMemo(() => getReadingTimeLabel(wordCount), [wordCount]);
   const savePayload = useMemo(
     () => ({
       projectId,
@@ -713,7 +715,7 @@ export default function EditorScreen() {
                       : "text-emerald-700"
                 }`}
               >
-                {statusLabel} • {wordCount} words
+                {statusLabel} • {wordCount} words • {characterCount} characters • {readingTimeLabel}
               </div>
               <TipTapEditor
                 editorKey={project.id}
@@ -839,6 +841,15 @@ function getPromptPreview(value, maxLength = 72) {
 function countWords(value) {
   const words = value.trim().match(/\S+/g);
   return words ? words.length : 0;
+}
+
+function countCharacters(value) {
+  return String(value || "").replace(/\s/g, "").length;
+}
+
+function getReadingTimeLabel(wordCount) {
+  const minutes = Math.max(1, Math.ceil(wordCount / 200));
+  return `${minutes} min read`;
 }
 
 function hasEditorContentChanged(currentHtml, persistedHtml) {
