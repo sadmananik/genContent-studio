@@ -2,6 +2,8 @@ const nodemailer = require("nodemailer");
 
 let transporter;
 
+const LINK_EXPIRY_COPY = "This link expires in 5 minutes and can only be used once.";
+
 async function sendPasswordResetEmail({ email, name, resetUrl }) {
   const mailer = getTransporter();
   const from = process.env.EMAIL_FROM;
@@ -20,8 +22,32 @@ async function sendPasswordResetEmail({ email, name, resetUrl }) {
       "Use the link below to reset your GenContent Studio password:",
       resetUrl,
       "",
-      "This link expires soon and can only be used once.",
+      LINK_EXPIRY_COPY,
       "If you did not request this change, you can ignore this email."
+    ].join("\n")
+  });
+}
+
+async function sendEmailVerificationEmail({ email, name, verificationUrl }) {
+  const mailer = getTransporter();
+  const from = process.env.EMAIL_FROM;
+
+  if (!from) {
+    throw new Error("EMAIL_FROM is not configured");
+  }
+
+  await mailer.sendMail({
+    from,
+    to: email,
+    subject: "Verify your GenContent Studio account",
+    text: [
+      `Hello ${name},`,
+      "",
+      "Use the link below to verify your GenContent Studio account:",
+      verificationUrl,
+      "",
+      LINK_EXPIRY_COPY,
+      "If you did not create this account, you can ignore this email."
     ].join("\n")
   });
 }
@@ -51,5 +77,6 @@ function getTransporter() {
 }
 
 module.exports = {
+  sendEmailVerificationEmail,
   sendPasswordResetEmail
 };

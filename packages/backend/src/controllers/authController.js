@@ -3,12 +3,14 @@ const crypto = require("crypto");
 const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
-const { sendPasswordResetEmail } = require("../utils/email");
+const { sendEmailVerificationEmail, sendPasswordResetEmail } = require("../utils/email");
 const { signAuthToken } = require("../utils/token");
 
 const PASSWORD_RESET_RESPONSE =
   "If an account exists for this email, password reset instructions have been sent.";
-const DEFAULT_RESET_TOKEN_LIFETIME_MINUTES = 30;
+const VERIFICATION_EMAIL_RESPONSE =
+  "If an unverified account exists for this email, verification instructions have been sent.";
+const LINK_EXPIRES_IN_MINUTES = 5;
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, profile } = req.body;
@@ -32,16 +34,30 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
+  const verificationToken = createAuthLinkToken();
   const user = await User.create({
     name: normalizedName,
     email: normalizedEmail,
     passwordHash,
+    emailVerified: false,
+    emailVerificationTokenHash: hashAuthLinkToken(verificationToken),
+    emailVerificationExpiresAt: buildAuthLinkExpiry(),
     profile
   });
 
+  try {
+    await sendEmailVerificationEmail({
+      email: user.email,
+      name: user.name,
+      verificationUrl: buildVerificationUrl(verificationToken)
+    });
+  } catch (error) {
+    console.error("Failed to send account verification email", error.message);
+  }
+
   res.status(201).json({
-    user: serializeUser(user),
-    token: signAuthToken(user)
+    message: "Account created. Check your email to verify your account before signing in.",
+    user: serializeUser(user)
   });
 });
 
@@ -52,16 +68,82 @@ const login = asyncHandler(async (req, res) => {
     throw httpError(400, "Email and password are required");
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
 
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     throw httpError(401, "Invalid email or password");
+  }
+
+  if (user.emailVerified === false) {
+    throw httpError(403, "Please verify your email before signing in.");
   }
 
   res.json({
     user: serializeUser(user),
     token: signAuthToken(user)
   });
+});
+
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    throw httpError(400, "Verification token is required");
+  }
+
+  const user = await User.findOneAndUpdate(
+    {
+      emailVerificationTokenHash: hashAuthLinkToken(token),
+      emailVerificationExpiresAt: { $gt: new Date() }
+    },
+    {
+      $set: { emailVerified: true },
+      $unset: { emailVerificationTokenHash: 1, emailVerificationExpiresAt: 1 }
+    },
+    { new: true }
+  );
+
+  if (!user) {
+    throw httpError(400, "This verification link is invalid or has expired");
+  }
+
+  res.json({ message: "Email verified successfully. You can now sign in." });
+});
+
+const resendVerificationEmail = asyncHandler(async (req, res) => {
+  const email = String(req.body.email || "")
+    .trim()
+    .toLowerCase();
+
+  if (!email) {
+    throw httpError(400, "Email is required");
+  }
+
+  const user = await User.findOne({ email }).select(
+    "+emailVerificationTokenHash +emailVerificationExpiresAt"
+  );
+
+  if (user && user.emailVerified === false) {
+    const verificationToken = createAuthLinkToken();
+    user.emailVerificationTokenHash = hashAuthLinkToken(verificationToken);
+    user.emailVerificationExpiresAt = buildAuthLinkExpiry();
+    await user.save();
+
+    try {
+      await sendEmailVerificationEmail({
+        email: user.email,
+        name: user.name,
+        verificationUrl: buildVerificationUrl(verificationToken)
+      });
+    } catch (error) {
+      user.emailVerificationTokenHash = undefined;
+      user.emailVerificationExpiresAt = undefined;
+      await user.save();
+      console.error("Failed to send account verification email", error.message);
+    }
+  }
+
+  res.json({ message: VERIFICATION_EMAIL_RESPONSE });
 });
 
 const requestPasswordReset = asyncHandler(async (req, res) => {
@@ -76,9 +158,9 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user) {
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    user.passwordResetTokenHash = hashResetToken(resetToken);
-    user.passwordResetExpiresAt = new Date(Date.now() + getResetTokenLifetime());
+    const resetToken = createAuthLinkToken();
+    user.passwordResetTokenHash = hashAuthLinkToken(resetToken);
+    user.passwordResetExpiresAt = buildAuthLinkExpiry();
     await user.save();
 
     const resetUrl = buildResetUrl(resetToken);
@@ -127,18 +209,20 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.json({ message: "Password reset successfully. You can now sign in." });
 });
 
-function hashResetToken(token) {
+function createAuthLinkToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+function hashAuthLinkToken(token) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
 
-function getResetTokenLifetime() {
-  const configuredMinutes = Number(process.env.PASSWORD_RESET_EXPIRES_IN_MINUTES);
-  const minutes =
-    Number.isFinite(configuredMinutes) && configuredMinutes > 0
-      ? configuredMinutes
-      : DEFAULT_RESET_TOKEN_LIFETIME_MINUTES;
+function hashResetToken(token) {
+  return hashAuthLinkToken(token);
+}
 
-  return minutes * 60 * 1000;
+function buildAuthLinkExpiry() {
+  return new Date(Date.now() + LINK_EXPIRES_IN_MINUTES * 60 * 1000);
 }
 
 function buildResetUrl(token) {
@@ -146,11 +230,17 @@ function buildResetUrl(token) {
   return `${frontendOrigin}/reset-password?token=${encodeURIComponent(token)}`;
 }
 
+function buildVerificationUrl(token) {
+  const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+  return `${frontendOrigin}/verify-email?token=${encodeURIComponent(token)}`;
+}
+
 function serializeUser(user) {
   return {
     id: user._id,
     name: user.name,
     email: user.email,
+    emailVerified: user.emailVerified !== false,
     profile: user.profile,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
@@ -160,6 +250,8 @@ function serializeUser(user) {
 module.exports = {
   login,
   requestPasswordReset,
+  resendVerificationEmail,
   resetPassword,
-  register
+  register,
+  verifyEmail
 };
