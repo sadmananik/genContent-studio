@@ -215,6 +215,7 @@ a {
   border-color: #d92d20;
 }
 
+.login-panel label > svg,
 .password-field > svg {
   flex: 0 0 auto;
   color: var(--muted);
@@ -339,6 +340,10 @@ a {
   margin-top: 20px;
 }
 
+.reset-password-submit {
+  margin-top: 20px;
+}
+
 .login-panel .auth-error {
   padding: 10px 12px;
   margin: 0 0 14px;
@@ -445,11 +450,44 @@ a {
   position: absolute;
   top: 16%;
   left: 38%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   padding: 12px 20px;
   color: white;
   background: linear-gradient(135deg, #8265ff, #5b41e5);
   border-radius: 18px 18px 18px 4px;
   font-size: 25px;
+}
+
+.chat-bubble span {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 50%;
+  animation: ai-thinking-dot 1.25s ease-in-out infinite;
+}
+
+.chat-bubble span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.chat-bubble span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes ai-thinking-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.55;
+    transform: translateY(0);
+  }
+
+  34% {
+    opacity: 1;
+    transform: translateY(-10px);
+  }
 }
 
 .robot {

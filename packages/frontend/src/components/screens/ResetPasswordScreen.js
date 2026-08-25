@@ -56,7 +56,7 @@ export default function ResetPasswordScreen() {
   return (
     <section className="screen login-screen">
       <Brand />
-      <form className="login-panel" onSubmit={handleSubmit}>
+      <form className="login-panel reset-password-panel" onSubmit={handleSubmit}>
         <h2>Create new password</h2>
         <p>Choose a secure password with at least eight characters.</p>
         {!message && (
@@ -94,7 +94,11 @@ export default function ResetPasswordScreen() {
         {errorMessage && <p className="auth-error">{errorMessage}</p>}
         {message && <p className="auth-success">{message}</p>}
         {!message && (
-          <Button className="full-width" disabled={auth.loading || !token} type="submit">
+          <Button
+            className="full-width reset-password-submit"
+            disabled={auth.loading || !token}
+            type="submit"
+          >
             {auth.loading ? "Updating..." : "Update Password"}
           </Button>
         )}

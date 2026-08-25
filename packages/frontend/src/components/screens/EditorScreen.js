@@ -13,7 +13,16 @@ import TipTapEditor from "../text-workspace/TipTapEditor";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
-import { mockPromptActions, mockTextProject } from "../text-workspace/mockTextWorkspaceData";
+import { textPromptActions } from "../text-workspace/promptActions";
+
+const defaultTextProject = {
+  id: "new-text-project",
+  title: "Untitled Text Project",
+  category: "Text Project",
+  type: "Text Project",
+  lastUpdated: "Not saved yet",
+  content: ""
+};
 
 export default function EditorScreen() {
   const searchParams = useSearchParams();
@@ -23,7 +32,7 @@ export default function EditorScreen() {
     return <ImageEditorScreen />;
   }
 
-  const projectId = searchParams.get("projectId") || mockTextProject.id;
+  const projectId = searchParams.get("projectId") || defaultTextProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const aiState = useAppStore((state) => state.aiState);
   const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
@@ -37,22 +46,25 @@ export default function EditorScreen() {
   const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
   const updateAiResponse = useAppStore((state) => state.updateAiResponse);
   const [editor, setEditor] = useState(null);
-  const [project, setProject] = useState(mockTextProject);
+  const [project, setProject] = useState(defaultTextProject);
   const [editorContent, setEditorContent] = useState({
-    html: mockTextProject.content,
-    text: stripHtml(mockTextProject.content)
+    html: defaultTextProject.content,
+    text: stripHtml(defaultTextProject.content)
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
+  const [isLoadingContent, setIsLoadingContent] = useState(isRealProject);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [saveError, setSaveError] = useState(null);
   const [prompt, setPrompt] = useState(
     "Write an introduction about how AI tools help small businesses."
   );
   const [responses, setResponses] = useState([]);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
+  const [recentlyInsertedResponseId, setRecentlyInsertedResponseId] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
@@ -63,11 +75,14 @@ export default function EditorScreen() {
     }),
     [editorContent.html, projectId]
   );
-  const statusLabel = hasUnsavedChanges
-    ? "Unsaved changes"
-    : lastSavedAt
-      ? `Saved ${formatTime(lastSavedAt)}`
-      : mockTextProject.lastUpdated;
+  const statusLabel = getSaveStatusLabel({
+    hasUnsavedChanges,
+    isLoadingContent,
+    isSaving,
+    lastSavedAt,
+    saveError,
+    fallback: project.lastUpdated || defaultTextProject.lastUpdated
+  });
   const history = useMemo(
     () =>
       responses.map((response) => ({
@@ -108,23 +123,76 @@ export default function EditorScreen() {
       return;
     }
 
+    let isActive = true;
+
+    setIsLoadingContent(true);
+    setSaveError(null);
+
     fetchProjectById(projectId)
-      .then((loadedProject) => setProject(normalizeProject(loadedProject)))
-      .catch(() => {});
+      .then((loadedProject) => {
+        if (isActive) {
+          setProject(normalizeProject(loadedProject));
+        }
+      })
+      .catch((error) => {
+        if (isActive) {
+          showNotification(
+            "Project load failed",
+            error.message || "Project details could not be loaded.",
+            TOAST_TYPES.ERROR
+          );
+        }
+      });
 
     apiRequest(`/api/text-content/${projectId}`)
       .then((textContent) => {
+        if (!isActive) {
+          return;
+        }
+
         const html = typeof textContent.content === "string" ? textContent.content : "";
 
-        if (html && editor) {
-          editor.commands.setContent(html);
-          setEditorContent({ html, text: editor.getText() });
-          setHasUnsavedChanges(false);
+        if (editor) {
+          editor.commands.setContent(html, false);
         }
+
+        setEditorContent({ html, text: editor ? editor.getText() : stripHtml(html) });
+        setHasUnsavedChanges(false);
+        setLastSavedAt(textContent.updatedAt ? new Date(textContent.updatedAt) : null);
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (!isActive) {
+          return;
+        }
+
+        if (error.message === "Text content not found") {
+          setEditorContent({ html: "", text: "" });
+          setHasUnsavedChanges(false);
+
+          if (editor) {
+            editor.commands.clearContent(false);
+          }
+          return;
+        }
+
+        setSaveError(error.message || "Saved content could not be loaded.");
+        showNotification(
+          "Content load failed",
+          error.message || "Saved content could not be loaded.",
+          TOAST_TYPES.ERROR
+        );
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingContent(false);
+        }
+      });
 
     fetchProjectChatHistory(projectId).catch(() => {});
+
+    return () => {
+      isActive = false;
+    };
   }, [editor, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
 
   useEffect(() => {
@@ -212,6 +280,7 @@ export default function EditorScreen() {
   const handleEditorChange = useCallback((content) => {
     setEditorContent(content);
     setHasUnsavedChanges(true);
+    setSaveError(null);
   }, []);
 
   const dismissNotification = useCallback(() => {
@@ -224,6 +293,8 @@ export default function EditorScreen() {
 
   async function handleSave() {
     setIsSaving(true);
+    setSaveError(null);
+
     try {
       await saveCurrentDraft();
       setHasUnsavedChanges(false);
@@ -234,6 +305,7 @@ export default function EditorScreen() {
         TOAST_TYPES.SUCCESS
       );
     } catch (error) {
+      setSaveError(error.message || "Project could not be saved.");
       showNotification(
         "Save failed",
         error.message || "Project could not be saved.",
@@ -297,6 +369,16 @@ export default function EditorScreen() {
       return;
     }
 
+    if (recentlyInsertedResponseId === response.id) {
+      showNotification(
+        "Already inserted",
+        "That response was just inserted into the editor.",
+        TOAST_TYPES.INFO,
+        2500
+      );
+      return;
+    }
+
     if (queueUnsavedAction(() => insertResponse(response))) {
       return;
     }
@@ -305,10 +387,14 @@ export default function EditorScreen() {
   }
 
   function insertResponse(response) {
-    replaceEditorContent(response.response);
+    insertTextIntoEditor(response.response);
     setSelectedHistoryId(response.id);
     setPrompt(response.prompt);
-    showNotification("Inserted", "Response replaced the editor content.", TOAST_TYPES.SUCCESS);
+    setRecentlyInsertedResponseId(response.id);
+    window.setTimeout(() => {
+      setRecentlyInsertedResponseId((currentId) => (currentId === response.id ? null : currentId));
+    }, 2000);
+    showNotification("Inserted", "Response added to the editor.", TOAST_TYPES.SUCCESS);
   }
 
   async function handleUpdateResponse(responseId, updatedResponse) {
@@ -467,6 +553,7 @@ export default function EditorScreen() {
 
   async function handleConfirmPendingAction() {
     setIsSaving(true);
+    setSaveError(null);
 
     try {
       await saveCurrentDraft();
@@ -476,6 +563,7 @@ export default function EditorScreen() {
       setPendingEditorAction(null);
       showNotification("Saved", "Draft saved before switching.", TOAST_TYPES.SUCCESS);
     } catch (error) {
+      setSaveError(error.message || "Draft could not be saved.");
       showNotification(
         "Save failed",
         error.message || "Draft could not be saved.",
@@ -498,10 +586,19 @@ export default function EditorScreen() {
   }
 
   function replaceEditorContent(value, options = {}) {
-    const html = `<p>${escapeHtml(value)}</p>`;
-    editor.commands.setContent(html);
+    const html = textToHtml(value);
+    editor.commands.setContent(html, false);
     setEditorContent({ html, text: value });
     setHasUnsavedChanges(options.markUnsaved ?? true);
+  }
+
+  function insertTextIntoEditor(value) {
+    const html = textToHtml(value);
+
+    editor.chain().focus().insertContent(html).run();
+    setEditorContent({ html: editor.getHTML(), text: editor.getText() });
+    setHasUnsavedChanges(true);
+    setSaveError(null);
   }
 
   return (
@@ -532,14 +629,18 @@ export default function EditorScreen() {
               <EditorToolbar editor={editor} />
               <div
                 className={`border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide ${
-                  hasUnsavedChanges ? "text-amber-700" : "text-emerald-700"
+                  saveError
+                    ? "text-red-700"
+                    : hasUnsavedChanges || isSaving
+                      ? "text-amber-700"
+                      : "text-emerald-700"
                 }`}
               >
-                {hasUnsavedChanges ? "Unsaved changes" : project.saveStatus} • {wordCount} words
+                {statusLabel} • {wordCount} words
               </div>
               <TipTapEditor
                 editorKey={project.id}
-                initialContent={mockTextProject.content}
+                initialContent={editorContent.html}
                 onContentChange={handleEditorChange}
                 onEditorReady={setEditor}
               />
@@ -548,7 +649,7 @@ export default function EditorScreen() {
 
           <aside className="grid min-w-0 content-start gap-5">
             <AIPromptPanel
-              actions={mockPromptActions}
+              actions={textPromptActions}
               error={aiState.error}
               isGenerating={isGenerating}
               onGenerate={handleGenerate}
@@ -615,14 +716,14 @@ export default function EditorScreen() {
 
 function normalizeProject(project) {
   return {
-    ...mockTextProject,
+    ...defaultTextProject,
     id: project._id || project.id,
-    title: project.title || mockTextProject.title,
-    category: project.category || mockTextProject.category,
+    title: project.title || defaultTextProject.title,
+    category: project.category || defaultTextProject.category,
     type: "Text Project",
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
-      : mockTextProject.lastUpdated,
+      : defaultTextProject.lastUpdated,
     collaborators: project.collaborators || []
   };
 }
@@ -643,6 +744,37 @@ function countWords(value) {
   return words ? words.length : 0;
 }
 
+function getSaveStatusLabel({
+  fallback,
+  hasUnsavedChanges,
+  isLoadingContent,
+  isSaving,
+  lastSavedAt,
+  saveError
+}) {
+  if (isLoadingContent) {
+    return "Loading content...";
+  }
+
+  if (isSaving) {
+    return "Saving...";
+  }
+
+  if (saveError) {
+    return "Save failed";
+  }
+
+  if (hasUnsavedChanges) {
+    return "Unsaved changes";
+  }
+
+  if (lastSavedAt) {
+    return `Saved ${formatTime(lastSavedAt)}`;
+  }
+
+  return fallback;
+}
+
 async function copyText(value) {
   if (navigator.clipboard) {
     await navigator.clipboard.writeText(value);
@@ -658,13 +790,28 @@ async function copyText(value) {
 }
 
 function escapeHtml(value) {
-  return value
+  return String(value || "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;")
     .replaceAll("\n", "<br>");
+}
+
+function textToHtml(value) {
+  const paragraphs = String(value || "")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  if (paragraphs.length === 0) {
+    return "";
+  }
+
+  return paragraphs
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll("\n", "<br>")}</p>`)
+    .join("");
 }
 
 function formatTime(value) {

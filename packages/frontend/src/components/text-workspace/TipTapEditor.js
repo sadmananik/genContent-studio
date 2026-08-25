@@ -5,7 +5,7 @@ import Color from "@tiptap/extension-color";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import { FontSize, TextStyle } from "@tiptap/extension-text-style";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function TipTapEditor({
   editorKey,
@@ -13,6 +13,7 @@ export default function TipTapEditor({
   onContentChange,
   onEditorReady
 }) {
+  const appliedEditorKeyRef = useRef(null);
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -44,8 +45,9 @@ export default function TipTapEditor({
   }, [editor, onEditorReady]);
 
   useEffect(() => {
-    if (editor && editorKey) {
-      editor.commands.setContent(initialContent);
+    if (editor && editorKey && appliedEditorKeyRef.current !== editorKey) {
+      appliedEditorKeyRef.current = editorKey;
+      editor.commands.setContent(initialContent, false);
     }
   }, [editor, editorKey, initialContent]);
 

@@ -164,11 +164,6 @@ export default function ProjectsScreen() {
         <EmptyState
           title={DASHBOARD_TEXT.EMPTY_PROJECTS_TITLE}
           description={DASHBOARD_TEXT.EMPTY_PROJECTS_DESCRIPTION}
-          action={
-            <Button type="button" onClick={() => setShowProjectForm(true)}>
-              Create Project
-            </Button>
-          }
         />
       ) : (
         <section className="grid gap-4">

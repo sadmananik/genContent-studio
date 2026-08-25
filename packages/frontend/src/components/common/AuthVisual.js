@@ -1,7 +1,11 @@
 export default function AuthVisual() {
   return (
     <div className="robot-scene" aria-hidden="true">
-      <div className="chat-bubble">•••</div>
+      <div className="chat-bubble">
+        <span />
+        <span />
+        <span />
+      </div>
       <div className="robot">
         <span className="antenna left" />
         <span className="antenna right" />

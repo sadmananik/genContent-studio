@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { Mail, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AuthVisual from "../common/AuthVisual";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
 import PasswordField from "../common/PasswordField";
@@ -70,7 +72,7 @@ export default function RegisterScreen() {
         <h2>Create account</h2>
         <p>Start creating with your AI workspace</p>
         <label>
-          <span>◇</span>
+          <UserRound aria-hidden="true" size={17} strokeWidth={1.8} />
           <input
             autoComplete="name"
             name="name"
@@ -81,7 +83,7 @@ export default function RegisterScreen() {
           />
         </label>
         <label>
-          <span>✉</span>
+          <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
           <input
             autoComplete="email"
             name="email"
@@ -128,18 +130,7 @@ export default function RegisterScreen() {
           Already have an account? <Link href="/login">Sign in</Link>
         </p>
       </form>
-      <div className="robot-scene" aria-hidden="true">
-        <div className="chat-bubble">•••</div>
-        <div className="robot">
-          <span className="antenna left" />
-          <span className="antenna right" />
-          <div className="robot-head">
-            <i />
-            <i />
-          </div>
-          <div className="robot-body" />
-        </div>
-      </div>
+      <AuthVisual />
     </section>
   );
 }
