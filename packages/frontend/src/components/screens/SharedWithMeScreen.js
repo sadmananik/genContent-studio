@@ -7,6 +7,7 @@ import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, SectionHeader } from "../common/Cards";
 import ProjectListCard from "../common/ProjectListCard";
+import ProjectTypeIcon from "../common/ProjectTypeIcon";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import {
   ACCESS_LEVEL_LABELS,
@@ -334,7 +335,7 @@ function formatSharedProject(project) {
     category: project.category || "Other",
     type,
     updated: formatUpdatedAt(project.updatedAt),
-    icon: type === PROJECT_TYPES.IMAGE ? "▧" : "▤",
+    icon: <ProjectTypeIcon type={type} />,
     tone: type === PROJECT_TYPES.IMAGE ? "lavender" : "mint",
     ownerName: project.owner?.name || "Unknown owner",
     ownerEmail: project.owner?.email || "",

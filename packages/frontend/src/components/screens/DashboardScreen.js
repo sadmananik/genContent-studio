@@ -11,6 +11,7 @@ import {
   StatGrid,
   WelcomePanel
 } from "../common/Cards";
+import ProjectTypeIcon from "../common/ProjectTypeIcon";
 import { DASHBOARD_TEXT, SUMMARY_CARD_LABELS } from "../../constants/dashboard";
 import { ROUTES } from "../../constants/navigation";
 import {
@@ -125,12 +126,7 @@ function formatProjectForDashboard(project) {
     category: project.category || "Other",
     type,
     updated: formatUpdatedAt(project.updatedAt),
-    icon:
-      type === PROJECT_TYPES.IMAGE ? (
-        <Image aria-hidden="true" size={18} strokeWidth={2.25} />
-      ) : (
-        <FileText aria-hidden="true" size={18} strokeWidth={2.25} />
-      ),
+    icon: <ProjectTypeIcon size={18} type={type} />,
     tone: type === PROJECT_TYPES.IMAGE ? "lavender" : "mint",
     collaborators: project.collaborators || []
   };
