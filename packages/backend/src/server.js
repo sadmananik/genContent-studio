@@ -7,6 +7,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const imageContentRoutes = require("./routes/imageContentRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const textContentRoutes = require("./routes/textContentRoutes");
+const templateRoutes = require("./routes/templateRoutes");
 const userRoutes = require("./routes/userRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
@@ -37,6 +38,7 @@ app.get("/api", (req, res) => {
       "/api/chats",
       "/api/text-content",
       "/api/image-content",
+      "/api/templates",
       "/api/ai/generate-text"
     ]
   });
@@ -47,6 +49,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/text-content", textContentRoutes);
+app.use("/api/templates", templateRoutes);
 app.use("/api/image-content", imageContentRoutes);
 app.use("/api/ai", aiRoutes);
 

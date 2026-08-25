@@ -188,6 +188,9 @@ export default function EditorScreen() {
       .then((loadedProject) => {
         if (isActive) {
           setProject(normalizeProject(loadedProject));
+          if (loadedProject.starterPrompt) {
+            setPrompt(loadedProject.starterPrompt);
+          }
         }
       })
       .catch((error) => {
