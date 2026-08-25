@@ -23,7 +23,7 @@ export default function WorkspaceSharePopover({
     .filter((user) => {
       const email = user.email?.toLowerCase() || "";
 
-      return trimmedEmail && !hiddenEmails.has(email) && email.includes(trimmedEmail);
+      return isValidEmail && !hiddenEmails.has(email) && email === trimmedEmail;
     })
     .slice(0, 3);
   const hasMatchingUsers = matchingUsers.length > 0;
@@ -42,20 +42,14 @@ export default function WorkspaceSharePopover({
         <label className="text-xs font-bold uppercase text-slate-500" htmlFor="invite-email">
           {SHARE_POPOVER_TEXT.INVITE_EMAIL_LABEL}
         </label>
-        <div className="flex gap-2">
-          <input
-            className="min-h-10 min-w-0 flex-1 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            id="invite-email"
-            onChange={(event) => onInviteEmailChange(event.target.value)}
-            placeholder={SHARE_POPOVER_TEXT.EMAIL_PLACEHOLDER}
-            type="email"
-            value={inviteEmail}
-          />
-          <Button type="submit">
-            <MailPlus aria-hidden="true" size={17} />
-            {SHARE_POPOVER_TEXT.INVITE_BUTTON}
-          </Button>
-        </div>
+        <input
+          className="min-h-10 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+          id="invite-email"
+          onChange={(event) => onInviteEmailChange(event.target.value)}
+          placeholder={SHARE_POPOVER_TEXT.EMAIL_PLACEHOLDER}
+          type="email"
+          value={inviteEmail}
+        />
       </form>
       {isLoadingUsers && (
         <p className="mt-3 text-xs font-medium text-slate-500">
@@ -72,7 +66,7 @@ export default function WorkspaceSharePopover({
 
             return (
               <div
-                className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
                 key={user._id || user.id || user.email}
               >
                 <UserAvatar className="h-9 w-9" user={user} />
@@ -82,11 +76,14 @@ export default function WorkspaceSharePopover({
                   </p>
                   <p className="truncate text-xs text-slate-500">{user.email}</p>
                 </div>
-                <Button disabled={isInvited} onClick={submitInvite(user.email)} type="button">
+                <Button
+                  className="px-2.5"
+                  disabled={isInvited}
+                  onClick={submitInvite(user.email)}
+                  type="button"
+                >
                   <UserPlus aria-hidden="true" size={16} />
-                  {isInvited
-                    ? SHARE_POPOVER_TEXT.INVITED_COLLABORATORS_LABEL
-                    : SHARE_POPOVER_TEXT.INVITE_BUTTON}
+                  {SHARE_POPOVER_TEXT.INVITE_BUTTON}
                 </Button>
               </div>
             );
@@ -95,7 +92,7 @@ export default function WorkspaceSharePopover({
       )}
       {isValidEmail && !hasMatchingUsers && (
         <div className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3">
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
             <UserAvatar className="h-9 w-9" user={{ email: trimmedEmail }} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-slate-900">{trimmedEmail}</p>
