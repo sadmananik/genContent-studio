@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "build": "find src -name '*.js' -print -exec node --check {} \\;",
+    "db:clear": "node scripts/clearMongoCollections.js",
     "start": "node src/server.js",
     "lint": "find src -name '*.js' -print -exec node --check {} \\;"
   },
