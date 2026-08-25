@@ -33,6 +33,20 @@ const projectSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
       }
+    ],
+    collaboratorPermissions: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        accessLevel: {
+          type: String,
+          enum: ["viewer", "editor"],
+          default: "editor"
+        }
+      }
     ]
   },
   { timestamps: true }
@@ -40,5 +54,6 @@ const projectSchema = new mongoose.Schema(
 
 projectSchema.index({ owner: 1, updatedAt: -1 });
 projectSchema.index({ collaborators: 1 });
+projectSchema.index({ "collaboratorPermissions.user": 1 });
 
 module.exports = mongoose.model("Project", projectSchema);

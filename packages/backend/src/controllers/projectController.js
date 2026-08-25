@@ -31,14 +31,18 @@ const createProject = asyncHandler(async (req, res) => {
     category: normalizeString(category, "Other") || "Other",
     description: normalizeString(description),
     owner: req.user.id,
-    collaborators: normalizedCollaborators
+    collaborators: normalizedCollaborators,
+    collaboratorPermissions: normalizedCollaborators.map((userId) => ({
+      user: userId,
+      accessLevel: "editor"
+    }))
   });
 
   const createdProject = await Project.findById(project._id)
     .populate("owner", "name email")
     .populate("collaborators", "name email");
 
-  res.status(201).json(createdProject);
+  res.status(201).json(serializeProjectForUser(createdProject, req.user.id));
 });
 
 const listProjects = asyncHandler(async (req, res) => {
@@ -49,12 +53,24 @@ const listProjects = asyncHandler(async (req, res) => {
     .populate("collaborators", "name email")
     .sort({ updatedAt: -1 });
 
-  res.json(projects);
+  res.json(projects.map((project) => serializeProjectForUser(project, req.user.id)));
+});
+
+const listSharedProjects = asyncHandler(async (req, res) => {
+  const projects = await Project.find({
+    owner: { $ne: req.user.id },
+    collaborators: req.user.id
+  })
+    .populate("owner", "name email")
+    .populate("collaborators", "name email")
+    .sort({ updatedAt: -1 });
+
+  res.json(projects.map((project) => serializeProjectForUser(project, req.user.id)));
 });
 
 const getProjectById = asyncHandler(async (req, res) => {
   const project = await findAccessibleProject(req.params.id, req.user.id);
-  res.json(project);
+  res.json(serializeProjectForUser(project, req.user.id));
 });
 
 const updateProject = asyncHandler(async (req, res) => {
@@ -81,10 +97,21 @@ const updateProject = asyncHandler(async (req, res) => {
   }
 
   if (req.body.collaborators !== undefined) {
-    project.collaborators = await validateCollaborators(
+    const collaborators = await validateCollaborators(
       req.body.collaborators,
       getObjectIdString(project.owner)
     );
+    project.collaborators = collaborators;
+    project.collaboratorPermissions = collaborators.map((userId) => {
+      const existingPermission = project.collaboratorPermissions.find(
+        (permission) => getObjectIdString(permission.user) === String(userId)
+      );
+
+      return {
+        user: userId,
+        accessLevel: existingPermission?.accessLevel || "editor"
+      };
+    });
   }
 
   await project.save();
@@ -92,7 +119,7 @@ const updateProject = asyncHandler(async (req, res) => {
     .populate("owner", "name email")
     .populate("collaborators", "name email");
 
-  res.json(updatedProject);
+  res.json(serializeProjectForUser(updatedProject, req.user.id));
 });
 
 const inviteProjectCollaborator = asyncHandler(async (req, res) => {
@@ -125,6 +152,7 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
     !project.collaborators.some((collaboratorId) => String(collaboratorId) === String(user._id))
   ) {
     project.collaborators.push(user._id);
+    project.collaboratorPermissions.push({ user: user._id, accessLevel: "editor" });
     await project.save();
   }
 
@@ -132,7 +160,30 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
     .populate("owner", "name email")
     .populate("collaborators", "name email");
 
-  res.json(updatedProject);
+  res.json(serializeProjectForUser(updatedProject, req.user.id));
+});
+
+const leaveProject = asyncHandler(async (req, res) => {
+  const project = await Project.findOne({
+    _id: req.params.id,
+    owner: { $ne: req.user.id },
+    collaborators: req.user.id
+  });
+
+  if (!project) {
+    throw httpError(404, "Shared project not found");
+  }
+
+  project.collaborators = project.collaborators.filter(
+    (collaboratorId) => String(collaboratorId) !== String(req.user.id)
+  );
+  project.collaboratorPermissions = project.collaboratorPermissions.filter(
+    (permission) => String(permission.user) !== String(req.user.id)
+  );
+
+  await project.save();
+
+  res.json({ message: "You left this shared project." });
 });
 
 const deleteProject = asyncHandler(async (req, res) => {
@@ -191,12 +242,53 @@ function getObjectIdString(value) {
   return String(value?._id || value);
 }
 
+function serializeProjectForUser(project, userId) {
+  const projectObject = project.toObject ? project.toObject() : project;
+  const userIdString = String(userId);
+  const ownerIdString = getObjectIdString(projectObject.owner);
+  const collaboratorIds = (projectObject.collaborators || []).map(getObjectIdString);
+  const accessLevel = getAccessLevelForUser(projectObject, userIdString);
+
+  return {
+    ...projectObject,
+    currentUserRole: ownerIdString === userIdString ? "owner" : "collaborator",
+    accessLevel,
+    canEdit: ownerIdString === userIdString || accessLevel === "editor",
+    canManageSharing: ownerIdString === userIdString,
+    canDelete: ownerIdString === userIdString,
+    isSharedWithCurrentUser:
+      ownerIdString !== userIdString && collaboratorIds.includes(userIdString)
+  };
+}
+
+function getAccessLevelForUser(project, userId) {
+  if (getObjectIdString(project.owner) === userId) {
+    return "editor";
+  }
+
+  const permission = (project.collaboratorPermissions || []).find(
+    (item) => getObjectIdString(item.user) === userId
+  );
+
+  if (permission?.accessLevel === "viewer") {
+    return "viewer";
+  }
+
+  return (project.collaborators || []).some(
+    (collaboratorId) => getObjectIdString(collaboratorId) === userId
+  )
+    ? "editor"
+    : null;
+}
+
 module.exports = {
   createProject,
   deleteProject,
   findAccessibleProject,
   getProjectById,
   inviteProjectCollaborator,
+  leaveProject,
   listProjects,
+  listSharedProjects,
   updateProject
 };
