@@ -19,6 +19,7 @@ export default function TextWorkspaceHeader({
   canManageSharing = true,
   exportOptions,
   invitedUsers = [],
+  onBackToProjects,
   onExport,
   onInviteUser,
   onNotify,
@@ -135,13 +136,24 @@ export default function TextWorkspaceHeader({
 
   return (
     <header className="relative flex flex-wrap items-center gap-4 border-b border-slate-200 bg-white px-5 py-4 lg:px-7">
-      <Link
-        className="inline-flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
-        href={ROUTES.PROJECTS}
-      >
-        <ArrowLeft aria-hidden="true" size={17} />
-        Projects
-      </Link>
+      {onBackToProjects ? (
+        <button
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+          onClick={onBackToProjects}
+          type="button"
+        >
+          <ArrowLeft aria-hidden="true" size={17} />
+          Projects
+        </button>
+      ) : (
+        <Link
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+          href={ROUTES.PROJECTS}
+        >
+          <ArrowLeft aria-hidden="true" size={17} />
+          Projects
+        </Link>
+      )}
 
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-xl font-bold text-slate-950 md:text-2xl">{project.title}</h1>

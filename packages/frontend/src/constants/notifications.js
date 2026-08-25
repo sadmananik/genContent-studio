@@ -95,6 +95,9 @@ export const TEXT_EDITOR_ALERTS = {
   SHARED_TITLE: "Shared",
   SHARING_UNAVAILABLE_TITLE: "Sharing unavailable",
   SWITCH_SAVE_MESSAGE: "Draft saved before switching.",
+  UNSAVED_BACK_DESCRIPTION:
+    "Your current editor content has unsaved changes. Save this draft before going back to Projects?",
+  UNSAVED_BACK_TITLE: "Save changes before leaving?",
   UNSAVED_CHANGES_STATUS: "Unsaved changes",
   UPDATE_FAILED_MESSAGE: "Response could not be updated.",
   UPDATE_FAILED_TITLE: "Update failed",
@@ -133,6 +136,9 @@ export const IMAGE_EDITOR_ALERTS = {
   RESPONSE_FAVOURITE_SAVED_MESSAGE: "Image response saved.",
   RESPONSE_UPDATE_FAILED_MESSAGE: "Image response could not be updated.",
   UPDATED_MESSAGE: "Image response updated.",
+  UNSAVED_CANVAS_BACK_DESCRIPTION:
+    "Your current canvas has unsaved changes. Save this image draft before going back to Projects?",
+  UNSAVED_CANVAS_BACK_TITLE: "Save changes before leaving?",
   UNSAVED_CANVAS_CONFIRM_DESCRIPTION:
     "Your current canvas has unsaved changes. Save this image draft before loading another response?",
   UNSAVED_CANVAS_CONFIRM_TITLE: "Save changes before switching?"

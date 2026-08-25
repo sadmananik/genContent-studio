@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import ImageEditorScreen from "./ImageEditorScreen";
@@ -20,6 +20,7 @@ import {
   PERMISSION_MESSAGES,
   PROJECT_ROLES
 } from "../../constants/content";
+import { ROUTES } from "../../constants/navigation";
 import { TEXT_EDITOR_ALERTS } from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
@@ -65,6 +66,7 @@ const quickActionPromptBuilders = {
 };
 
 export default function EditorScreen() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const workspaceType = searchParams.get("type");
   const requestedAccess = searchParams.get("access");
@@ -752,6 +754,21 @@ export default function EditorScreen() {
     }
   }
 
+  function handleBackToProjects() {
+    const navigateToProjects = () => router.push(ROUTES.PROJECTS);
+
+    if (
+      queueUnsavedAction(navigateToProjects, {
+        description: TEXT_EDITOR_ALERTS.UNSAVED_BACK_DESCRIPTION,
+        title: TEXT_EDITOR_ALERTS.UNSAVED_BACK_TITLE
+      })
+    ) {
+      return;
+    }
+
+    navigateToProjects();
+  }
+
   async function saveCurrentDraft() {
     if (isRealProject) {
       await sendTextGenerationRequest({
@@ -800,6 +817,7 @@ export default function EditorScreen() {
         canManageSharing={canManageSharing}
         invitedUsers={invitedUsers}
         isSaving={isSaving}
+        onBackToProjects={handleBackToProjects}
         onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
         onExport={handleExport}
         onInviteUser={handleInviteUser}

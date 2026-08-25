@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
@@ -18,11 +18,13 @@ import {
   PERMISSION_MESSAGES,
   PROJECT_ROLES
 } from "../../constants/content";
+import { ROUTES } from "../../constants/navigation";
 import { IMAGE_EDITOR_ALERTS, TEXT_EDITOR_ALERTS } from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
 
 export default function ImageEditorScreen() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId") || mockImageProject.id;
   const requestedAccess = searchParams.get("access");
@@ -45,6 +47,7 @@ export default function ImageEditorScreen() {
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [notification, setNotification] = useState(null);
   const [pendingCanvasAction, setPendingCanvasAction] = useState(null);
+  const [pendingCanvasActionCopy, setPendingCanvasActionCopy] = useState(null);
   const [prompt, setPrompt] = useState("Create a clean product launch social post.");
   const [project, setProject] = useState(mockImageProject);
   const [responses, setResponses] = useState([]);
@@ -555,12 +558,13 @@ export default function ImageEditorScreen() {
     }, 250);
   }
 
-  function queueUnsavedCanvasAction(action) {
+  function queueUnsavedCanvasAction(action, copy = {}) {
     if (!hasUnsavedChanges) {
       return false;
     }
 
     setPendingCanvasAction(() => action);
+    setPendingCanvasActionCopy(copy);
     return true;
   }
 
@@ -571,6 +575,7 @@ export default function ImageEditorScreen() {
       await saveCurrentCanvas();
       pendingCanvasAction?.();
       setPendingCanvasAction(null);
+      setPendingCanvasActionCopy(null);
       showNotification(
         TEXT_EDITOR_ALERTS.SAVED_TITLE,
         IMAGE_EDITOR_ALERTS.CANVAS_SAVED_BEFORE_SWITCHING_MESSAGE,
@@ -585,6 +590,21 @@ export default function ImageEditorScreen() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function handleBackToProjects() {
+    const navigateToProjects = () => router.push(ROUTES.PROJECTS);
+
+    if (
+      queueUnsavedCanvasAction(navigateToProjects, {
+        description: IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_BACK_DESCRIPTION,
+        title: IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_BACK_TITLE
+      })
+    ) {
+      return;
+    }
+
+    navigateToProjects();
   }
 
   function handleExport(format) {
@@ -630,6 +650,7 @@ export default function ImageEditorScreen() {
         ]}
         invitedUsers={invitedUsers}
         isSaving={isSaving}
+        onBackToProjects={handleBackToProjects}
         onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
         onExport={handleExport}
         onInviteUser={handleInviteUser}
@@ -703,10 +724,16 @@ export default function ImageEditorScreen() {
         <ConfirmDialog
           cancelLabel="Stay Here"
           confirmLabel="Save and Continue"
-          description={IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION}
-          onCancel={() => setPendingCanvasAction(null)}
+          description={
+            pendingCanvasActionCopy?.description ||
+            IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION
+          }
+          onCancel={() => {
+            setPendingCanvasAction(null);
+            setPendingCanvasActionCopy(null);
+          }}
           onConfirm={handleConfirmPendingAction}
-          title={IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE}
+          title={pendingCanvasActionCopy?.title || IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE}
         />
       )}
 
