@@ -163,6 +163,7 @@ export const VERIFY_EMAIL_TEXT = {
 };
 
 export const SHARE_POPOVER_TEXT = {
+  ALREADY_INVITED_ROLE: "Invited",
   CREATE_ACCOUNT_HINT:
     "No account found. They need to create an account before access can be added.",
   EMAIL_PLACEHOLDER: "teammate@example.com",
@@ -171,5 +172,6 @@ export const SHARE_POPOVER_TEXT = {
   INVITE_EMAIL_LABEL: "Invite by email",
   INVITE_TYPED_EMAIL_LABEL: "Invite this email",
   MATCHING_ACCOUNT_LABEL: "Matching account",
+  OWNER_ROLE: "Owner",
   SEARCHING_USERS: "Checking users..."
 };

@@ -94,12 +94,13 @@ export default function TextWorkspaceHeader({
             </Button>
             {isShareOpen && (
               <WorkspaceSharePopover
-                excludedEmails={[auth.user?.email, project.owner?.email]}
+                currentUser={auth.user}
                 inviteEmail={inviteEmail}
                 invitedUsers={invitedUsers}
                 isLoadingUsers={userState.loading}
                 onInviteEmailChange={setInviteEmail}
                 onInviteSubmit={handleInviteSubmit}
+                owner={project.owner}
                 users={userState.users}
               />
             )}

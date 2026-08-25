@@ -4,29 +4,32 @@ import { UserAvatar } from "../common/UserAvatar";
 import { SHARE_POPOVER_TEXT } from "../../constants/notifications";
 
 export default function WorkspaceSharePopover({
-  excludedEmails = [],
+  currentUser,
   inviteEmail,
   invitedUsers = [],
   isLoadingUsers = false,
   onInviteEmailChange,
   onInviteSubmit,
+  owner,
   users = []
 }) {
   const hasInvitedUsers = invitedUsers.length > 0;
   const trimmedEmail = inviteEmail.trim().toLowerCase();
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+  const ownerEmail = owner?.email?.toLowerCase() || currentUser?.email?.toLowerCase() || "";
   const invitedEmails = new Set(
     invitedUsers.map((user) => user.email?.toLowerCase()).filter(Boolean)
   );
-  const hiddenEmails = new Set(excludedEmails.map((email) => email?.toLowerCase()).filter(Boolean));
-  const matchingUsers = users
-    .filter((user) => {
-      const email = user.email?.toLowerCase() || "";
-
-      return isValidEmail && !hiddenEmails.has(email) && email === trimmedEmail;
-    })
-    .slice(0, 3);
-  const hasMatchingUsers = matchingUsers.length > 0;
+  const matchingUser = isValidEmail
+    ? findAccountByEmail([owner, currentUser, ...invitedUsers, ...users], trimmedEmail)
+    : null;
+  const matchingAccount = matchingUser
+    ? {
+        role: getAccountRole(trimmedEmail, ownerEmail, invitedEmails),
+        user: matchingUser
+      }
+    : null;
+  const hasMatchingAccount = Boolean(matchingAccount);
 
   function submitInvite(email) {
     return (event) => {
@@ -56,41 +59,37 @@ export default function WorkspaceSharePopover({
           {SHARE_POPOVER_TEXT.SEARCHING_USERS}
         </p>
       )}
-      {hasMatchingUsers && (
+      {hasMatchingAccount && (
         <div className="mt-4 grid gap-2">
           <p className="text-xs font-bold uppercase text-slate-500">
             {SHARE_POPOVER_TEXT.MATCHING_ACCOUNT_LABEL}
           </p>
-          {matchingUsers.map((user) => {
-            const isInvited = invitedEmails.has(user.email?.toLowerCase());
-
-            return (
-              <div
-                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                key={user._id || user.id || user.email}
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+            <UserAvatar className="h-9 w-9" user={matchingAccount.user} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-slate-900">
+                {matchingAccount.user.name || matchingAccount.user.email}
+              </p>
+              <p className="truncate text-xs text-slate-500">{matchingAccount.user.email}</p>
+            </div>
+            {matchingAccount.role ? (
+              <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+                {matchingAccount.role}
+              </span>
+            ) : (
+              <Button
+                className="px-2.5"
+                onClick={submitInvite(matchingAccount.user.email)}
+                type="button"
               >
-                <UserAvatar className="h-9 w-9" user={user} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-slate-900">
-                    {user.name || user.email}
-                  </p>
-                  <p className="truncate text-xs text-slate-500">{user.email}</p>
-                </div>
-                <Button
-                  className="px-2.5"
-                  disabled={isInvited}
-                  onClick={submitInvite(user.email)}
-                  type="button"
-                >
-                  <UserPlus aria-hidden="true" size={16} />
-                  {SHARE_POPOVER_TEXT.INVITE_BUTTON}
-                </Button>
-              </div>
-            );
-          })}
+                <UserPlus aria-hidden="true" size={16} />
+                {SHARE_POPOVER_TEXT.INVITE_BUTTON}
+              </Button>
+            )}
+          </div>
         </div>
       )}
-      {isValidEmail && !hasMatchingUsers && (
+      {isValidEmail && !hasMatchingAccount && (
         <div className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3">
           <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
             <UserAvatar className="h-9 w-9" user={{ email: trimmedEmail }} />
@@ -128,4 +127,20 @@ export default function WorkspaceSharePopover({
       )}
     </div>
   );
+}
+
+function findAccountByEmail(accounts, email) {
+  return accounts.find((account) => account?.email?.toLowerCase() === email) || null;
+}
+
+function getAccountRole(email, ownerEmail, invitedEmails) {
+  if (email === ownerEmail) {
+    return SHARE_POPOVER_TEXT.OWNER_ROLE;
+  }
+
+  if (invitedEmails.has(email)) {
+    return SHARE_POPOVER_TEXT.ALREADY_INVITED_ROLE;
+  }
+
+  return null;
 }
