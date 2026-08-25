@@ -208,6 +208,7 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
       email,
       inviterName: inviter?.name || "A teammate",
       projectTitle: project.title,
+      recipientName: user.name,
       sharedUrl: buildSharedProjectsUrl()
     }).catch((error) => {
       console.error("Failed to send project invite email", error.message);

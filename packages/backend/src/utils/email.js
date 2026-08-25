@@ -71,11 +71,17 @@ async function sendEmailVerificationEmail({ email, expiresInMinutes, name, verif
   });
 }
 
-async function sendExistingUserProjectInviteEmail({ email, inviterName, projectTitle, sharedUrl }) {
+async function sendExistingUserProjectInviteEmail({
+  email,
+  inviterName,
+  projectTitle,
+  recipientName,
+  sharedUrl
+}) {
   const template = EMAIL_TEMPLATES.EXISTING_USER_PROJECT_INVITE;
   const subject = template.subject(projectTitle);
   const text = [
-    `Hello,`,
+    getGreeting(recipientName),
     "",
     template.intro(inviterName, projectTitle),
     template.action,
@@ -101,6 +107,12 @@ async function sendNewUserProjectInviteEmail({ email, inviterName, projectTitle,
   ].join("\n");
 
   await sendTextEmail({ email, subject, text });
+}
+
+function getGreeting(name) {
+  const safeName = String(name || "").trim();
+
+  return safeName ? `Hello ${safeName},` : "Hello,";
 }
 
 function getLinkExpiryCopy(expiresInMinutes) {
