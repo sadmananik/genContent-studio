@@ -23,6 +23,7 @@ const defaultTextProject = {
   lastUpdated: "Not saved yet",
   content: ""
 };
+const starterPrompt = "Write an introduction about how AI tools help small businesses.";
 
 export default function EditorScreen() {
   const searchParams = useSearchParams();
@@ -54,13 +55,13 @@ export default function EditorScreen() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(isRealProject);
   const [isLoadingContent, setIsLoadingContent] = useState(isRealProject);
   const [isSaving, setIsSaving] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [saveError, setSaveError] = useState(null);
-  const [prompt, setPrompt] = useState(
-    "Write an introduction about how AI tools help small businesses."
-  );
+  const [prompt, setPrompt] = useState(starterPrompt);
   const [responses, setResponses] = useState([]);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
@@ -120,6 +121,10 @@ export default function EditorScreen() {
 
   useEffect(() => {
     if (!isRealProject) {
+      setResponses([]);
+      setSelectedHistoryId(null);
+      setIsLoadingHistory(false);
+      setHistoryError(null);
       return;
     }
 
@@ -188,15 +193,33 @@ export default function EditorScreen() {
         }
       });
 
-    fetchProjectChatHistory(projectId).catch(() => {});
+    setResponses([]);
+    setSelectedHistoryId(null);
+    setIsLoadingHistory(true);
+    setHistoryError(null);
+
+    fetchProjectChatHistory(projectId)
+      .catch((error) => {
+        if (isActive) {
+          setHistoryError(error.message || "AI history could not be loaded.");
+          setResponses([]);
+          setSelectedHistoryId(null);
+          clearAiError();
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingHistory(false);
+        }
+      });
 
     return () => {
       isActive = false;
     };
-  }, [editor, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
+  }, [clearAiError, editor, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
 
   useEffect(() => {
-    if (!isRealProject || aiState.chatHistory.length === 0) {
+    if (!isRealProject) {
       return;
     }
 
@@ -275,6 +298,12 @@ export default function EditorScreen() {
 
   function handleQuickAction(action) {
     setPrompt(`${action}: ${prompt}`.slice(0, 1200));
+  }
+
+  function handlePromptFocus() {
+    if (prompt === starterPrompt) {
+      setPrompt("");
+    }
   }
 
   const handleEditorChange = useCallback((content) => {
@@ -510,35 +539,16 @@ export default function EditorScreen() {
   }
 
   function handleSelectHistory(historyId) {
-    if (!editor) {
-      return;
-    }
-
     if (selectedHistoryId === historyId) {
       return;
     }
 
-    if (queueUnsavedAction(() => loadHistoryItem(historyId))) {
-      return;
-    }
-
-    loadHistoryItem(historyId);
-  }
-
-  function loadHistoryItem(historyId) {
     const responseItem = responses.find((response) => response.id === historyId);
 
     setSelectedHistoryId(historyId);
 
     if (responseItem) {
       setPrompt(responseItem.prompt);
-      replaceEditorContent(responseItem.response, { markUnsaved: false });
-      showNotification(
-        "History loaded",
-        "History response loaded in editor.",
-        TOAST_TYPES.INFO,
-        3000
-      );
     }
   }
 
@@ -585,13 +595,6 @@ export default function EditorScreen() {
     }
   }
 
-  function replaceEditorContent(value, options = {}) {
-    const html = textToHtml(value);
-    editor.commands.setContent(html, false);
-    setEditorContent({ html, text: value });
-    setHasUnsavedChanges(options.markUnsaved ?? true);
-  }
-
   function insertTextIntoEditor(value) {
     const html = textToHtml(value);
 
@@ -615,8 +618,10 @@ export default function EditorScreen() {
 
       <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
         <AIHistorySidebar
+          error={historyError}
           history={history}
           isCollapsed={isHistoryCollapsed}
+          isLoading={isLoadingHistory}
           onDeleteHistory={handleDeleteResponse}
           onSelectHistory={handleSelectHistory}
           onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
@@ -659,6 +664,7 @@ export default function EditorScreen() {
                 }
                 setPrompt(value);
               }}
+              onPromptFocus={handlePromptFocus}
               onQuickAction={handleQuickAction}
               prompt={prompt}
             />
