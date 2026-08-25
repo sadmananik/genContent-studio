@@ -10,7 +10,11 @@ const upsertTextContent = asyncHandler(async (req, res) => {
     throw httpError(400, "Project is required");
   }
 
-  await findAccessibleProject(project, req.user.id);
+  const accessibleProject = await findAccessibleProject(project, req.user.id);
+
+  if (accessibleProject.type !== "text") {
+    throw httpError(400, "Text content can only be saved for text projects");
+  }
 
   const textContent = await TextContent.findOneAndUpdate(
     { project },
@@ -22,7 +26,11 @@ const upsertTextContent = asyncHandler(async (req, res) => {
 });
 
 const getTextContent = asyncHandler(async (req, res) => {
-  await findAccessibleProject(req.params.projectId, req.user.id);
+  const accessibleProject = await findAccessibleProject(req.params.projectId, req.user.id);
+
+  if (accessibleProject.type !== "text") {
+    throw httpError(400, "Text content is only available for text projects");
+  }
 
   const textContent = await TextContent.findOne({ project: req.params.projectId }).populate(
     "lastUpdatedBy",

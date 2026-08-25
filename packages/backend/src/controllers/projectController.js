@@ -1,29 +1,44 @@
 const Project = require("../models/Project");
+const AIChat = require("../models/AIChat");
+const ImageContent = require("../models/ImageContent");
+const TextContent = require("../models/TextContent");
 const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
+const {
+  normalizeObjectIdList,
+  normalizeString,
+  requireTrimmedString
+} = require("../utils/validation");
 
 const createProject = asyncHandler(async (req, res) => {
   const { title, type, category = "Other", description = "", collaborators = [] } = req.body;
+  const normalizedTitle = requireTrimmedString(title, "Project title");
 
-  if (!title || !type) {
-    throw httpError(400, "Project title and type are required");
+  if (!type) {
+    throw httpError(400, "Project type is required");
   }
 
   if (!["text", "image"].includes(type)) {
     throw httpError(400, "Project type must be text or image");
   }
 
+  const normalizedCollaborators = await validateCollaborators(collaborators, req.user.id);
+
   const project = await Project.create({
-    title: title.trim(),
+    title: normalizedTitle,
     type,
-    category,
-    description,
+    category: normalizeString(category, "Other") || "Other",
+    description: normalizeString(description),
     owner: req.user.id,
-    collaborators
+    collaborators: normalizedCollaborators
   });
 
-  res.status(201).json(project);
+  const createdProject = await Project.findById(project._id)
+    .populate("owner", "name email")
+    .populate("collaborators", "name email");
+
+  res.status(201).json(createdProject);
 });
 
 const listProjects = asyncHandler(async (req, res) => {
@@ -51,14 +66,33 @@ const updateProject = asyncHandler(async (req, res) => {
   }
 
   allowedUpdates.forEach((field) => {
-    if (req.body[field] !== undefined) {
+    if (field !== "collaborators" && req.body[field] !== undefined) {
       project[field] =
         typeof req.body[field] === "string" ? req.body[field].trim() : req.body[field];
     }
   });
 
+  if (req.body.title !== undefined && !project.title) {
+    throw httpError(400, "Project title is required");
+  }
+
+  if (req.body.category !== undefined && !project.category) {
+    project.category = "Other";
+  }
+
+  if (req.body.collaborators !== undefined) {
+    project.collaborators = await validateCollaborators(
+      req.body.collaborators,
+      getObjectIdString(project.owner)
+    );
+  }
+
   await project.save();
-  res.json(project);
+  const updatedProject = await Project.findById(project._id)
+    .populate("owner", "name email")
+    .populate("collaborators", "name email");
+
+  res.json(updatedProject);
 });
 
 const inviteProjectCollaborator = asyncHandler(async (req, res) => {
@@ -111,6 +145,11 @@ const deleteProject = asyncHandler(async (req, res) => {
     throw httpError(404, "Project not found or only owners can delete projects");
   }
 
+  await Promise.all([
+    AIChat.deleteMany({ project: project._id }),
+    ImageContent.deleteMany({ project: project._id }),
+    TextContent.deleteMany({ project: project._id })
+  ]);
   await project.deleteOne();
   res.status(204).send();
 });
@@ -128,6 +167,28 @@ async function findAccessibleProject(projectId, userId) {
   }
 
   return project;
+}
+
+async function validateCollaborators(collaborators, ownerId) {
+  const normalizedIds = normalizeObjectIdList(collaborators, "Collaborators") || [];
+  const ownerIdString = getObjectIdString(ownerId);
+  const collaboratorIds = normalizedIds.filter((id) => id !== ownerIdString);
+
+  if (collaboratorIds.length === 0) {
+    return [];
+  }
+
+  const existingUsers = await User.find({ _id: { $in: collaboratorIds } }).select("_id");
+
+  if (existingUsers.length !== collaboratorIds.length) {
+    throw httpError(400, "One or more collaborators do not exist");
+  }
+
+  return collaboratorIds;
+}
+
+function getObjectIdString(value) {
+  return String(value?._id || value);
 }
 
 module.exports = {
