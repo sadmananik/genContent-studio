@@ -764,13 +764,14 @@ export default function ImageEditorScreen() {
 
       {pendingCanvasAction && (
         <ConfirmDialog
-          cancelLabel="Stay Here"
+          cancelLabel={IMAGE_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
           confirmLabel="Save and Continue"
           description={
             pendingCanvasActionCopy?.description ||
             IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION
           }
           onCancel={() => {
+            pendingCanvasAction?.();
             setPendingCanvasAction(null);
             setPendingCanvasActionCopy(null);
           }}

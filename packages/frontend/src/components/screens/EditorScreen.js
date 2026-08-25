@@ -934,13 +934,14 @@ export default function EditorScreen() {
       </div>
       {pendingEditorAction && (
         <ConfirmDialog
-          cancelLabel="Stay Here"
+          cancelLabel={TEXT_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
           confirmLabel="Save and Continue"
           description={
             pendingEditorActionCopy?.description ||
             "Your current editor content has unsaved changes. Save this draft before continuing?"
           }
           onCancel={() => {
+            pendingEditorAction?.();
             setPendingEditorAction(null);
             setPendingEditorActionCopy(null);
           }}
