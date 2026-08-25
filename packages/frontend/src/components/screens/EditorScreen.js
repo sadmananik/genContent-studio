@@ -24,6 +24,18 @@ const defaultTextProject = {
   content: ""
 };
 const starterPrompt = "Write an introduction about how AI tools help small businesses.";
+const maxQuickActionContentLength = 3200;
+const quickActionPromptBuilders = {
+  Rewrite: (content) =>
+    `Rewrite the following content while preserving its meaning and making it clearer:\n\n${content}`,
+  "Improve Tone": (content) =>
+    `Improve the tone of the following content so it sounds polished, confident, and natural:\n\n${content}`,
+  Summarise: (content) => `Summarise the following content into a concise version:\n\n${content}`,
+  Expand: (content) =>
+    `Expand the following content with useful detail while keeping the same topic and style:\n\n${content}`,
+  "SEO Suggestions": (content) =>
+    `Suggest SEO keywords, title ideas, and meta description improvements for this content:\n\n${content}`
+};
 
 export default function EditorScreen() {
   const searchParams = useSearchParams();
@@ -230,8 +242,8 @@ export default function EditorScreen() {
     setSelectedHistoryId(realResponses[0]?.id || null);
   }, [aiState.chatHistory, isRealProject]);
 
-  async function handleGenerate() {
-    const trimmedPrompt = String(prompt || "").trim();
+  async function handleGenerate(promptOverride) {
+    const trimmedPrompt = String(promptOverride || prompt || "").trim();
 
     if (!trimmedPrompt) {
       showNotification("Prompt required", "Enter a prompt before generating.", TOAST_TYPES.ERROR);
@@ -296,8 +308,28 @@ export default function EditorScreen() {
     }
   }
 
-  function handleQuickAction(action) {
-    setPrompt(`${action}: ${prompt}`.slice(0, 1200));
+  async function handleQuickAction(action) {
+    const sourceContent = (getSelectedEditorText(editor) || editorContent.text).trim();
+
+    if (!sourceContent) {
+      showNotification(
+        "Content required",
+        "Write or select text in the editor before using a quick action.",
+        TOAST_TYPES.WARNING
+      );
+      return;
+    }
+
+    const buildPrompt = quickActionPromptBuilders[action];
+
+    if (!buildPrompt) {
+      setPrompt(`${action}: ${prompt}`.slice(0, 1200));
+      return;
+    }
+
+    const actionPrompt = buildPrompt(sourceContent.slice(0, maxQuickActionContentLength));
+    setPrompt(actionPrompt.slice(0, 1200));
+    await handleGenerate(actionPrompt);
   }
 
   function handlePromptFocus() {
@@ -749,6 +781,20 @@ function formatChatAsResponse(chat) {
 function countWords(value) {
   const words = value.trim().match(/\S+/g);
   return words ? words.length : 0;
+}
+
+function getSelectedEditorText(editor) {
+  if (!editor) {
+    return "";
+  }
+
+  const { from, to } = editor.state.selection;
+
+  if (from === to) {
+    return "";
+  }
+
+  return editor.state.doc.textBetween(from, to, " ").trim();
 }
 
 function getSaveStatusLabel({
