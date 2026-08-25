@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Mail, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AuthVisual from "../common/AuthVisual";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
@@ -14,6 +14,8 @@ import { useAppStore } from "../../store";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const invitedEmail = searchParams.get("email") || "";
   const auth = useAppStore((state) => state.auth);
   const registerUser = useAppStore((state) => state.registerUser);
   const clearAuthError = useAppStore((state) => state.clearAuthError);
@@ -35,6 +37,15 @@ export default function RegisterScreen() {
       router.replace(ROUTES.DASHBOARD);
     }
   }, [auth.isAuthenticated, router]);
+
+  useEffect(() => {
+    if (invitedEmail) {
+      setFormValues((currentValues) => ({
+        ...currentValues,
+        email: invitedEmail
+      }));
+    }
+  }, [invitedEmail]);
 
   function handleChange(event) {
     const { name, value } = event.target;

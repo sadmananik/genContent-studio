@@ -55,6 +55,38 @@ async function sendEmailVerificationEmail({ email, expiresInMinutes, name, verif
   });
 }
 
+async function sendExistingUserProjectInviteEmail({ email, inviterName, projectTitle, sharedUrl }) {
+  const template = EMAIL_TEMPLATES.EXISTING_USER_PROJECT_INVITE;
+  const subject = template.subject(projectTitle);
+  const text = [
+    `Hello,`,
+    "",
+    template.intro(inviterName, projectTitle),
+    template.action,
+    sharedUrl,
+    "",
+    "If you were not expecting this invitation, you can ignore this email."
+  ].join("\n");
+
+  await sendTextEmail({ email, subject, text });
+}
+
+async function sendNewUserProjectInviteEmail({ email, inviterName, projectTitle, registerUrl }) {
+  const template = EMAIL_TEMPLATES.NEW_USER_PROJECT_INVITE;
+  const subject = template.subject(projectTitle);
+  const text = [
+    `Hello,`,
+    "",
+    template.intro(inviterName, projectTitle),
+    template.action,
+    registerUrl,
+    "",
+    "If you were not expecting this invitation, you can ignore this email."
+  ].join("\n");
+
+  await sendTextEmail({ email, subject, text });
+}
+
 function getLinkExpiryCopy(expiresInMinutes) {
   const minutes = Number(expiresInMinutes);
   const safeMinutes = Number.isFinite(minutes) && minutes > 0 ? minutes : 5;
@@ -109,6 +141,20 @@ function shouldUseConsoleDelivery() {
   return !process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS;
 }
 
+async function sendTextEmail({ email, subject, text }) {
+  if (shouldUseConsoleDelivery()) {
+    logEmailToConsole({ email, subject, text });
+    return;
+  }
+
+  await getTransporter().sendMail({
+    from: requireEmailFrom(),
+    to: email,
+    subject,
+    text
+  });
+}
+
 function logEmailToConsole({ email, subject, text }) {
   console.log(
     [
@@ -124,5 +170,7 @@ function logEmailToConsole({ email, subject, text }) {
 
 module.exports = {
   sendEmailVerificationEmail,
+  sendExistingUserProjectInviteEmail,
+  sendNewUserProjectInviteEmail,
   sendPasswordResetEmail
 };

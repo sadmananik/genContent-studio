@@ -63,12 +63,15 @@ export default function ImageEditorScreen() {
       const email = user.email?.toLowerCase();
 
       if (email && !usersByEmail.has(email)) {
-        usersByEmail.set(email, user);
+        usersByEmail.set(email, {
+          ...user,
+          accessLevel: getCollaboratorAccessLevel(project, user)
+        });
       }
     });
 
     return [...usersByEmail.values()];
-  }, [project.collaborators]);
+  }, [project]);
   const statusLabel = hasUnsavedChanges
     ? TEXT_EDITOR_ALERTS.UNSAVED_CHANGES_STATUS
     : lastSavedAt
@@ -768,6 +771,15 @@ function downloadBlob(blob, filename) {
 
 function formatTime(value) {
   return value.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function getCollaboratorAccessLevel(project, user) {
+  const userId = String(user?._id || user?.id || "");
+  const permission = (project.collaboratorPermissions || []).find(
+    (item) => String(item.user?._id || item.user) === userId
+  );
+
+  return permission?.accessLevel;
 }
 
 function buildDemoImageResponse(prompt) {

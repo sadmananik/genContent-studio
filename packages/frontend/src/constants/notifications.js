@@ -173,5 +173,7 @@ export const SHARE_POPOVER_TEXT = {
   INVITE_TYPED_EMAIL_LABEL: "Invite this email",
   MATCHING_ACCOUNT_LABEL: "Matching account",
   OWNER_ROLE: "Owner",
+  PROJECT_ROLE_EDITOR: "Editor",
+  PROJECT_ROLE_VIEWER: "Viewer",
   SEARCHING_USERS: "Checking users..."
 };

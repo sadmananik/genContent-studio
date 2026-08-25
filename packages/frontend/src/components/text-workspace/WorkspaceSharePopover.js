@@ -1,6 +1,7 @@
 import { MailPlus, UserPlus } from "lucide-react";
 import Button from "../common/Button";
 import { UserAvatar } from "../common/UserAvatar";
+import { ACCESS_LEVELS } from "../../constants/content";
 import { SHARE_POPOVER_TEXT } from "../../constants/notifications";
 
 export default function WorkspaceSharePopover({
@@ -111,7 +112,7 @@ export default function WorkspaceSharePopover({
           </p>
           {invitedUsers.map((user) => (
             <div
-              className="flex items-center gap-3 rounded-md bg-slate-50 px-3 py-2"
+              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-violet-50 px-3 py-2 ring-1 ring-violet-100"
               key={user.email || user.name}
             >
               <UserAvatar className="h-9 w-9" user={user} />
@@ -121,6 +122,9 @@ export default function WorkspaceSharePopover({
                 </p>
                 <p className="truncate text-xs text-slate-500">{user.email}</p>
               </div>
+              <span className="rounded-full bg-violet-600 px-2 py-1 text-xs font-bold text-white">
+                {getAccessLevelLabel(user.accessLevel)}
+              </span>
             </div>
           ))}
         </div>
@@ -143,4 +147,10 @@ function getAccountRole(email, ownerEmail, invitedEmails) {
   }
 
   return null;
+}
+
+function getAccessLevelLabel(accessLevel) {
+  return accessLevel === ACCESS_LEVELS.VIEWER
+    ? SHARE_POPOVER_TEXT.PROJECT_ROLE_VIEWER
+    : SHARE_POPOVER_TEXT.PROJECT_ROLE_EDITOR;
 }

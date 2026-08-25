@@ -150,12 +150,15 @@ export default function EditorScreen() {
       const email = user.email?.toLowerCase();
 
       if (email && !usersByEmail.has(email)) {
-        usersByEmail.set(email, user);
+        usersByEmail.set(email, {
+          ...user,
+          accessLevel: getCollaboratorAccessLevel(project, user)
+        });
       }
     });
 
     return [...usersByEmail.values()];
-  }, [project.collaborators]);
+  }, [project]);
 
   useEffect(() => {
     const pendingToast = readPendingToast();
@@ -1111,6 +1114,15 @@ function downloadBlob(blob, filename) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function getCollaboratorAccessLevel(project, user) {
+  const userId = String(user?._id || user?.id || "");
+  const permission = (project.collaboratorPermissions || []).find(
+    (item) => String(item.user?._id || item.user) === userId
+  );
+
+  return permission?.accessLevel;
 }
 
 function createPdfBlob(title, text) {
