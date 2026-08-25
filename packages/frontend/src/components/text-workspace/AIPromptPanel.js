@@ -6,6 +6,7 @@ export default function AIPromptPanel({
   error,
   isGenerating,
   onGenerate,
+  onPromptFocus,
   onPromptChange,
   onQuickAction,
   prompt
@@ -22,6 +23,7 @@ export default function AIPromptPanel({
         disabled={isGenerating}
         maxLength={1200}
         onChange={(event) => onPromptChange(event.target.value)}
+        onFocus={onPromptFocus}
         placeholder="Write a blog introduction about AI tools for small businesses..."
         value={prompt}
       />

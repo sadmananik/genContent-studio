@@ -3,7 +3,9 @@ import EmptyAIHistory from "./EmptyAIHistory";
 
 export default function AIHistorySidebar({
   history,
+  error,
   isCollapsed,
+  isLoading,
   onDeleteHistory,
   onSelectHistory,
   onToggleCollapsed,
@@ -29,7 +31,18 @@ export default function AIHistorySidebar({
 
       {!isCollapsed && (
         <div className="grid gap-2 p-3">
-          {history.length === 0 ? (
+          {isLoading ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+              Loading AI history...
+            </div>
+          ) : error ? (
+            <div
+              className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              role="alert"
+            >
+              {error}
+            </div>
+          ) : history.length === 0 ? (
             <EmptyAIHistory />
           ) : (
             history.map((item) => (
