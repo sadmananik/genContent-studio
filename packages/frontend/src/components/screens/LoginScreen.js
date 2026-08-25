@@ -57,10 +57,11 @@ export default function LoginScreen() {
       <form className="login-panel" onSubmit={handleLogin}>
         <h2>Welcome back!</h2>
         <p>Sign in to continue to your account</p>
-        <label>
+        <label htmlFor="login-email">
           <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
           <input
             autoComplete="email"
+            id="login-email"
             name="email"
             onChange={handleChange}
             placeholder="Email address"
@@ -71,6 +72,7 @@ export default function LoginScreen() {
         </label>
         <PasswordField
           autoComplete="current-password"
+          id="login-password"
           label="Password"
           name="password"
           onChange={handleChange}

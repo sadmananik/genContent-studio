@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
@@ -24,6 +24,35 @@ const defaultTextProject = {
   content: ""
 };
 const starterPrompt = "Write an introduction about how AI tools help small businesses.";
+const maxPromptDisplayLength = 180;
+const maxQuickActionContentLength = 3200;
+const quickActionPromptBuilders = {
+  Rewrite: {
+    label: "Rewrite selected/editor content",
+    buildPrompt: (content) =>
+      `Rewrite the following content while preserving its meaning and making it clearer:\n\n${content}`
+  },
+  "Improve Tone": {
+    label: "Improve tone of selected/editor content",
+    buildPrompt: (content) =>
+      `Improve the tone of the following content so it sounds polished, confident, and natural:\n\n${content}`
+  },
+  Summarise: {
+    label: "Summarise selected/editor content",
+    buildPrompt: (content) =>
+      `Summarise the following content into a concise version:\n\n${content}`
+  },
+  Expand: {
+    label: "Expand selected/editor content",
+    buildPrompt: (content) =>
+      `Expand the following content with useful detail while keeping the same topic and style:\n\n${content}`
+  },
+  "SEO Suggestions": {
+    label: "Create SEO suggestions from selected/editor content",
+    buildPrompt: (content) =>
+      `Suggest SEO keywords, title ideas, and meta description improvements for this content:\n\n${content}`
+  }
+};
 
 export default function EditorScreen() {
   const searchParams = useSearchParams();
@@ -65,9 +94,11 @@ export default function EditorScreen() {
   const [responses, setResponses] = useState([]);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
+  const [pendingEditorActionCopy, setPendingEditorActionCopy] = useState(null);
   const [recentlyInsertedResponseId, setRecentlyInsertedResponseId] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
+  const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const savePayload = useMemo(
     () => ({
@@ -88,7 +119,7 @@ export default function EditorScreen() {
     () =>
       responses.map((response) => ({
         id: response.id,
-        prompt: response.prompt,
+        prompt: response.promptPreview || getPromptPreview(response.prompt),
         timestamp: response.timestamp,
         favourite: response.favourite,
         type: "response"
@@ -156,6 +187,7 @@ export default function EditorScreen() {
         }
 
         const html = typeof textContent.content === "string" ? textContent.content : "";
+        lastPersistedContentHtmlRef.current = normalizeEditorHtml(html);
 
         if (editor) {
           editor.commands.setContent(html, false);
@@ -171,6 +203,7 @@ export default function EditorScreen() {
         }
 
         if (error.message === "Text content not found") {
+          lastPersistedContentHtmlRef.current = "";
           setEditorContent({ html: "", text: "" });
           setHasUnsavedChanges(false);
 
@@ -230,8 +263,8 @@ export default function EditorScreen() {
     setSelectedHistoryId(realResponses[0]?.id || null);
   }, [aiState.chatHistory, isRealProject]);
 
-  async function handleGenerate() {
-    const trimmedPrompt = String(prompt || "").trim();
+  async function handleGenerate(promptOverride) {
+    const trimmedPrompt = String(promptOverride || prompt || "").trim();
 
     if (!trimmedPrompt) {
       showNotification("Prompt required", "Enter a prompt before generating.", TOAST_TYPES.ERROR);
@@ -248,6 +281,7 @@ export default function EditorScreen() {
       const response = {
         id: responseId,
         prompt: trimmedPrompt,
+        promptPreview: getPromptPreview(trimmedPrompt),
         response: generatedText,
         timestamp: "Just now",
         favourite: false
@@ -296,8 +330,30 @@ export default function EditorScreen() {
     }
   }
 
-  function handleQuickAction(action) {
-    setPrompt(`${action}: ${prompt}`.slice(0, 1200));
+  async function handleQuickAction(action) {
+    const sourceContent = (getSelectedEditorText(editor) || editorContent.text).trim();
+
+    if (!sourceContent) {
+      showNotification(
+        "Content required",
+        "Write or select text in the editor before using a quick action.",
+        TOAST_TYPES.WARNING
+      );
+      return;
+    }
+
+    const actionConfig = quickActionPromptBuilders[action];
+
+    if (!actionConfig) {
+      setPrompt(`${action}: ${prompt}`.slice(0, 1200));
+      return;
+    }
+
+    const limitedContent = sourceContent.slice(0, maxQuickActionContentLength);
+    const actionPrompt = actionConfig.buildPrompt(limitedContent);
+
+    setPrompt(actionConfig.label.slice(0, maxPromptDisplayLength));
+    await handleGenerate(actionPrompt);
   }
 
   function handlePromptFocus() {
@@ -308,7 +364,9 @@ export default function EditorScreen() {
 
   const handleEditorChange = useCallback((content) => {
     setEditorContent(content);
-    setHasUnsavedChanges(true);
+    setHasUnsavedChanges(
+      hasEditorContentChanged(content.html, lastPersistedContentHtmlRef.current)
+    );
     setSaveError(null);
   }, []);
 
@@ -326,6 +384,7 @@ export default function EditorScreen() {
 
     try {
       await saveCurrentDraft();
+      lastPersistedContentHtmlRef.current = normalizeEditorHtml(editorContent.html);
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
       showNotification(
@@ -408,7 +467,13 @@ export default function EditorScreen() {
       return;
     }
 
-    if (queueUnsavedAction(() => insertResponse(response))) {
+    if (
+      queueUnsavedAction(() => insertResponse(response), {
+        description:
+          "Your current editor content has unsaved changes. Save this draft before inserting the AI response?",
+        title: "Save changes before inserting?"
+      })
+    ) {
       return;
     }
 
@@ -552,12 +617,14 @@ export default function EditorScreen() {
     }
   }
 
-  function queueUnsavedAction(action) {
-    if (!hasUnsavedChanges) {
+  function queueUnsavedAction(action, copy = {}) {
+    if (!hasEditorContentChanged(editorContent.html, lastPersistedContentHtmlRef.current)) {
+      setHasUnsavedChanges(false);
       return false;
     }
 
     setPendingEditorAction(() => action);
+    setPendingEditorActionCopy(copy);
     return true;
   }
 
@@ -567,10 +634,12 @@ export default function EditorScreen() {
 
     try {
       await saveCurrentDraft();
+      lastPersistedContentHtmlRef.current = normalizeEditorHtml(editorContent.html);
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
       pendingEditorAction?.();
       setPendingEditorAction(null);
+      setPendingEditorActionCopy(null);
       showNotification("Saved", "Draft saved before switching.", TOAST_TYPES.SUCCESS);
     } catch (error) {
       setSaveError(error.message || "Draft could not be saved.");
@@ -599,8 +668,10 @@ export default function EditorScreen() {
     const html = textToHtml(value);
 
     editor.chain().focus().insertContent(html).run();
-    setEditorContent({ html: editor.getHTML(), text: editor.getText() });
-    setHasUnsavedChanges(true);
+    const nextHtml = editor.getHTML();
+
+    setEditorContent({ html: nextHtml, text: editor.getText() });
+    setHasUnsavedChanges(hasEditorContentChanged(nextHtml, lastPersistedContentHtmlRef.current));
     setSaveError(null);
   }
 
@@ -703,10 +774,16 @@ export default function EditorScreen() {
         <ConfirmDialog
           cancelLabel="Stay Here"
           confirmLabel="Save and Continue"
-          description="Your current editor content has unsaved changes. Save this draft before loading another response?"
-          onCancel={() => setPendingEditorAction(null)}
+          description={
+            pendingEditorActionCopy?.description ||
+            "Your current editor content has unsaved changes. Save this draft before continuing?"
+          }
+          onCancel={() => {
+            setPendingEditorAction(null);
+            setPendingEditorActionCopy(null);
+          }}
           onConfirm={handleConfirmPendingAction}
-          title="Save changes before switching?"
+          title={pendingEditorActionCopy?.title || "Save changes before continuing?"}
         />
       )}
       <ToastNotification
@@ -740,15 +817,53 @@ function formatChatAsResponse(chat) {
     id: chat._id || chat.id,
     sourceId: chat._id || chat.id,
     prompt: chat.prompt,
+    promptPreview: getPromptPreview(chat.prompt),
     response: chat.response,
     timestamp: chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "Saved chat",
     favourite: Boolean(chat.isFavourite)
   };
 }
 
+function getPromptPreview(value, maxLength = 72) {
+  const compactPrompt = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (compactPrompt.length <= maxLength) {
+    return compactPrompt;
+  }
+
+  return `${compactPrompt.slice(0, maxLength - 1).trim()}...`;
+}
+
 function countWords(value) {
   const words = value.trim().match(/\S+/g);
   return words ? words.length : 0;
+}
+
+function hasEditorContentChanged(currentHtml, persistedHtml) {
+  return normalizeEditorHtml(currentHtml) !== normalizeEditorHtml(persistedHtml);
+}
+
+function normalizeEditorHtml(value) {
+  return String(value || "")
+    .replace(/<p>(?:\s|<br\s*\/?>|&nbsp;)*<\/p>/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getSelectedEditorText(editor) {
+  if (!editor) {
+    return "";
+  }
+
+  const { from, to } = editor.state.selection;
+
+  if (from === to) {
+    return "";
+  }
+
+  return editor.state.doc.textBetween(from, to, " ").trim();
 }
 
 function getSaveStatusLabel({

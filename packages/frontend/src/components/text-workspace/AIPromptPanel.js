@@ -53,7 +53,7 @@ export default function AIPromptPanel({
         </div>
         <Button
           disabled={isGenerating || !String(prompt || "").trim()}
-          onClick={onGenerate}
+          onClick={() => onGenerate()}
           type="button"
         >
           {isGenerating && <Loader2 aria-hidden="true" className="animate-spin" size={16} />}

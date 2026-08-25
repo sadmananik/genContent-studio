@@ -50,19 +50,15 @@ a {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   color: #111827;
   font-size: 15px;
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  color: white;
-  background: linear-gradient(135deg, #7c5cff, #4f36df);
-  border-radius: 8px;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
 }
 
 .btn {
