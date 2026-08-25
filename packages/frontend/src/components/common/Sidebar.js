@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Bot,
   FilePenLine,
   FolderKanban,
   LayoutDashboard,
-  LogOut,
   PanelTop,
   SearchCheck,
   Settings,
@@ -15,8 +14,9 @@ import {
   Users
 } from "lucide-react";
 import Brand from "./Brand";
-import { clearAuthState } from "../../lib/auth";
-import { EDITOR_NAV_ITEMS, NAV_ITEMS, ROUTES } from "../../constants/navigation";
+import { EDITOR_NAV_ITEMS, NAV_ITEMS } from "../../constants/navigation";
+
+const APP_VERSION = "0.1.0";
 
 const navIcons = {
   Bot,
@@ -32,12 +32,7 @@ const navIcons = {
 
 export function AppSidebar({ active }) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  function handleLogout() {
-    clearAuthState();
-    router.push(ROUTES.LOGIN);
-  }
+  const currentYear = new Date().getFullYear();
 
   return (
     <aside className="app-sidebar">
@@ -59,14 +54,8 @@ export function AppSidebar({ active }) {
         })}
       </nav>
       <div className="sidebar-footer">
-        <button type="button">
-          <Settings aria-hidden="true" size={18} strokeWidth={2.25} />
-          Settings
-        </button>
-        <button type="button" onClick={handleLogout}>
-          <LogOut aria-hidden="true" size={18} strokeWidth={2.25} />
-          Logout
-        </button>
+        <p>GenContent Studio v{APP_VERSION}</p>
+        <small>&copy; {currentYear} GenContent Studio</small>
       </div>
     </aside>
   );
