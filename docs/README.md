@@ -1,9 +1,17 @@
-# Product Documentation
+# GenContent Studio Documentation
 
-GenContent Studio product and business logic notes for future development.
+Product and business logic notes for future maintenance and handover.
 
-## Guides
+## Business logic
 
-- [AI Text Generation](./ai-text-generation.md)
+- [Authentication and account lifecycle](./authentication.md)
+- [Projects, workspaces, and collaboration](./projects-and-collaboration.md)
+- [AI text generation](./ai-text-generation.md)
 - [Templates Library](./templates-library.md)
 - [Favorites](./favorites.md)
+
+## Documentation rules
+
+- Keep frontend and backend responsibilities separate.
+- Record route names, API endpoints, and state transitions.
+- Update these notes when user-facing workflows change.
