@@ -5,6 +5,11 @@ import { usePathname } from "next/navigation";
 import AppHeader from "../../components/common/AppHeader";
 import ProtectedRoute from "../../components/common/ProtectedRoute";
 import { AppSidebar } from "../../components/common/Sidebar";
+import {
+  applyThemePreference,
+  getStoredThemePreference,
+  watchSystemThemePreference
+} from "../../lib/themePreference";
 
 const PROTOTYPE_ROUTES = new Set(["/chat-history", "/collaboration", "/editor"]);
 
@@ -13,13 +18,10 @@ export default function ProtectedLayout({ children }) {
   const isPrototypeRoute = PROTOTYPE_ROUTES.has(pathname);
 
   useEffect(() => {
-    const theme = window.localStorage.getItem("gencontent-theme-preference") || "system";
+    const theme = getStoredThemePreference();
 
-    document.documentElement.dataset.theme = ["light", "dark", "system"].includes(theme)
-      ? theme
-      : "system";
-    document.documentElement.style.colorScheme =
-      theme === "system" ? "light dark" : theme === "dark" ? "dark" : "light";
+    applyThemePreference(theme);
+    return watchSystemThemePreference(theme);
   }, []);
 
   if (isPrototypeRoute) {

@@ -10,9 +10,14 @@ import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { UserAvatar } from "../common/UserAvatar";
 import { ROUTES } from "../../constants/navigation";
 import { SETTINGS_TEXT } from "../../constants/notifications";
+import {
+  applyThemePreference,
+  getStoredThemePreference,
+  saveThemePreference,
+  watchSystemThemePreference
+} from "../../lib/themePreference";
 import { useAppStore } from "../../store";
 
-const THEME_STORAGE_KEY = "gencontent-theme-preference";
 const THEME_OPTIONS = [
   { label: SETTINGS_TEXT.THEME_OPTIONS.SYSTEM, value: "system" },
   { label: SETTINGS_TEXT.THEME_OPTIONS.LIGHT, value: "light" },
@@ -38,10 +43,13 @@ export default function SettingsScreen() {
   }, [auth.token, getUserProfile]);
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) || "system";
+    const storedTheme = getStoredThemePreference();
+
     setTheme(storedTheme);
     applyThemePreference(storedTheme);
   }, []);
+
+  useEffect(() => watchSystemThemePreference(theme), [theme]);
 
   function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
     setNotification({ duration, id: Date.now(), message, title, type });
@@ -51,8 +59,7 @@ export default function SettingsScreen() {
     const nextTheme = event.target.value;
 
     setTheme(nextTheme);
-    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-    applyThemePreference(nextTheme);
+    saveThemePreference(nextTheme);
     showNotification(
       SETTINGS_TEXT.THEME_UPDATED_TITLE,
       SETTINGS_TEXT.THEME_UPDATED_MESSAGE,
@@ -72,7 +79,6 @@ export default function SettingsScreen() {
         SETTINGS_TEXT.CHANGE_PASSWORD_SUCCESS_DESCRIPTION(user?.email || ""),
         TOAST_TYPES.SUCCESS
       );
-      return response;
     } catch (error) {
       showNotification(
         SETTINGS_TEXT.CHANGE_PASSWORD_FAILED_TITLE,
@@ -186,13 +192,4 @@ export default function SettingsScreen() {
       />
     </main>
   );
-}
-
-export function applyThemePreference(theme) {
-  const root = document.documentElement;
-  const normalizedTheme = ["light", "dark", "system"].includes(theme) ? theme : "system";
-
-  root.dataset.theme = normalizedTheme;
-  root.style.colorScheme =
-    normalizedTheme === "system" ? "light dark" : normalizedTheme === "dark" ? "dark" : "light";
 }
