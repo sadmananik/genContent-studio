@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Button from "../common/Button";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
-import { getInitials } from "../common/UserProfileMenu";
+import { UserAvatar } from "../common/UserAvatar";
 import { PROFILE_ALERTS } from "../../constants/notifications";
 import { useAppStore } from "../../store";
 
@@ -88,13 +88,14 @@ export default function ProfileScreen() {
         </header>
 
         <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 pb-5">
-          {imageUrl ? (
-            <img alt="" className="h-16 w-16 rounded-full object-cover" src={imageUrl} />
-          ) : (
-            <span className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-emerald-900 to-violet-600 text-lg font-extrabold text-white">
-              {getInitials(formValues.name)}
-            </span>
-          )}
+          <UserAvatar
+            className="h-16 w-16 text-lg"
+            user={{
+              ...user,
+              name: formValues.name || user?.name,
+              profile: { avatarUrl: imageUrl }
+            }}
+          />
           <div className="min-w-0">
             <h2 className="truncate text-lg font-bold text-slate-950">{user?.name || "User"}</h2>
             <p className="truncate text-sm text-slate-500">{user?.email}</p>

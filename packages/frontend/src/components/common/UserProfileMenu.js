@@ -1,22 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { UserAvatar as SharedUserAvatar, getInitials } from "./UserAvatar";
 
 export function UserAvatar({ name = "", imageUrl }) {
-  if (imageUrl) {
-    return (
-      <img
-        className="grid h-[34px] w-[34px] place-items-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-900 to-violet-600 object-cover text-xs font-extrabold text-white"
-        src={imageUrl}
-        alt=""
-      />
-    );
-  }
-
   return (
-    <span className="grid h-[34px] w-[34px] place-items-center rounded-full bg-gradient-to-br from-emerald-900 to-violet-600 text-xs font-extrabold text-white">
-      {getInitials(name)}
-    </span>
+    <SharedUserAvatar
+      className="h-[34px] w-[34px]"
+      user={{ name, profile: { avatarUrl: imageUrl } }}
+    />
   );
 }
 
@@ -87,27 +79,10 @@ export default function UserProfileMenu({ user, onLogout, onProfile }) {
 }
 
 function renderAvatar(displayName, imageUrl, initials) {
-  if (imageUrl) {
-    return <UserAvatar name={displayName} imageUrl={imageUrl} />;
-  }
-
   return (
-    <span className="grid h-[34px] w-[34px] place-items-center rounded-full bg-gradient-to-br from-emerald-900 to-violet-600 text-xs font-extrabold text-white">
-      {initials}
-    </span>
+    <SharedUserAvatar
+      className="h-[34px] w-[34px]"
+      user={{ name: displayName || initials, profile: { avatarUrl: imageUrl } }}
+    />
   );
-}
-
-export function getInitials(name = "") {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-
-  if (parts.length === 0) {
-    return "U";
-  }
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
 }

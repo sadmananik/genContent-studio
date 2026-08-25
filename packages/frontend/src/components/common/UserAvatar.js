@@ -2,6 +2,22 @@ import { cn } from "../../lib/styles";
 
 export function UserAvatar({ className = "", user }) {
   const label = user?.email || user?.name || "User";
+  const imageUrl = user?.profile?.avatarUrl || user?.profile?.imageUrl || user?.avatarUrl || "";
+
+  if (imageUrl) {
+    return (
+      <img
+        alt=""
+        aria-label={label}
+        className={cn(
+          "grid h-8 w-8 place-items-center rounded-full bg-violet-100 object-cover text-xs font-extrabold text-violet-700",
+          className
+        )}
+        src={imageUrl}
+        title={label}
+      />
+    );
+  }
 
   return (
     <span
