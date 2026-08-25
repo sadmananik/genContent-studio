@@ -75,7 +75,7 @@ export default function ToastNotification({
       </div>
       <button
         aria-label="Close notification"
-        className="grid h-7 w-7 shrink-0 place-items-center rounded-md hover:bg-white/60"
+        className="app-close-button grid h-7 w-7 shrink-0 place-items-center rounded-md"
         onClick={onClose}
         type="button"
       >

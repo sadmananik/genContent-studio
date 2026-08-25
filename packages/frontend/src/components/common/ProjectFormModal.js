@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
+import { X } from "lucide-react";
 import Button from "./Button";
 import {
   CONTENT_CATEGORIES,
@@ -59,12 +60,12 @@ export default function ProjectFormModal({
             <p className="mt-1.5 text-slate-500">{DASHBOARD_TEXT.PROJECT_INFORMATION}</p>
           </div>
           <button
-            className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            className="app-close-button grid h-9 w-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-700"
             type="button"
             onClick={onClose}
             aria-label={PROJECT_FORM_TEXT.CLOSE}
           >
-            ×
+            <X aria-hidden="true" size={17} />
           </button>
         </div>
         <label className="grid gap-2 text-sm font-bold text-slate-700">
