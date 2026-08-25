@@ -340,6 +340,10 @@ a {
   margin-top: 20px;
 }
 
+.reset-password-submit {
+  margin-top: 20px;
+}
+
 .login-panel .auth-error {
   padding: 10px 12px;
   margin: 0 0 14px;
