@@ -592,18 +592,17 @@ export default function EditorScreen() {
     }
 
     const nextResponses = responses.filter((item) => item.id !== responseId);
-    const nextSelectedResponse = nextResponses[0] || null;
+    const isDeletingSelectedResponse = selectedHistoryId === responseId;
 
     setResponses(nextResponses);
     setSelectedHistoryId((currentSelectedId) =>
-      currentSelectedId === responseId ? nextSelectedResponse?.id || null : currentSelectedId
+      currentSelectedId === responseId ? null : currentSelectedId
     );
 
-    if (selectedHistoryId === responseId) {
-      setPrompt(nextSelectedResponse?.prompt || starterPrompt);
-    }
-
-    if (response && isEditorShowingResponse(response, editorContent.html)) {
+    if (isDeletingSelectedResponse) {
+      setPrompt(starterPrompt);
+      clearEditorContent();
+    } else if (response && isEditorShowingResponse(response, editorContent.html)) {
       clearEditorContent();
     }
 
