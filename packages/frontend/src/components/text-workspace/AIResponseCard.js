@@ -1,13 +1,4 @@
-import {
-  Check,
-  Copy,
-  Edit3,
-  MoreHorizontal,
-  Save,
-  Star,
-  TextCursorInput,
-  Trash2
-} from "lucide-react";
+import { Check, Copy, Edit3, Save, Star, TextCursorInput, Trash2 } from "lucide-react";
 import { useState } from "react";
 import Button from "../common/Button";
 
@@ -90,9 +81,6 @@ export default function AIResponseCard({
             Delete
           </Button>
         )}
-        <Button aria-label="More response options" variant="icon" type="button">
-          <MoreHorizontal aria-hidden="true" size={17} />
-        </Button>
       </div>
     </article>
   );
