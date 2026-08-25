@@ -55,49 +55,57 @@ export default function AIHistorySidebar({
                 }`}
                 key={item.id}
               >
-                <button
-                  className="block w-full text-left"
-                  onClick={() => onSelectHistory(item.id)}
-                  type="button"
-                >
-                  <span className="flex items-start gap-2 text-sm font-bold text-slate-800">
-                    <button
-                      aria-label={
-                        item.favourite ? `Unfavourite ${item.prompt}` : `Favourite ${item.prompt}`
-                      }
-                      aria-pressed={item.favourite}
-                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${
-                        item.favourite
-                          ? "bg-amber-50 text-amber-500"
-                          : "bg-slate-100 text-slate-400 hover:bg-amber-50 hover:text-amber-500"
-                      }`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onToggleFavourite?.(item.id);
-                      }}
-                      type="button"
-                    >
-                      <Star
-                        aria-hidden="true"
-                        className={item.favourite ? "fill-amber-400" : ""}
-                        size={16}
-                      />
-                    </button>
-                    <span className="line-clamp-2 min-w-0 break-words">{item.prompt}</span>
-                  </span>
-                  <span className="mt-1 block text-xs text-slate-500">{item.timestamp}</span>
-                </button>
-                {onDeleteHistory && (
+                <div className="flex items-start gap-2">
                   <button
-                    aria-label={`Delete ${item.prompt}`}
-                    className="mt-2 inline-flex h-8 items-center gap-2 rounded-md border border-transparent px-2 text-xs font-bold text-slate-500 hover:border-red-100 hover:bg-red-50 hover:text-red-600"
-                    onClick={() => onDeleteHistory(item.id)}
+                    aria-label={
+                      item.favourite ? `Unfavourite ${item.prompt}` : `Favourite ${item.prompt}`
+                    }
+                    aria-pressed={item.favourite}
+                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${
+                      item.favourite
+                        ? "bg-amber-50 text-amber-500"
+                        : "bg-slate-100 text-slate-400 hover:bg-amber-50 hover:text-amber-500"
+                    }`}
+                    onClick={() => onToggleFavourite?.(item.id)}
                     type="button"
                   >
-                    <Trash2 aria-hidden="true" size={14} />
-                    Delete
+                    <Star
+                      aria-hidden="true"
+                      className={item.favourite ? "fill-amber-400" : ""}
+                      size={16}
+                    />
                   </button>
-                )}
+                  <button
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => onSelectHistory(item.id)}
+                    type="button"
+                  >
+                    <span className="line-clamp-2 block break-words text-sm font-bold text-slate-800">
+                      {item.prompt}
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-500">{item.timestamp}</span>
+                  </button>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <button
+                    className="text-xs font-bold text-violet-700 hover:text-violet-900"
+                    onClick={() => onSelectHistory(item.id)}
+                    type="button"
+                  >
+                    Open response
+                  </button>
+                  {onDeleteHistory && (
+                    <button
+                      aria-label={`Delete ${item.prompt}`}
+                      className="inline-flex h-8 items-center gap-2 rounded-md border border-transparent px-2 text-xs font-bold text-slate-500 hover:border-red-100 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => onDeleteHistory(item.id)}
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" size={14} />
+                      Delete
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}
