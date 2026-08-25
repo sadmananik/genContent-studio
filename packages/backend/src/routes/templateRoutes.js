@@ -5,6 +5,7 @@ const {
   getTemplateById,
   listMyTemplates,
   listRecentTemplates,
+  listTemplateTags,
   listTemplates,
   publishProjectTemplate,
   unfavoriteTemplate,
@@ -21,6 +22,7 @@ router.use(requireUser);
 router.get("/", listTemplates);
 router.get("/mine", listMyTemplates);
 router.get("/recent", listRecentTemplates);
+router.get("/tags", listTemplateTags);
 router.post("/projects/:projectId", validateObjectId("projectId"), publishProjectTemplate);
 router.get("/:id", validateObjectId("id"), getTemplateById);
 router.put("/:id", validateObjectId("id"), updateTemplate);

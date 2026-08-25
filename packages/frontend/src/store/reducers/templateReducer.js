@@ -5,6 +5,7 @@ const initialTemplateState = {
   myTemplates: [],
   recentTemplates: [],
   selectedTemplate: null,
+  tagSuggestions: [],
   loading: false,
   myLoading: false,
   error: null
@@ -68,6 +69,23 @@ export function createTemplateReducer(set) {
         }));
         throw error;
       }
+    },
+
+    fetchTemplateTagSuggestions: async (search = "") => {
+      const query = new URLSearchParams();
+      const normalizedSearch = search.trim();
+
+      if (normalizedSearch) {
+        query.set("search", normalizedSearch);
+      }
+
+      const tagSuggestions = await apiRequest(
+        `/api/templates/tags${query.size ? `?${query}` : ""}`
+      );
+      set((state) => ({
+        templateState: { ...state.templateState, tagSuggestions, error: null }
+      }));
+      return tagSuggestions;
     },
 
     publishTemplate: async (projectId, payload) => {

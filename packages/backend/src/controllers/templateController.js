@@ -1,4 +1,5 @@
 const ImageContent = require("../models/ImageContent");
+const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const Template = require("../models/Template");
 const TemplatePreference = require("../models/TemplatePreference");
@@ -15,6 +16,7 @@ const httpError = require("../utils/httpError");
 const { normalizeString, requireTrimmedString } = require("../utils/validation");
 
 const RECENT_TEMPLATE_LIMIT = 6;
+const TAG_SUGGESTION_LIMIT = 12;
 const TEMPLATE_UPDATE_FIELDS = [
   "title",
   "description",
@@ -95,6 +97,31 @@ const listRecentTemplates = asyncHandler(async (req, res) => {
     }));
 
   res.json(templates);
+});
+
+const listTemplateTags = asyncHandler(async (req, res) => {
+  await ensureSystemTemplates();
+
+  const search = normalizeString(req.query.search).slice(0, 40);
+  const match = {
+    tags: { $exists: true, $ne: [] },
+    $or: [
+      { visibility: TEMPLATE_VISIBILITY.PUBLIC },
+      { creator: new mongoose.Types.ObjectId(req.user.id) }
+    ]
+  };
+  const pipeline = [
+    { $match: match },
+    { $unwind: "$tags" },
+    ...(search ? [{ $match: { tags: new RegExp(escapeRegExp(search), "i") } }] : []),
+    { $group: { _id: "$tags" } },
+    { $sort: { _id: 1 } },
+    { $limit: TAG_SUGGESTION_LIMIT },
+    { $project: { _id: 0, tag: "$_id" } }
+  ];
+  const tags = await Template.aggregate(pipeline);
+
+  res.json(tags.map((item) => item.tag));
 });
 
 const getTemplateById = asyncHandler(async (req, res) => {
@@ -434,6 +461,7 @@ module.exports = {
   deleteTemplate,
   favoriteTemplate,
   getTemplateById,
+  listTemplateTags,
   listMyTemplates,
   listRecentTemplates,
   listTemplates,

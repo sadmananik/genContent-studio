@@ -10,6 +10,7 @@ import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TemplateCard from "../templates/TemplateCard";
 import TemplateFormModal from "../templates/TemplateFormModal";
 import TemplatePreviewModal from "../templates/TemplatePreviewModal";
+import TagSuggestionDropdown from "../templates/TagSuggestionDropdown";
 import { API_PROJECT_TYPES } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
 import {
@@ -28,6 +29,7 @@ export default function TemplatesScreen() {
   const deleteTemplate = useAppStore((state) => state.deleteTemplate);
   const fetchMyTemplates = useAppStore((state) => state.fetchMyTemplates);
   const fetchRecentTemplates = useAppStore((state) => state.fetchRecentTemplates);
+  const fetchTemplateTagSuggestions = useAppStore((state) => state.fetchTemplateTagSuggestions);
   const fetchTemplates = useAppStore((state) => state.fetchTemplates);
   const toggleTemplateFavorite = useAppStore((state) => state.toggleTemplateFavorite);
   const updateTemplate = useAppStore((state) => state.updateTemplate);
@@ -41,6 +43,8 @@ export default function TemplatesScreen() {
   const [pendingAction, setPendingAction] = useState(null);
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [search, setSearch] = useState("");
+  const [searchTagSuggestions, setSearchTagSuggestions] = useState([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [type, setType] = useState(TEMPLATE_TYPES.ALL);
   const [usingTemplateId, setUsingTemplateId] = useState(null);
   const [notification, setNotification] = useState(null);
@@ -66,6 +70,21 @@ export default function TemplatesScreen() {
       fetchMyTemplates().catch(() => {});
     }
   }, [activeTab, auth.token, fetchMyTemplates]);
+
+  useEffect(() => {
+    if (!auth.token || activeTab !== TEMPLATE_TABS.BROWSE || !isSearchFocused || !search.trim()) {
+      setSearchTagSuggestions([]);
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      fetchTemplateTagSuggestions(search.trim())
+        .then(setSearchTagSuggestions)
+        .catch(() => setSearchTagSuggestions([]));
+    }, 180);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeTab, auth.token, fetchTemplateTagSuggestions, isSearchFocused, search]);
 
   const isFiltered = Boolean(search.trim()) || type !== "all" || category !== "all";
   const visibleTemplates =
@@ -254,10 +273,19 @@ export default function TemplatesScreen() {
                 />
                 <input
                   className="min-h-10 w-full rounded-md border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  onBlur={() => window.setTimeout(() => setIsSearchFocused(false), 120)}
                   onChange={(event) => setSearch(event.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
                   placeholder={TEMPLATE_TEXT.SEARCH_PLACEHOLDER}
                   value={search}
                 />
+                {isSearchFocused && searchTagSuggestions.length > 0 && (
+                  <TagSuggestionDropdown
+                    label={TEMPLATE_TEXT.SEARCH_TAG_SUGGESTIONS}
+                    onSelect={(tag) => setSearch(tag)}
+                    suggestions={searchTagSuggestions}
+                  />
+                )}
               </span>
             </label>
             <FilterSelect

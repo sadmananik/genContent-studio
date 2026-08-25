@@ -83,6 +83,8 @@ export const TEMPLATE_TEXT = {
   REPUBLISH_FAILED_TITLE: "Publish failed",
   SEARCH_LABEL: "Search templates",
   SEARCH_PLACEHOLDER: "Search templates...",
+  SEARCH_TAG_SUGGESTIONS: "Matching tags",
+  TAG_SUGGESTIONS: "Suggested tags",
   TYPE_FILTER_LABEL: "Type",
   UNFAVORITED_MESSAGE: "Template removed from favorites.",
   UNFAVORITED_TITLE: "Favorite removed",

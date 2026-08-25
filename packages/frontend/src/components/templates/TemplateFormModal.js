@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppModal from "../common/AppModal";
 import Button from "../common/Button";
+import TagSuggestionDropdown from "./TagSuggestionDropdown";
 import {
   TEMPLATE_CATEGORIES,
   TEMPLATE_FORM_FIELDS,
   TEMPLATE_TEXT,
   TEMPLATE_VISIBILITY
 } from "../../constants/templates";
+import { useAppStore } from "../../store";
 
 const fieldClassName =
   "min-h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100";
@@ -21,8 +23,30 @@ export default function TemplateFormModal({
   onClose,
   onSubmit
 }) {
+  const fetchTemplateTagSuggestions = useAppStore((state) => state.fetchTemplateTagSuggestions);
   const [values, setValues] = useState(() => getInitialValues(initialValues));
+  const [tagSuggestions, setTagSuggestions] = useState([]);
+  const [isTagInputFocused, setIsTagInputFocused] = useState(false);
   const isEditing = mode === "edit";
+  const activeTagQuery = getActiveTagQuery(values.tags);
+  const visibleTagSuggestions = tagSuggestions.filter(
+    (tag) => !getSelectedTags(values.tags).includes(tag.toLowerCase())
+  );
+
+  useEffect(() => {
+    if (!isTagInputFocused || !activeTagQuery) {
+      setTagSuggestions([]);
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      fetchTemplateTagSuggestions(activeTagQuery)
+        .then(setTagSuggestions)
+        .catch(() => setTagSuggestions([]));
+    }, 180);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeTagQuery, fetchTemplateTagSuggestions, isTagInputFocused]);
 
   function updateValue(field, value) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -101,13 +125,24 @@ export default function TemplateFormModal({
         </div>
 
         <TemplateField label={TEMPLATE_FORM_FIELDS.TAGS}>
-          <input
-            className={fieldClassName}
-            maxLength={400}
-            onChange={(event) => updateValue("tags", event.target.value)}
-            placeholder="marketing, blog, campaign"
-            value={values.tags}
-          />
+          <span className="relative block">
+            <input
+              className={fieldClassName}
+              maxLength={400}
+              onBlur={() => window.setTimeout(() => setIsTagInputFocused(false), 120)}
+              onChange={(event) => updateValue("tags", event.target.value)}
+              onFocus={() => setIsTagInputFocused(true)}
+              placeholder="marketing, blog, campaign"
+              value={values.tags}
+            />
+            {isTagInputFocused && visibleTagSuggestions.length > 0 && (
+              <TagSuggestionDropdown
+                label={TEMPLATE_TEXT.TAG_SUGGESTIONS}
+                onSelect={(tag) => updateValue("tags", applyTagSuggestion(values.tags, tag))}
+                suggestions={visibleTagSuggestions}
+              />
+            )}
+          </span>
         </TemplateField>
 
         <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_PROMPT}>
@@ -221,4 +256,28 @@ function getInitialValues(values = {}) {
     style: values.style || "",
     visibility: values.visibility || TEMPLATE_VISIBILITY.PUBLIC
   };
+}
+
+function getActiveTagQuery(value) {
+  const segments = String(value || "").split(",");
+  return segments[segments.length - 1].trim().toLowerCase();
+}
+
+function getSelectedTags(value) {
+  const segments = String(value || "").split(",");
+  return segments
+    .slice(0, -1)
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function applyTagSuggestion(value, selectedTag) {
+  const segments = String(value || "").split(",");
+  segments[segments.length - 1] = ` ${selectedTag}`;
+
+  return segments
+    .map((tag, index) => (index === 0 ? tag.trim() : tag.trim()))
+    .filter(Boolean)
+    .join(", ")
+    .concat(", ");
 }
