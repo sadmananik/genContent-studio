@@ -1,12 +1,14 @@
 const Project = require("../models/Project");
 const AIChat = require("../models/AIChat");
 const ImageContent = require("../models/ImageContent");
+const ProjectInvite = require("../models/ProjectInvite");
 const TextContent = require("../models/TextContent");
 const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const {
   ACCESS_LEVELS,
+  ACCESS_LEVEL_VALUES,
   PROJECT_FIELD_LABELS,
   PROJECT_MESSAGES,
   PROJECT_ROLES,
@@ -17,6 +19,10 @@ const {
   normalizeString,
   requireTrimmedString
 } = require("../utils/validation");
+const {
+  sendExistingUserProjectInviteEmail,
+  sendNewUserProjectInviteEmail
+} = require("../utils/email");
 
 const createProject = asyncHandler(async (req, res) => {
   const { title, type, category = "Other", description = "", collaborators = [] } = req.body;
@@ -81,8 +87,15 @@ const getProjectById = asyncHandler(async (req, res) => {
 });
 
 const updateProject = asyncHandler(async (req, res) => {
-  const project = await findAccessibleProject(req.params.id, req.user.id);
+  const project = await Project.findOne({
+    _id: req.params.id,
+    owner: req.user.id
+  });
   const allowedUpdates = ["title", "type", "category", "description", "collaborators"];
+
+  if (!project) {
+    throw httpError(404, PROJECT_MESSAGES.PROJECT_UPDATE_OWNER_ONLY);
+  }
 
   if (req.body.type !== undefined && !PROJECT_TYPE_VALUES.includes(req.body.type)) {
     throw httpError(400, PROJECT_MESSAGES.PROJECT_TYPE_INVALID);
@@ -108,15 +121,23 @@ const updateProject = asyncHandler(async (req, res) => {
       req.body.collaborators,
       getObjectIdString(project.owner)
     );
+    const requestedPermissions = Array.isArray(req.body.collaboratorPermissions)
+      ? req.body.collaboratorPermissions
+      : [];
     project.collaborators = collaborators;
     project.collaboratorPermissions = collaborators.map((userId) => {
+      const requestedPermission = requestedPermissions.find(
+        (permission) => getObjectIdString(permission.user) === String(userId)
+      );
       const existingPermission = project.collaboratorPermissions.find(
         (permission) => getObjectIdString(permission.user) === String(userId)
       );
 
       return {
         user: userId,
-        accessLevel: existingPermission?.accessLevel || ACCESS_LEVELS.EDITOR
+        accessLevel: ACCESS_LEVEL_VALUES.includes(requestedPermission?.accessLevel)
+          ? requestedPermission.accessLevel
+          : existingPermission?.accessLevel || ACCESS_LEVELS.EDITOR
       };
     });
   }
@@ -130,7 +151,12 @@ const updateProject = asyncHandler(async (req, res) => {
 });
 
 const inviteProjectCollaborator = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+  const email = String(req.body.email || "")
+    .trim()
+    .toLowerCase();
+  const accessLevel = ACCESS_LEVEL_VALUES.includes(req.body.accessLevel)
+    ? req.body.accessLevel
+    : ACCESS_LEVELS.EDITOR;
 
   if (!email) {
     throw httpError(400, PROJECT_MESSAGES.INVITE_EMAIL_REQUIRED);
@@ -145,22 +171,67 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
     throw httpError(404, PROJECT_MESSAGES.INVITE_OWNER_ONLY);
   }
 
-  const user = await User.findOne({ email: email.trim().toLowerCase() });
+  const inviter = await User.findById(req.user.id).select("name email");
+  const user = await User.findOne({ email });
 
-  if (!user) {
-    throw httpError(404, PROJECT_MESSAGES.INVITE_USER_NOT_FOUND);
-  }
-
-  if (String(user._id) === String(project.owner)) {
+  if (user && String(user._id) === String(project.owner)) {
     throw httpError(400, PROJECT_MESSAGES.INVITE_OWNER_ALREADY_COLLABORATOR);
   }
 
-  if (
-    !project.collaborators.some((collaboratorId) => String(collaboratorId) === String(user._id))
-  ) {
-    project.collaborators.push(user._id);
-    project.collaboratorPermissions.push({ user: user._id, accessLevel: ACCESS_LEVELS.EDITOR });
-    await project.save();
+  if (user) {
+    const alreadyCollaborator = project.collaborators.some(
+      (collaboratorId) => String(collaboratorId) === String(user._id)
+    );
+    const existingPermission = project.collaboratorPermissions.find(
+      (permission) => String(permission.user) === String(user._id)
+    );
+    const shouldUpdatePermission =
+      existingPermission && existingPermission.accessLevel !== accessLevel;
+
+    if (!alreadyCollaborator) {
+      project.collaborators.push(user._id);
+    }
+
+    if (existingPermission) {
+      existingPermission.accessLevel = accessLevel;
+    } else {
+      project.collaboratorPermissions.push({ accessLevel, user: user._id });
+    }
+
+    if (!alreadyCollaborator || shouldUpdatePermission || !existingPermission) {
+      await project.save();
+    }
+
+    await ProjectInvite.deleteOne({ email, project: project._id });
+
+    sendExistingUserProjectInviteEmail({
+      email,
+      inviterName: inviter?.name || "A teammate",
+      projectTitle: project.title,
+      sharedUrl: buildSharedProjectsUrl()
+    }).catch((error) => {
+      console.error("Failed to send project invite email", error.message);
+    });
+  } else {
+    await ProjectInvite.findOneAndUpdate(
+      { email, project: project._id },
+      {
+        $set: {
+          accessLevel,
+          invitedBy: req.user.id
+        }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    sendNewUserProjectInviteEmail({
+      email,
+      inviterName: inviter?.name || "A teammate",
+      projectTitle: project.title,
+      registerUrl: buildRegisterUrl(email)
+    }).catch((error) => {
+      console.error("Failed to send project invite email", error.message);
+    });
   }
 
   const updatedProject = await Project.findById(project._id)
@@ -206,6 +277,7 @@ const deleteProject = asyncHandler(async (req, res) => {
   await Promise.all([
     AIChat.deleteMany({ project: project._id }),
     ImageContent.deleteMany({ project: project._id }),
+    ProjectInvite.deleteMany({ project: project._id }),
     TextContent.deleteMany({ project: project._id })
   ]);
   await project.deleteOne();
@@ -249,6 +321,27 @@ function getObjectIdString(value) {
   return String(value?._id || value);
 }
 
+function buildFrontendUrl(pathname, params = {}) {
+  const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+  const url = new URL(pathname, frontendOrigin);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  return url.toString();
+}
+
+function buildRegisterUrl(email) {
+  return buildFrontendUrl("/register", { email });
+}
+
+function buildSharedProjectsUrl() {
+  return buildFrontendUrl("/shared");
+}
+
 function serializeProjectForUser(project, userId) {
   const projectObject = project.toObject ? project.toObject() : project;
   const userIdString = String(userId);
@@ -289,6 +382,14 @@ function getAccessLevelForUser(project, userId) {
     : null;
 }
 
+function requireProjectEditAccess(project, userId) {
+  const projectObject = project.toObject ? project.toObject() : project;
+
+  if (getAccessLevelForUser(projectObject, String(userId)) !== ACCESS_LEVELS.EDITOR) {
+    throw httpError(403, PROJECT_MESSAGES.PROJECT_EDIT_FORBIDDEN);
+  }
+}
+
 module.exports = {
   createProject,
   deleteProject,
@@ -298,5 +399,6 @@ module.exports = {
   leaveProject,
   listProjects,
   listSharedProjects,
+  requireProjectEditAccess,
   updateProject
 };

@@ -7,6 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const AIChat = require("../src/models/AIChat");
 const ImageContent = require("../src/models/ImageContent");
 const Project = require("../src/models/Project");
+const ProjectInvite = require("../src/models/ProjectInvite");
 const TextContent = require("../src/models/TextContent");
 const User = require("../src/models/User");
 
@@ -26,7 +27,7 @@ async function main() {
 
   await mongoose.connect(process.env.MONGODB_URI);
 
-  const models = [AIChat, ImageContent, TextContent, Project, User];
+  const models = [AIChat, ImageContent, TextContent, Project, ProjectInvite, User];
   const results = await Promise.all(
     models.map(async (model) => ({
       collection: model.collection.name,

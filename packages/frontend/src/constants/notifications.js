@@ -95,6 +95,9 @@ export const TEXT_EDITOR_ALERTS = {
   SHARED_TITLE: "Shared",
   SHARING_UNAVAILABLE_TITLE: "Sharing unavailable",
   SWITCH_SAVE_MESSAGE: "Draft saved before switching.",
+  UNSAVED_BACK_DESCRIPTION:
+    "Your current editor content has unsaved changes. Save this draft before going back to Projects?",
+  UNSAVED_BACK_TITLE: "Save changes before leaving?",
   UNSAVED_CHANGES_STATUS: "Unsaved changes",
   UPDATE_FAILED_MESSAGE: "Response could not be updated.",
   UPDATE_FAILED_TITLE: "Update failed",
@@ -106,6 +109,8 @@ export const TEXT_EDITOR_ALERTS = {
 
 export const IMAGE_EDITOR_ALERTS = {
   CANVAS_JSON_EXPORTED_MESSAGE: "Canvas JSON exported.",
+  CANVAS_LOAD_FAILED_MESSAGE: "Saved image canvas could not be loaded.",
+  CANVAS_LOAD_FAILED_TITLE: "Canvas load failed",
   CANVAS_SAVE_FAILED_MESSAGE: "Image could not be saved.",
   CANVAS_SAVE_FAILED_BEFORE_SWITCHING_MESSAGE: "Canvas could not be saved before switching.",
   CANVAS_SAVED_LOCAL_MESSAGE: "Image canvas saved in this browser.",
@@ -133,6 +138,9 @@ export const IMAGE_EDITOR_ALERTS = {
   RESPONSE_FAVOURITE_SAVED_MESSAGE: "Image response saved.",
   RESPONSE_UPDATE_FAILED_MESSAGE: "Image response could not be updated.",
   UPDATED_MESSAGE: "Image response updated.",
+  UNSAVED_CANVAS_BACK_DESCRIPTION:
+    "Your current canvas has unsaved changes. Save this image draft before going back to Projects?",
+  UNSAVED_CANVAS_BACK_TITLE: "Save changes before leaving?",
   UNSAVED_CANVAS_CONFIRM_DESCRIPTION:
     "Your current canvas has unsaved changes. Save this image draft before loading another response?",
   UNSAVED_CANVAS_CONFIRM_TITLE: "Save changes before switching?"
@@ -149,4 +157,47 @@ export const PROFILE_ALERTS = {
 
 export const AI_HISTORY_TEXT = {
   LOADING: "Loading AI history..."
+};
+
+export const VERIFY_EMAIL_TEXT = {
+  CHECKING_LINK: "Checking verification link...",
+  EXPIRED_HINT: "Account verification links expire in 5 minutes.",
+  INVALID_LINK: "This verification link is invalid or incomplete",
+  RESEND_BUTTON: "Send New Verification Link",
+  RESEND_BUTTON_LOADING: "Sending...",
+  SIGN_IN_BACK: "Back to sign in",
+  SIGN_IN_CONTINUE: "Continue to sign in",
+  TITLE: "Verify email"
+};
+
+export const SHARE_POPOVER_TEXT = {
+  ALREADY_INVITED_ROLE: "Invited",
+  CREATE_ACCOUNT_HINT:
+    "No account found. They need to create an account before access can be added.",
+  EMAIL_PLACEHOLDER: "teammate@example.com",
+  INVITED_COLLABORATORS_LABEL: "Invited collaborators",
+  INVITE_BUTTON: "Invite",
+  INVITE_EMAIL_LABEL: "Invite by email",
+  INVITE_TYPED_EMAIL_LABEL: "Invite this email",
+  MANAGE_PERMISSIONS_BUTTON: "Manage permissions",
+  MANAGE_PERMISSIONS_DESCRIPTION:
+    "Review invited collaborators, change their project access, or remove access.",
+  MANAGE_PERMISSIONS_TITLE: "Manage permissions",
+  MATCHING_ACCOUNT_LABEL: "Matching account",
+  OWNER_ROLE: "Owner",
+  PERMISSION_CHANGED_MESSAGE: "Save changes to apply this permission update.",
+  PERMISSION_CHANGED_TITLE: "Permission changed",
+  PERMISSION_REMOVED_MESSAGE: "Save changes to remove this collaborator from the project.",
+  PERMISSION_REMOVED_TITLE: "Collaborator removed",
+  PERMISSIONS_UPDATE_FAILED_MESSAGE: "Collaborator permissions could not be saved.",
+  PERMISSIONS_UPDATE_FAILED_TITLE: "Permissions not saved",
+  PERMISSIONS_UPDATED_MESSAGE: "Collaborator permissions were saved.",
+  PERMISSIONS_UPDATED_TITLE: "Permissions updated",
+  PROJECT_ROLE_EDITOR: "Editor",
+  PROJECT_ROLE_VIEWER: "Viewer",
+  REMOVE_USER: "Remove",
+  ROLE_SELECTOR_LABEL: "Permission",
+  SAVE_PERMISSIONS: "Save Changes",
+  SAVING_PERMISSIONS: "Saving...",
+  SEARCHING_USERS: "Checking users..."
 };

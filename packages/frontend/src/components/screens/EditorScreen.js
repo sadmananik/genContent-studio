@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import ImageEditorScreen from "./ImageEditorScreen";
@@ -20,6 +20,7 @@ import {
   PERMISSION_MESSAGES,
   PROJECT_ROLES
 } from "../../constants/content";
+import { ROUTES } from "../../constants/navigation";
 import { TEXT_EDITOR_ALERTS } from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
@@ -65,6 +66,7 @@ const quickActionPromptBuilders = {
 };
 
 export default function EditorScreen() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const workspaceType = searchParams.get("type");
   const requestedAccess = searchParams.get("access");
@@ -150,12 +152,15 @@ export default function EditorScreen() {
       const email = user.email?.toLowerCase();
 
       if (email && !usersByEmail.has(email)) {
-        usersByEmail.set(email, user);
+        usersByEmail.set(email, {
+          ...user,
+          accessLevel: getCollaboratorAccessLevel(project, user)
+        });
       }
     });
 
     return [...usersByEmail.values()];
-  }, [project.collaborators]);
+  }, [project]);
 
   useEffect(() => {
     const pendingToast = readPendingToast();
@@ -303,7 +308,10 @@ export default function EditorScreen() {
     setIsGenerating(true);
 
     try {
-      const result = await generateTextFromPrompt({ prompt: trimmedPrompt });
+      const result = await generateTextFromPrompt({
+        project: isRealProject ? projectId : undefined,
+        prompt: trimmedPrompt
+      });
       const generatedText = result?.text || "";
       const responseId = `response-${Date.now()}`;
       const response = {
@@ -584,18 +592,17 @@ export default function EditorScreen() {
     }
 
     const nextResponses = responses.filter((item) => item.id !== responseId);
-    const nextSelectedResponse = nextResponses[0] || null;
+    const isDeletingSelectedResponse = selectedHistoryId === responseId;
 
     setResponses(nextResponses);
     setSelectedHistoryId((currentSelectedId) =>
-      currentSelectedId === responseId ? nextSelectedResponse?.id || null : currentSelectedId
+      currentSelectedId === responseId ? null : currentSelectedId
     );
 
-    if (selectedHistoryId === responseId) {
-      setPrompt(nextSelectedResponse?.prompt || starterPrompt);
-    }
-
-    if (response && isEditorShowingResponse(response, editorContent.html)) {
+    if (isDeletingSelectedResponse) {
+      setPrompt(starterPrompt);
+      clearEditorContent();
+    } else if (response && isEditorShowingResponse(response, editorContent.html)) {
       clearEditorContent();
     }
 
@@ -607,7 +614,7 @@ export default function EditorScreen() {
     );
   }
 
-  async function handleInviteUser(emailValue) {
+  async function handleInviteUser(emailValue, accessLevel) {
     if (!canManageSharing) {
       showNotification(
         TEXT_EDITOR_ALERTS.SHARING_UNAVAILABLE_TITLE,
@@ -647,7 +654,7 @@ export default function EditorScreen() {
     }
 
     try {
-      const updatedProject = await inviteProjectCollaborator(projectId, email);
+      const updatedProject = await inviteProjectCollaborator(projectId, email, accessLevel);
       setProject(normalizeProject(updatedProject));
       showNotification(
         TEXT_EDITOR_ALERTS.SHARED_TITLE,
@@ -746,6 +753,21 @@ export default function EditorScreen() {
     }
   }
 
+  function handleBackToProjects() {
+    const navigateToProjects = () => router.push(ROUTES.PROJECTS);
+
+    if (
+      queueUnsavedAction(navigateToProjects, {
+        description: TEXT_EDITOR_ALERTS.UNSAVED_BACK_DESCRIPTION,
+        title: TEXT_EDITOR_ALERTS.UNSAVED_BACK_TITLE
+      })
+    ) {
+      return;
+    }
+
+    navigateToProjects();
+  }
+
   async function saveCurrentDraft() {
     if (isRealProject) {
       await sendTextGenerationRequest({
@@ -794,8 +816,11 @@ export default function EditorScreen() {
         canManageSharing={canManageSharing}
         invitedUsers={invitedUsers}
         isSaving={isSaving}
+        onBackToProjects={handleBackToProjects}
+        onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
         onExport={handleExport}
         onInviteUser={handleInviteUser}
+        onNotify={showNotification}
         onSave={handleSave}
         project={project}
         statusLabel={statusLabel}
@@ -867,6 +892,7 @@ export default function EditorScreen() {
               </div>
               {selectedResponse ? (
                 <AIResponseCard
+                  canEdit={canEditProject}
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}
@@ -924,10 +950,12 @@ function normalizeProject(project) {
     canEdit: project.canEdit !== false,
     canManageSharing: project.canManageSharing !== false,
     currentUserRole: project.currentUserRole || PROJECT_ROLES.OWNER,
+    owner: project.owner,
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
       : defaultTextProject.lastUpdated,
-    collaborators: project.collaborators || []
+    collaborators: project.collaborators || [],
+    collaboratorPermissions: project.collaboratorPermissions || []
   };
 }
 
@@ -1049,23 +1077,100 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;")
-    .replaceAll("\n", "<br>");
+    .replaceAll("'", "&#039;");
 }
 
 function textToHtml(value) {
-  const paragraphs = String(value || "")
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean);
+  const lines = String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n");
+  const blocks = [];
+  let paragraphLines = [];
+  let listItems = [];
+  let listType = null;
 
-  if (paragraphs.length === 0) {
+  function flushParagraph() {
+    if (paragraphLines.length === 0) {
+      return;
+    }
+
+    blocks.push(`<p>${formatInlineMarkdown(paragraphLines.join("<br>"))}</p>`);
+    paragraphLines = [];
+  }
+
+  function flushList() {
+    if (listItems.length === 0) {
+      return;
+    }
+
+    blocks.push(
+      `<${listType}>${listItems.map((item) => `<li>${item}</li>`).join("")}</${listType}>`
+    );
+    listItems = [];
+    listType = null;
+  }
+
+  lines.forEach((line) => {
+    const trimmedLine = line.trim();
+    const headingMatch = trimmedLine.match(/^(#{1,3})\s+(.+)$/);
+    const unorderedListMatch = trimmedLine.match(/^[-*]\s+(.+)$/);
+    const orderedListMatch = trimmedLine.match(/^\d+\.\s+(.+)$/);
+
+    if (!trimmedLine) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+
+    if (headingMatch) {
+      flushParagraph();
+      flushList();
+      blocks.push(
+        `<h${headingMatch[1].length}>${formatInlineMarkdown(headingMatch[2])}</h${headingMatch[1].length}>`
+      );
+      return;
+    }
+
+    if (unorderedListMatch || orderedListMatch) {
+      flushParagraph();
+
+      const nextListType = unorderedListMatch ? "ul" : "ol";
+
+      if (listType && listType !== nextListType) {
+        flushList();
+      }
+
+      listType = nextListType;
+      listItems.push(formatInlineMarkdown((unorderedListMatch || orderedListMatch)[1]));
+      return;
+    }
+
+    flushList();
+    paragraphLines.push(trimmedLine);
+  });
+
+  flushParagraph();
+  flushList();
+
+  if (blocks.length === 0) {
     return "";
   }
 
-  return paragraphs
-    .map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll("\n", "<br>")}</p>`)
-    .join("");
+  return blocks.join("");
+}
+
+function formatInlineMarkdown(value) {
+  const tokens = [];
+  const escapedValue = escapeHtml(value).replace(
+    /`([^`]+)`/g,
+    (_, code) => `@@CODE${tokens.push(`<code>${code}</code>`) - 1}@@`
+  );
+
+  return escapedValue
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/@@CODE(\d+)@@/g, (_, index) => tokens[Number(index)] || "");
 }
 
 function formatTime(value) {
@@ -1111,6 +1216,15 @@ function downloadBlob(blob, filename) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function getCollaboratorAccessLevel(project, user) {
+  const userId = String(user?._id || user?.id || "");
+  const permission = (project.collaboratorPermissions || []).find(
+    (item) => String(item.user?._id || item.user) === userId
+  );
+
+  return permission?.accessLevel;
 }
 
 function createPdfBlob(title, text) {

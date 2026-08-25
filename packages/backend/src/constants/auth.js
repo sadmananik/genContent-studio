@@ -22,6 +22,21 @@ const AUTH_MESSAGES = {
 };
 
 const EMAIL_TEMPLATES = {
+  EXISTING_USER_PROJECT_INVITE: {
+    subject: (projectTitle) => `You were invited to ${projectTitle}`,
+    intro: (inviterName, projectTitle) =>
+      `${inviterName} invited you to collaborate on "${projectTitle}" in GenContent Studio.`,
+    action: "You can now access it from Shared with Me.",
+    buttonLabel: "Open Shared with Me"
+  },
+  NEW_USER_PROJECT_INVITE: {
+    subject: (projectTitle) => `Create an account to join ${projectTitle}`,
+    intro: (inviterName, projectTitle) =>
+      `${inviterName} invited you to collaborate on "${projectTitle}" in GenContent Studio.`,
+    action:
+      "Create an account with this email address, verify it, and the project will appear in Shared with Me.",
+    buttonLabel: "Create Account"
+  },
   PASSWORD_RESET: {
     subject: "Reset your GenContent Studio password",
     intro: "Use the link below to reset your GenContent Studio password:",

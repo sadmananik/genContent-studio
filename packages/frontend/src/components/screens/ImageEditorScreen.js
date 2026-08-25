@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
@@ -18,11 +18,13 @@ import {
   PERMISSION_MESSAGES,
   PROJECT_ROLES
 } from "../../constants/content";
+import { ROUTES } from "../../constants/navigation";
 import { IMAGE_EDITOR_ALERTS, TEXT_EDITOR_ALERTS } from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
 
 export default function ImageEditorScreen() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId") || mockImageProject.id;
   const requestedAccess = searchParams.get("access");
@@ -45,6 +47,7 @@ export default function ImageEditorScreen() {
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [notification, setNotification] = useState(null);
   const [pendingCanvasAction, setPendingCanvasAction] = useState(null);
+  const [pendingCanvasActionCopy, setPendingCanvasActionCopy] = useState(null);
   const [prompt, setPrompt] = useState("Create a clean product launch social post.");
   const [project, setProject] = useState(mockImageProject);
   const [responses, setResponses] = useState([]);
@@ -63,12 +66,15 @@ export default function ImageEditorScreen() {
       const email = user.email?.toLowerCase();
 
       if (email && !usersByEmail.has(email)) {
-        usersByEmail.set(email, user);
+        usersByEmail.set(email, {
+          ...user,
+          accessLevel: getCollaboratorAccessLevel(project, user)
+        });
       }
     });
 
     return [...usersByEmail.values()];
-  }, [project.collaborators]);
+  }, [project]);
   const statusLabel = hasUnsavedChanges
     ? TEXT_EDITOR_ALERTS.UNSAVED_CHANGES_STATUS
     : lastSavedAt
@@ -93,7 +99,13 @@ export default function ImageEditorScreen() {
 
     fetchProjectById(projectId)
       .then((loadedProject) => setProject(normalizeProject(loadedProject)))
-      .catch(() => {});
+      .catch((error) => {
+        showNotification(
+          TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_TITLE,
+          error.message || TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_MESSAGE,
+          TOAST_TYPES.ERROR
+        );
+      });
   }, [fetchProjectById, isRealProject, projectId]);
 
   useEffect(() => {
@@ -137,7 +149,13 @@ export default function ImageEditorScreen() {
           setHasUnsavedChanges(false);
         });
       })
-      .catch(() => {});
+      .catch((error) => {
+        showNotification(
+          IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_TITLE,
+          error.message || IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_MESSAGE,
+          TOAST_TYPES.ERROR
+        );
+      });
   }, [canvas, isRealProject, projectId]);
 
   useEffect(() => {
@@ -238,7 +256,7 @@ export default function ImageEditorScreen() {
     setPrompt(`${action}: ${prompt}`.slice(0, 1200));
   }
 
-  async function handleInviteUser(emailValue) {
+  async function handleInviteUser(emailValue, accessLevel) {
     if (!canManageSharing) {
       showNotification(
         TEXT_EDITOR_ALERTS.INVITE_UNAVAILABLE_TITLE,
@@ -278,7 +296,7 @@ export default function ImageEditorScreen() {
     }
 
     try {
-      const updatedProject = await inviteProjectCollaborator(projectId, email);
+      const updatedProject = await inviteProjectCollaborator(projectId, email, accessLevel);
       setProject(normalizeProject(updatedProject));
       showNotification(
         TEXT_EDITOR_ALERTS.SHARED_TITLE,
@@ -499,7 +517,7 @@ export default function ImageEditorScreen() {
     );
   }
 
-  async function handleSaveCanvas(payload) {
+  async function handleSaveCanvas(payload, { notify = true } = {}) {
     if (!canEditProject) {
       showNotification(
         PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
@@ -521,18 +539,21 @@ export default function ImageEditorScreen() {
 
     setHasUnsavedChanges(false);
     setLastSavedAt(new Date());
-    showNotification(
-      TEXT_EDITOR_ALERTS.SAVED_TITLE,
-      isRealProject
-        ? IMAGE_EDITOR_ALERTS.CANVAS_SAVED_MESSAGE
-        : IMAGE_EDITOR_ALERTS.CANVAS_SAVED_LOCAL_MESSAGE,
-      TOAST_TYPES.SUCCESS
-    );
+
+    if (notify) {
+      showNotification(
+        TEXT_EDITOR_ALERTS.SAVED_TITLE,
+        isRealProject
+          ? IMAGE_EDITOR_ALERTS.CANVAS_SAVED_MESSAGE
+          : IMAGE_EDITOR_ALERTS.CANVAS_SAVED_LOCAL_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
+    }
   }
 
-  async function saveCurrentCanvas() {
+  async function saveCurrentCanvas(options) {
     const payload = canvas ? JSON.stringify(canvas.toJSON()) : "{}";
-    await handleSaveCanvas(payload);
+    await handleSaveCanvas(payload, options);
   }
 
   function handleHeaderSave() {
@@ -552,12 +573,13 @@ export default function ImageEditorScreen() {
     }, 250);
   }
 
-  function queueUnsavedCanvasAction(action) {
+  function queueUnsavedCanvasAction(action, copy = {}) {
     if (!hasUnsavedChanges) {
       return false;
     }
 
     setPendingCanvasAction(() => action);
+    setPendingCanvasActionCopy(copy);
     return true;
   }
 
@@ -565,15 +587,18 @@ export default function ImageEditorScreen() {
     setIsSaving(true);
 
     try {
-      await saveCurrentCanvas();
+      await saveCurrentCanvas({ notify: false });
       pendingCanvasAction?.();
       setPendingCanvasAction(null);
+      setPendingCanvasActionCopy(null);
       showNotification(
         TEXT_EDITOR_ALERTS.SAVED_TITLE,
         IMAGE_EDITOR_ALERTS.CANVAS_SAVED_BEFORE_SWITCHING_MESSAGE,
         TOAST_TYPES.SUCCESS
       );
     } catch (error) {
+      setPendingCanvasAction(null);
+      setPendingCanvasActionCopy(null);
       showNotification(
         TEXT_EDITOR_ALERTS.SAVE_FAILED_TITLE,
         error.message || IMAGE_EDITOR_ALERTS.CANVAS_SAVE_FAILED_BEFORE_SWITCHING_MESSAGE,
@@ -582,6 +607,21 @@ export default function ImageEditorScreen() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function handleBackToProjects() {
+    const navigateToProjects = () => router.push(ROUTES.PROJECTS);
+
+    if (
+      queueUnsavedCanvasAction(navigateToProjects, {
+        description: IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_BACK_DESCRIPTION,
+        title: IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_BACK_TITLE
+      })
+    ) {
+      return;
+    }
+
+    navigateToProjects();
   }
 
   function handleExport(format) {
@@ -627,8 +667,11 @@ export default function ImageEditorScreen() {
         ]}
         invitedUsers={invitedUsers}
         isSaving={isSaving}
+        onBackToProjects={handleBackToProjects}
+        onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
         onExport={handleExport}
         onInviteUser={handleInviteUser}
+        onNotify={showNotification}
         onSave={handleHeaderSave}
         project={project}
         statusLabel={statusLabel}
@@ -673,6 +716,7 @@ export default function ImageEditorScreen() {
               </div>
               {selectedResponse ? (
                 <ImageResponseCard
+                  canEdit={canEditProject}
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}
@@ -697,10 +741,16 @@ export default function ImageEditorScreen() {
         <ConfirmDialog
           cancelLabel="Stay Here"
           confirmLabel="Save and Continue"
-          description={IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION}
-          onCancel={() => setPendingCanvasAction(null)}
+          description={
+            pendingCanvasActionCopy?.description ||
+            IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION
+          }
+          onCancel={() => {
+            setPendingCanvasAction(null);
+            setPendingCanvasActionCopy(null);
+          }}
           onConfirm={handleConfirmPendingAction}
-          title={IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE}
+          title={pendingCanvasActionCopy?.title || IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE}
         />
       )}
 
@@ -727,10 +777,12 @@ function normalizeProject(project) {
     canEdit: project.canEdit !== false,
     canManageSharing: project.canManageSharing !== false,
     currentUserRole: project.currentUserRole || PROJECT_ROLES.OWNER,
+    owner: project.owner,
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
       : mockImageProject.lastUpdated,
-    collaborators: project.collaborators || []
+    collaborators: project.collaborators || [],
+    collaboratorPermissions: project.collaboratorPermissions || []
   };
 }
 
@@ -768,6 +820,15 @@ function downloadBlob(blob, filename) {
 
 function formatTime(value) {
   return value.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function getCollaboratorAccessLevel(project, user) {
+  const userId = String(user?._id || user?.id || "");
+  const permission = (project.collaboratorPermissions || []).find(
+    (item) => String(item.user?._id || item.user) === userId
+  );
+
+  return permission?.accessLevel;
 }
 
 function buildDemoImageResponse(prompt) {

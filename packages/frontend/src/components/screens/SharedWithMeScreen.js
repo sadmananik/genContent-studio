@@ -129,7 +129,11 @@ export default function SharedWithMeScreen() {
         <EmptyState
           title={SHARED_PROJECT_ALERTS.EMPTY_TITLE}
           description={SHARED_PROJECT_ALERTS.EMPTY_DESCRIPTION}
-          action={<button onClick={() => router.push(ROUTES.PROJECTS)}>View My Projects</button>}
+          action={
+            <Button onClick={() => router.push(ROUTES.PROJECTS)} type="button">
+              View My Projects
+            </Button>
+          }
         />
       ) : (
         <section className="grid gap-4">

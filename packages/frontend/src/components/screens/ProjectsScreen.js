@@ -9,7 +9,12 @@ import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
-import { API_PROJECT_TYPES, PROJECT_TYPES } from "../../constants/content";
+import {
+  ACCESS_LEVELS,
+  API_PROJECT_TYPES,
+  EDITOR_ACCESS_QUERY,
+  PROJECT_TYPES
+} from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
 import { COMMON_UI_TEXT, PROJECT_ALERTS } from "../../constants/notifications";
 import { useAppStore } from "../../store";
@@ -229,7 +234,7 @@ export default function ProjectsScreen() {
                     role="menu"
                   >
                     <button
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
                       onClick={() => {
                         router.push(getProjectWorkspaceHref(project));
                         setOpenActionProjectId(null);
@@ -248,23 +253,26 @@ export default function ProjectsScreen() {
                       }}
                       role="menuitem"
                       type="button"
+                      disabled={!project.canManageSharing}
                     >
                       <Pencil aria-hidden="true" size={16} />
                       Edit
                     </button>
-                    <button
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50"
-                      disabled={deletingProjectId === project.id}
-                      onClick={() => {
-                        setProjectPendingDelete(project);
-                        setOpenActionProjectId(null);
-                      }}
-                      role="menuitem"
-                      type="button"
-                    >
-                      <Trash2 aria-hidden="true" size={16} />
-                      {deletingProjectId === project.id ? "Deleting..." : "Delete"}
-                    </button>
+                    {project.canDelete && (
+                      <button
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+                        disabled={deletingProjectId === project.id}
+                        onClick={() => {
+                          setProjectPendingDelete(project);
+                          setOpenActionProjectId(null);
+                        }}
+                        role="menuitem"
+                        type="button"
+                      >
+                        <Trash2 aria-hidden="true" size={16} />
+                        {deletingProjectId === project.id ? "Deleting..." : "Delete"}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -325,6 +333,9 @@ function formatProject(project) {
     title: project.title,
     category: project.category || "Other",
     description: project.description || "",
+    accessLevel: project.accessLevel,
+    canDelete: project.canDelete !== false,
+    canManageSharing: project.canManageSharing !== false,
     type,
     updated: formatUpdatedAt(project.updatedAt),
     icon: type === PROJECT_TYPES.IMAGE ? "▧" : "▤",
@@ -335,7 +346,9 @@ function formatProject(project) {
 function getProjectWorkspaceHref(project) {
   const workspace =
     project.type === PROJECT_TYPES.IMAGE ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT;
-  return `${ROUTES.EDITOR}?projectId=${project.id}&type=${workspace}`;
+  const access =
+    project.accessLevel === ACCESS_LEVELS.VIEWER ? `&access=${EDITOR_ACCESS_QUERY.VIEW}` : "";
+  return `${ROUTES.EDITOR}?projectId=${project.id}&type=${workspace}${access}`;
 }
 
 function formatUpdatedAt(value) {

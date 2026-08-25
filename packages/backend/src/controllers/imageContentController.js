@@ -2,7 +2,7 @@ const ImageContent = require("../models/ImageContent");
 const { PROJECT_MESSAGES, PROJECT_TYPES } = require("../constants/projects");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
-const { findAccessibleProject } = require("./projectController");
+const { findAccessibleProject, requireProjectEditAccess } = require("./projectController");
 
 const upsertImageContent = asyncHandler(async (req, res) => {
   const { project, imageUrl, generationPrompt, canvasState = {} } = req.body;
@@ -12,6 +12,7 @@ const upsertImageContent = asyncHandler(async (req, res) => {
   }
 
   const accessibleProject = await findAccessibleProject(project, req.user.id);
+  requireProjectEditAccess(accessibleProject, req.user.id);
 
   if (accessibleProject.type !== PROJECT_TYPES.IMAGE) {
     throw httpError(400, PROJECT_MESSAGES.IMAGE_CONTENT_TYPE_SAVE_REQUIRED);

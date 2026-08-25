@@ -5,6 +5,7 @@ const { AUTH_MESSAGES } = require("../constants/auth");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const { sendEmailVerificationEmail, sendPasswordResetEmail } = require("../utils/email");
+const { applyPendingProjectInvites } = require("../services/projectInviteService");
 const { signAuthToken } = require("../utils/token");
 
 const DEFAULT_AUTH_LINK_EXPIRES_IN_MINUTES = 5;
@@ -76,6 +77,8 @@ const login = asyncHandler(async (req, res) => {
     throw httpError(403, AUTH_MESSAGES.UNVERIFIED_LOGIN);
   }
 
+  await applyPendingProjectInvites(user);
+
   res.json({
     user: serializeUser(user),
     token: signAuthToken(user)
@@ -104,6 +107,8 @@ const verifyEmail = asyncHandler(async (req, res) => {
   if (!user) {
     throw httpError(400, AUTH_MESSAGES.EMAIL_VERIFICATION_INVALID);
   }
+
+  await applyPendingProjectInvites(user);
 
   res.json({ message: AUTH_MESSAGES.EMAIL_VERIFICATION_SUCCESS });
 });

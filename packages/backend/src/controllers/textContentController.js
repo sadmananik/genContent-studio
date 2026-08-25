@@ -2,7 +2,7 @@ const TextContent = require("../models/TextContent");
 const { PROJECT_MESSAGES, PROJECT_TYPES } = require("../constants/projects");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
-const { findAccessibleProject } = require("./projectController");
+const { findAccessibleProject, requireProjectEditAccess } = require("./projectController");
 
 const upsertTextContent = asyncHandler(async (req, res) => {
   const { project, content = "" } = req.body;
@@ -12,6 +12,7 @@ const upsertTextContent = asyncHandler(async (req, res) => {
   }
 
   const accessibleProject = await findAccessibleProject(project, req.user.id);
+  requireProjectEditAccess(accessibleProject, req.user.id);
 
   if (accessibleProject.type !== PROJECT_TYPES.TEXT) {
     throw httpError(400, PROJECT_MESSAGES.TEXT_CONTENT_TYPE_SAVE_REQUIRED);
