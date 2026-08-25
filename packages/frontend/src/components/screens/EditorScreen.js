@@ -624,6 +624,7 @@ export default function EditorScreen() {
           isLoading={isLoadingHistory}
           onDeleteHistory={handleDeleteResponse}
           onSelectHistory={handleSelectHistory}
+          onToggleFavourite={handleFavouriteResponse}
           onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
           selectedHistoryId={selectedHistoryId}
         />

@@ -7,6 +7,7 @@ export default function AIHistorySidebar({
   isCollapsed,
   isLoading,
   onDeleteHistory,
+  onToggleFavourite,
   onSelectHistory,
   onToggleCollapsed,
   selectedHistoryId
@@ -60,12 +61,29 @@ export default function AIHistorySidebar({
                   type="button"
                 >
                   <span className="flex items-start gap-2 text-sm font-bold text-slate-800">
-                    {item.favourite && (
-                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-amber-50 text-amber-500">
-                        <Star aria-hidden="true" className="fill-amber-400" size={18} />
-                      </span>
-                    )}
-                    {item.prompt}
+                    <button
+                      aria-label={
+                        item.favourite ? `Unfavourite ${item.prompt}` : `Favourite ${item.prompt}`
+                      }
+                      aria-pressed={item.favourite}
+                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${
+                        item.favourite
+                          ? "bg-amber-50 text-amber-500"
+                          : "bg-slate-100 text-slate-400 hover:bg-amber-50 hover:text-amber-500"
+                      }`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleFavourite?.(item.id);
+                      }}
+                      type="button"
+                    >
+                      <Star
+                        aria-hidden="true"
+                        className={item.favourite ? "fill-amber-400" : ""}
+                        size={16}
+                      />
+                    </button>
+                    <span>{item.prompt}</span>
                   </span>
                   <span className="mt-1 block text-xs text-slate-500">{item.timestamp}</span>
                 </button>

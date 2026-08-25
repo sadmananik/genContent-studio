@@ -497,6 +497,7 @@ export default function ImageEditorScreen() {
           isCollapsed={isHistoryCollapsed}
           onDeleteHistory={handleDeleteResponse}
           onSelectHistory={handleSelectHistory}
+          onToggleFavourite={handleFavouriteResponse}
           onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
           selectedHistoryId={selectedResponseId}
         />
