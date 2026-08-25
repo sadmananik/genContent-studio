@@ -51,7 +51,7 @@ Content-Type: application/json
 
 ## Flow
 
-Text Project → TipTap workspace prompt → Zustand `generateTextFromPrompt` → `POST /api/ai/generate-text` → OpenAI → display / Insert into TipTap.
+Text Project → TipTap workspace prompt → Zustand `generateTextFromPrompt` → `POST /api/ai/generate-text` → OpenAI → response appears in the editor and is stored in AI history for real projects.
 
 ## Local demo note
 
