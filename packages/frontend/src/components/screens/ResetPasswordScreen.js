@@ -21,7 +21,9 @@ export default function ResetPasswordScreen() {
   const [formError, setFormError] = useState("");
   const [message, setMessage] = useState("");
   const errorMessage =
-    formError || auth.error || (!token ? "This password reset link is invalid or incomplete" : "");
+    formError ||
+    auth.error ||
+    (!token ? "This password reset link is invalid, expired, or incomplete" : "");
 
   useEffect(() => clearAuthError(), [clearAuthError]);
 
@@ -36,7 +38,7 @@ export default function ResetPasswordScreen() {
     setFormError("");
 
     if (!token) {
-      setFormError("This password reset link is invalid or incomplete");
+      setFormError("This password reset link is invalid, expired, or incomplete");
       return;
     }
 
@@ -58,7 +60,9 @@ export default function ResetPasswordScreen() {
       <Brand />
       <form className="login-panel reset-password-panel" onSubmit={handleSubmit}>
         <h2>Create new password</h2>
-        <p>Choose a secure password with at least eight characters.</p>
+        <p>
+          Choose a secure password with at least eight characters. Reset links expire in 5 minutes.
+        </p>
         {!message && (
           <>
             <PasswordField

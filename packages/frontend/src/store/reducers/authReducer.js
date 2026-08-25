@@ -24,8 +24,13 @@ export function createAuthReducer(set, get) {
           body: JSON.stringify(payload)
         });
 
-        saveAuthSession(session);
-        setAuthSuccess(set, session);
+        if (session.token) {
+          saveAuthSession(session);
+          setAuthSuccess(set, session);
+        } else {
+          finishAuthRequest(set);
+        }
+
         return session;
       } catch (error) {
         setAuthError(set, error);
@@ -90,6 +95,40 @@ export function createAuthReducer(set, get) {
         clearAuthState();
         get().clearUserState();
         setAuthSessionError(set, error);
+        throw error;
+      }
+    },
+
+    verifyEmail: async (token) => {
+      setAuthRequest(set);
+
+      try {
+        const response = await apiRequest("/api/auth/verify-email", {
+          method: "POST",
+          body: JSON.stringify({ token })
+        });
+
+        finishAuthRequest(set);
+        return response;
+      } catch (error) {
+        setAuthError(set, error);
+        throw error;
+      }
+    },
+
+    resendVerificationEmail: async (email) => {
+      setAuthRequest(set);
+
+      try {
+        const response = await apiRequest("/api/auth/resend-verification", {
+          method: "POST",
+          body: JSON.stringify({ email })
+        });
+
+        finishAuthRequest(set);
+        return response;
+      } catch (error) {
+        setAuthError(set, error);
         throw error;
       }
     },

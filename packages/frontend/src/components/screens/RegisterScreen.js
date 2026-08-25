@@ -24,6 +24,7 @@ export default function RegisterScreen() {
     confirmPassword: ""
   });
   const [formError, setFormError] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     clearAuthError();
@@ -38,6 +39,7 @@ export default function RegisterScreen() {
   function handleChange(event) {
     const { name, value } = event.target;
     setFormValues((currentValues) => ({ ...currentValues, [name]: value }));
+    setMessage("");
 
     if (name === "password" || name === "confirmPassword") {
       setFormError("");
@@ -58,8 +60,11 @@ export default function RegisterScreen() {
         email: formValues.email,
         password: formValues.password
       };
-      await registerUser(registrationDetails);
-      router.push(ROUTES.DASHBOARD);
+      const response = await registerUser(registrationDetails);
+      setMessage(
+        response.message ||
+          "Account created. Check your email to verify your account before signing in."
+      );
     } catch (error) {
       // Error state is displayed from the auth store.
     }
@@ -70,62 +75,69 @@ export default function RegisterScreen() {
       <Brand />
       <form className="login-panel" onSubmit={handleRegister}>
         <h2>Create account</h2>
-        <p>Start creating with your AI workspace</p>
-        <label>
-          <UserRound aria-hidden="true" size={17} strokeWidth={1.8} />
-          <input
-            autoComplete="name"
-            name="name"
-            onChange={handleChange}
-            placeholder="Full name"
-            required
-            value={formValues.name}
-          />
-        </label>
-        <label>
-          <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
-          <input
-            autoComplete="email"
-            name="email"
-            onChange={handleChange}
-            placeholder="Email address"
-            required
-            type="email"
-            value={formValues.email}
-          />
-        </label>
-        <PasswordField
-          autoComplete="new-password"
-          label="Password"
-          minLength={8}
-          name="password"
-          onChange={handleChange}
-          placeholder="Password"
-          required
-          value={formValues.password}
-        />
-        <PasswordStrength password={formValues.password} />
-        <PasswordField
-          aria-invalid={
-            Boolean(formValues.confirmPassword) &&
-            formValues.password !== formValues.confirmPassword
-          }
-          autoComplete="new-password"
-          label="Confirm password"
-          minLength={8}
-          name="confirmPassword"
-          onChange={handleChange}
-          placeholder="Confirm password"
-          required
-          value={formValues.confirmPassword}
-        />
-        {formValues.confirmPassword &&
-          formValues.password !== formValues.confirmPassword &&
-          !formError && <p className="field-hint error">Passwords must match</p>}
+        <p>Start creating with your AI workspace. Verification links expire in 5 minutes.</p>
+        {!message && (
+          <>
+            <label>
+              <UserRound aria-hidden="true" size={17} strokeWidth={1.8} />
+              <input
+                autoComplete="name"
+                name="name"
+                onChange={handleChange}
+                placeholder="Full name"
+                required
+                value={formValues.name}
+              />
+            </label>
+            <label>
+              <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
+              <input
+                autoComplete="email"
+                name="email"
+                onChange={handleChange}
+                placeholder="Email address"
+                required
+                type="email"
+                value={formValues.email}
+              />
+            </label>
+            <PasswordField
+              autoComplete="new-password"
+              label="Password"
+              minLength={8}
+              name="password"
+              onChange={handleChange}
+              placeholder="Password"
+              required
+              value={formValues.password}
+            />
+            <PasswordStrength password={formValues.password} />
+            <PasswordField
+              aria-invalid={
+                Boolean(formValues.confirmPassword) &&
+                formValues.password !== formValues.confirmPassword
+              }
+              autoComplete="new-password"
+              label="Confirm password"
+              minLength={8}
+              name="confirmPassword"
+              onChange={handleChange}
+              placeholder="Confirm password"
+              required
+              value={formValues.confirmPassword}
+            />
+            {formValues.confirmPassword &&
+              formValues.password !== formValues.confirmPassword &&
+              !formError && <p className="field-hint error">Passwords must match</p>}
+          </>
+        )}
         {(formError || auth.error) && <p className="auth-error">{formError || auth.error}</p>}
-        <Button className="full-width register-submit" disabled={auth.loading} type="submit">
-          {auth.loading ? "Creating account..." : "Create Account"}
-        </Button>
+        {message && <p className="auth-success">{message}</p>}
+        {!message && (
+          <Button className="full-width register-submit" disabled={auth.loading} type="submit">
+            {auth.loading ? "Creating account..." : "Create Account"}
+          </Button>
+        )}
         <p className="signup">
           Already have an account? <Link href="/login">Sign in</Link>
         </p>
