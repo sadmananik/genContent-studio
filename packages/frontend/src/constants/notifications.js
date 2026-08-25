@@ -171,10 +171,17 @@ export const SHARE_POPOVER_TEXT = {
   INVITE_BUTTON: "Invite",
   INVITE_EMAIL_LABEL: "Invite by email",
   INVITE_TYPED_EMAIL_LABEL: "Invite this email",
+  MANAGE_PERMISSIONS_BUTTON: "Manage permissions",
+  MANAGE_PERMISSIONS_DESCRIPTION:
+    "Review invited collaborators, change their project access, or remove access.",
+  MANAGE_PERMISSIONS_TITLE: "Manage permissions",
   MATCHING_ACCOUNT_LABEL: "Matching account",
   OWNER_ROLE: "Owner",
   PROJECT_ROLE_EDITOR: "Editor",
   PROJECT_ROLE_VIEWER: "Viewer",
+  REMOVE_USER: "Remove",
   ROLE_SELECTOR_LABEL: "Permission",
+  SAVE_PERMISSIONS: "Save Changes",
+  SAVING_PERMISSIONS: "Saving...",
   SEARCHING_USERS: "Checking users..."
 };

@@ -114,15 +114,23 @@ const updateProject = asyncHandler(async (req, res) => {
       req.body.collaborators,
       getObjectIdString(project.owner)
     );
+    const requestedPermissions = Array.isArray(req.body.collaboratorPermissions)
+      ? req.body.collaboratorPermissions
+      : [];
     project.collaborators = collaborators;
     project.collaboratorPermissions = collaborators.map((userId) => {
+      const requestedPermission = requestedPermissions.find(
+        (permission) => getObjectIdString(permission.user) === String(userId)
+      );
       const existingPermission = project.collaboratorPermissions.find(
         (permission) => getObjectIdString(permission.user) === String(userId)
       );
 
       return {
         user: userId,
-        accessLevel: existingPermission?.accessLevel || ACCESS_LEVELS.EDITOR
+        accessLevel: ACCESS_LEVEL_VALUES.includes(requestedPermission?.accessLevel)
+          ? requestedPermission.accessLevel
+          : existingPermission?.accessLevel || ACCESS_LEVELS.EDITOR
       };
     });
   }

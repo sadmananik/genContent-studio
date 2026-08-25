@@ -630,6 +630,7 @@ export default function ImageEditorScreen() {
         ]}
         invitedUsers={invitedUsers}
         isSaving={isSaving}
+        onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
         onExport={handleExport}
         onInviteUser={handleInviteUser}
         onSave={handleHeaderSave}
@@ -730,10 +731,12 @@ function normalizeProject(project) {
     canEdit: project.canEdit !== false,
     canManageSharing: project.canManageSharing !== false,
     currentUserRole: project.currentUserRole || PROJECT_ROLES.OWNER,
+    owner: project.owner,
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
       : mockImageProject.lastUpdated,
-    collaborators: project.collaborators || []
+    collaborators: project.collaborators || [],
+    collaboratorPermissions: project.collaboratorPermissions || []
   };
 }
 

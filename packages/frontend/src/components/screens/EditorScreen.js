@@ -797,6 +797,7 @@ export default function EditorScreen() {
         canManageSharing={canManageSharing}
         invitedUsers={invitedUsers}
         isSaving={isSaving}
+        onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
         onExport={handleExport}
         onInviteUser={handleInviteUser}
         onSave={handleSave}
@@ -927,10 +928,12 @@ function normalizeProject(project) {
     canEdit: project.canEdit !== false,
     canManageSharing: project.canManageSharing !== false,
     currentUserRole: project.currentUserRole || PROJECT_ROLES.OWNER,
+    owner: project.owner,
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
       : defaultTextProject.lastUpdated,
-    collaborators: project.collaborators || []
+    collaborators: project.collaborators || [],
+    collaboratorPermissions: project.collaboratorPermissions || []
   };
 }
 
