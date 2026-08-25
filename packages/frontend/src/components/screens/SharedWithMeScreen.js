@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ExternalLink, Eye, LogOut } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, Eye, LogOut } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -196,8 +196,12 @@ export default function SharedWithMeScreen() {
                     type="button"
                     variant="secondary"
                   >
-                    Actions
-                    <ChevronDown aria-hidden="true" size={16} strokeWidth={2.4} />
+                    More
+                    {openActionProjectId === project.id ? (
+                      <ChevronUp aria-hidden="true" size={16} strokeWidth={2.4} />
+                    ) : (
+                      <ChevronDown aria-hidden="true" size={16} strokeWidth={2.4} />
+                    )}
                   </Button>
                   {openActionProjectId === project.id && (
                     <div

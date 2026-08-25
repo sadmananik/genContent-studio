@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Pencil, Settings, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -210,9 +210,9 @@ export default function ProjectsScreen() {
                   aria-label={`${project.title} actions`}
                   aria-expanded={openActionProjectId === project.id}
                   aria-haspopup="menu"
-                  className={`min-w-28 border-violet-100 bg-violet-50 px-3 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800 ${
+                  className={`border-slate-200 bg-white px-3 text-slate-700 shadow-sm hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 ${
                     openActionProjectId === project.id
-                      ? "border-violet-300 bg-violet-100 text-violet-800"
+                      ? "border-violet-300 bg-violet-50 text-violet-700"
                       : ""
                   }`}
                   variant="secondary"
@@ -224,17 +224,21 @@ export default function ProjectsScreen() {
                     );
                   }}
                 >
-                  <Settings aria-hidden="true" size={17} />
                   Manage
+                  {openActionProjectId === project.id ? (
+                    <ChevronUp aria-hidden="true" size={16} strokeWidth={2.4} />
+                  ) : (
+                    <ChevronDown aria-hidden="true" size={16} strokeWidth={2.4} />
+                  )}
                 </Button>
                 {openActionProjectId === project.id && (
                   <div
-                    className="absolute right-0 top-[calc(100%+0.625rem)] z-50 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
+                    className="project-actions-menu absolute right-0 top-[calc(100%+0.45rem)] z-50 w-52 rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)] before:absolute before:-top-1.5 before:right-3 before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-slate-200 before:bg-white"
                     onClick={(event) => event.stopPropagation()}
                     role="menu"
                   >
                     <button
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
+                      className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
                       onClick={() => {
                         router.push(getProjectWorkspaceHref(project));
                         setOpenActionProjectId(null);
@@ -246,7 +250,7 @@ export default function ProjectsScreen() {
                       Open
                     </button>
                     <button
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+                      className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
                       onClick={() => {
                         setEditingProject(project);
                         setOpenActionProjectId(null);
@@ -260,7 +264,7 @@ export default function ProjectsScreen() {
                     </button>
                     {project.canDelete && (
                       <button
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+                        className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:text-red-300"
                         disabled={deletingProjectId === project.id}
                         onClick={() => {
                           setProjectPendingDelete(project);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
-import { FileText, FolderKanban, Image, Users } from "lucide-react";
+import { ArrowRight, FileText, FolderKanban, Image, Users } from "lucide-react";
 import {
   CategorySummary,
   EmptyState,
@@ -72,7 +72,15 @@ export default function DashboardScreen() {
         <div>
           <SectionHeader
             title={DASHBOARD_TEXT.RECENT_PROJECTS}
-            action={<Link href={ROUTES.PROJECTS}>{DASHBOARD_TEXT.VIEW_ALL_PROJECTS}</Link>}
+            action={
+              <Link
+                className="dashboard-projects-link inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 hover:shadow-[0_10px_22px_rgba(101,69,246,0.14)] focus:outline-none focus:ring-2 focus:ring-violet-100"
+                href={ROUTES.PROJECTS}
+              >
+                {DASHBOARD_TEXT.VIEW_ALL_PROJECTS}
+                <ArrowRight aria-hidden="true" size={16} strokeWidth={2.3} />
+              </Link>
+            }
           />
           {projectState.loading && !hasProjects ? (
             <EmptyState

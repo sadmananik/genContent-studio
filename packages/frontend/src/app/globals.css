@@ -172,15 +172,51 @@ a {
   border-color: #334155;
 }
 
+:root[data-active-theme="dark"] .project-actions-menu,
 :root[data-active-theme="dark"] .shared-project-actions-menu {
   background: #09090b;
   border-color: #1f2937;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55);
 }
 
+:root[data-active-theme="dark"] .project-actions-menu::before,
 :root[data-active-theme="dark"] .shared-project-actions-menu::before {
   background: #09090b;
   border-color: #1f2937;
+}
+
+:root[data-active-theme="dark"] .project-actions-menu button,
+:root[data-active-theme="dark"] .shared-project-actions-menu button {
+  color: #e2e8f0;
+}
+
+:root[data-active-theme="dark"] .project-actions-menu button:hover,
+:root[data-active-theme="dark"] .shared-project-actions-menu button:hover {
+  background: #1e1b4b;
+  color: #f8fafc;
+}
+
+:root[data-active-theme="dark"] .project-actions-menu button.text-red-600,
+:root[data-active-theme="dark"] .shared-project-actions-menu button.text-red-600 {
+  color: #f87171;
+}
+
+:root[data-active-theme="dark"] .project-actions-menu button.text-red-600:hover,
+:root[data-active-theme="dark"] .shared-project-actions-menu button.text-red-600:hover {
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+}
+
+.dashboard-projects-link:hover {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+  color: #6d28d9;
+}
+
+:root[data-active-theme="dark"] .dashboard-projects-link:hover {
+  background: #1e1b4b;
+  border-color: #8b5cf6;
+  color: #f8fafc;
 }
 
 .brand {
