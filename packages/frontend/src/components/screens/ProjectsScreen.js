@@ -7,6 +7,7 @@ import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, SectionHeader } from "../common/Cards";
 import ProjectListCard from "../common/ProjectListCard";
+import ProjectTypeIcon from "../common/ProjectTypeIcon";
 import ProjectFormModal from "../common/ProjectFormModal";
 import TemplateFormModal from "../templates/TemplateFormModal";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
@@ -427,7 +428,7 @@ function formatProject(project) {
     tone: project.tone || "",
     type,
     updated: formatUpdatedAt(project.updatedAt),
-    icon: type === PROJECT_TYPES.IMAGE ? "▧" : "▤",
+    icon: <ProjectTypeIcon type={type} />,
     tone: type === PROJECT_TYPES.IMAGE ? "lavender" : "mint"
   };
 }

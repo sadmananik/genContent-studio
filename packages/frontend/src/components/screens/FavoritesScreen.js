@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, ExternalLink, FileText, ImageIcon, StarOff } from "lucide-react";
+import { Copy, ExternalLink, StarOff } from "lucide-react";
 import Button from "../common/Button";
 import { EmptyState, SectionHeader } from "../common/Cards";
 import ProjectListCard from "../common/ProjectListCard";
+import ProjectTypeIcon from "../common/ProjectTypeIcon";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { AI_CONTENT_TYPES, API_PROJECT_TYPES, PROJECT_TYPES } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
@@ -150,13 +151,7 @@ export default function FavoritesScreen() {
                   </Button>
                 </>
               }
-              icon={
-                favourite.contentType === AI_CONTENT_TYPES.IMAGE ? (
-                  <ImageIcon aria-hidden="true" size={19} />
-                ) : (
-                  <FileText aria-hidden="true" size={19} />
-                )
-              }
+              icon={<ProjectTypeIcon type={favourite.contentType} />}
               key={favourite.id}
               onOpen={() => router.push(getProjectWorkspaceHref(favourite))}
               title={favourite.projectTitle}
