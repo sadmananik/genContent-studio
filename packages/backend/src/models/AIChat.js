@@ -37,5 +37,6 @@ const aiChatSchema = new mongoose.Schema(
 
 aiChatSchema.index({ project: 1, createdAt: -1 });
 aiChatSchema.index({ user: 1, createdAt: -1 });
+aiChatSchema.index({ isFavourite: 1, updatedAt: -1 });
 
 module.exports = mongoose.model("AIChat", aiChatSchema);

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Eye, LogOut, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, Eye, LogOut } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
-import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
+import { EmptyState, SectionHeader } from "../common/Cards";
+import ProjectListCard from "../common/ProjectListCard";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import {
   ACCESS_LEVEL_LABELS,
@@ -138,95 +139,106 @@ export default function SharedWithMeScreen() {
       ) : (
         <section className="grid gap-4">
           {projects.map((project) => (
-            <article
-              className={`group relative grid gap-4 rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center ${
-                openActionProjectId === project.id
-                  ? "z-30 border-violet-300 bg-violet-50/70"
-                  : "z-0 border-slate-200"
-              }`}
-              key={project.id}
-            >
-              <IconBadge tone={project.tone}>{project.icon}</IconBadge>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-start gap-2">
-                  <strong className="block min-w-0 flex-1 truncate text-sm font-bold text-slate-950 group-hover:text-violet-700">
-                    {project.title}
-                  </strong>
+            <ProjectListCard
+              actions={
+                <>
                   <span className={getAccessBadgeClassName(project.accessLevel)}>
                     {project.accessLabel}
                   </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  {project.category} • {project.type} Project • {project.updated}
-                </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  Owner: <span className="font-bold text-slate-700">{project.ownerName}</span>
-                  {project.ownerEmail ? ` (${project.ownerEmail})` : ""}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {project.collaboratorCount} collaborator
-                  {project.collaboratorCount === 1 ? "" : "s"}
-                </p>
-              </div>
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                  className="border-violet-100 bg-violet-50 px-3 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800"
-                  onClick={() => router.push(getProjectWorkspaceHref(project))}
-                  type="button"
-                  variant="secondary"
-                >
-                  <ExternalLink aria-hidden="true" size={17} />
-                  Open Project
-                </Button>
-                <div className="relative" data-shared-project-actions>
                   <Button
-                    aria-label={`${project.title} actions`}
-                    aria-expanded={openActionProjectId === project.id}
-                    aria-haspopup="menu"
-                    onClick={() =>
-                      setOpenActionProjectId((currentId) =>
-                        currentId === project.id ? null : project.id
-                      )
-                    }
+                    className="shared-project-open-button border-violet-100 bg-violet-50 px-3 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      router.push(getProjectWorkspaceHref(project));
+                    }}
                     type="button"
-                    variant="icon"
+                    variant="secondary"
                   >
-                    <MoreHorizontal aria-hidden="true" size={17} />
+                    <ExternalLink aria-hidden="true" size={17} />
+                    Open Project
                   </Button>
-                  {openActionProjectId === project.id && (
-                    <div
-                      className="absolute right-0 top-[calc(100%+0.625rem)] z-50 w-52 overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
-                      role="menu"
+                  <div className="relative" data-shared-project-actions>
+                    <Button
+                      aria-label={`${project.title} actions`}
+                      aria-expanded={openActionProjectId === project.id}
+                      aria-haspopup="menu"
+                      className={`shared-project-more-button border-slate-200 bg-white px-3 text-slate-700 shadow-sm hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 ${
+                        openActionProjectId === project.id
+                          ? "border-violet-300 bg-violet-50 text-violet-700"
+                          : ""
+                      }`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpenActionProjectId((currentId) => {
+                          return currentId === project.id ? null : project.id;
+                        });
+                      }}
+                      type="button"
+                      variant="secondary"
                     >
-                      <button
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
-                        onClick={() => {
-                          setDetailsProject(project);
-                          setOpenActionProjectId(null);
-                        }}
-                        role="menuitem"
-                        type="button"
+                      More
+                      {openActionProjectId === project.id ? (
+                        <ChevronUp aria-hidden="true" size={16} strokeWidth={2.4} />
+                      ) : (
+                        <ChevronDown aria-hidden="true" size={16} strokeWidth={2.4} />
+                      )}
+                    </Button>
+                    {openActionProjectId === project.id && (
+                      <div
+                        className="shared-project-actions-menu absolute right-0 top-[calc(100%+0.45rem)] z-50 w-56 rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)] before:absolute before:-top-1.5 before:right-3 before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-slate-200 before:bg-white"
+                        onClick={(event) => event.stopPropagation()}
+                        role="menu"
                       >
-                        <Eye aria-hidden="true" size={16} />
-                        View Details
-                      </button>
-                      <button
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50"
-                        onClick={() => {
-                          setLeavingProject(project);
-                          setOpenActionProjectId(null);
-                        }}
-                        role="menuitem"
-                        type="button"
-                      >
-                        <LogOut aria-hidden="true" size={16} />
-                        Leave Project
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </article>
+                        <button
+                          className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDetailsProject(project);
+                            setOpenActionProjectId(null);
+                          }}
+                          role="menuitem"
+                          type="button"
+                        >
+                          <Eye aria-hidden="true" size={16} />
+                          View Details
+                        </button>
+                        <button
+                          className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-100"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setLeavingProject(project);
+                            setOpenActionProjectId(null);
+                          }}
+                          role="menuitem"
+                          type="button"
+                        >
+                          <LogOut aria-hidden="true" size={16} />
+                          Leave Project
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              }
+              active={openActionProjectId === project.id}
+              icon={project.icon}
+              key={project.id}
+              onOpen={() => router.push(getProjectWorkspaceHref(project))}
+              title={project.title}
+              tone={project.tone}
+            >
+              <p className="mt-1 text-xs text-slate-500">
+                {project.category} • {project.type} Project • {project.updated}
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                Owner: <span className="font-bold text-slate-700">{project.ownerName}</span>
+                {project.ownerEmail ? ` (${project.ownerEmail})` : ""}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {project.collaboratorCount} collaborator
+                {project.collaboratorCount === 1 ? "" : "s"}
+              </p>
+            </ProjectListCard>
           ))}
         </section>
       )}
@@ -356,7 +368,8 @@ function getProjectWorkspaceHref(project) {
 }
 
 function getAccessBadgeClassName(accessLevel) {
-  const baseClasses = "rounded-full px-2.5 py-1 text-xs font-bold";
+  const baseClasses =
+    "inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-bold";
   return accessLevel === ACCESS_LEVELS.VIEWER
     ? `${baseClasses} bg-slate-100 text-slate-600`
     : `${baseClasses} bg-emerald-50 text-emerald-700`;

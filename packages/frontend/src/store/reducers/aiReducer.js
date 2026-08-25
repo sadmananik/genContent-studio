@@ -4,6 +4,7 @@ const initialAiState = {
   textResponse: null,
   imageResponse: null,
   chatHistory: [],
+  favouriteResponses: [],
   loading: false,
   error: null
 };
@@ -73,6 +74,13 @@ export function createAiReducer(set) {
       );
     },
 
+    fetchFavouriteResponses: async () => {
+      return runAiRequest(
+        () => apiRequest("/api/chats/favourites"),
+        (aiState, favouriteResponses) => ({ favouriteResponses })
+      );
+    },
+
     saveAiResponse: async (payload) => {
       return runAiRequest(
         () =>
@@ -94,7 +102,14 @@ export function createAiReducer(set) {
         (aiState, chat) => ({
           chatHistory: aiState.chatHistory.map((item) =>
             item._id === chat._id || item.id === chat.id ? chat : item
-          )
+          ),
+          favouriteResponses: chat.isFavourite
+            ? aiState.favouriteResponses.map((item) =>
+                item._id === chat._id || item.id === chat.id ? chat : item
+              )
+            : aiState.favouriteResponses.filter(
+                (item) => item._id !== chat._id && item.id !== chat.id
+              )
         })
       );
     },

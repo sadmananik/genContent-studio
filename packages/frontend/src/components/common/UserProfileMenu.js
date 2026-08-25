@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, LogOut, User } from "lucide-react";
+import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { UserAvatar as SharedUserAvatar, getInitials } from "./UserAvatar";
 
 export function UserAvatar({ name = "", imageUrl }) {
@@ -13,7 +13,7 @@ export function UserAvatar({ name = "", imageUrl }) {
   );
 }
 
-export default function UserProfileMenu({ user, onLogout, onProfile }) {
+export default function UserProfileMenu({ user, onLogout, onProfile, onSettings }) {
   const profileRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const displayName = user?.name || "User";
@@ -34,6 +34,11 @@ export default function UserProfileMenu({ user, onLogout, onProfile }) {
   function handleProfile() {
     setIsOpen(false);
     onProfile?.();
+  }
+
+  function handleSettings() {
+    setIsOpen(false);
+    onSettings?.();
   }
 
   return (
@@ -72,6 +77,15 @@ export default function UserProfileMenu({ user, onLogout, onProfile }) {
           >
             <User aria-hidden="true" size={16} />
             Profile
+          </button>
+          <button
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            type="button"
+            role="menuitem"
+            onClick={handleSettings}
+          >
+            <Settings aria-hidden="true" size={16} />
+            Settings
           </button>
           <button
             className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 transition hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-100"

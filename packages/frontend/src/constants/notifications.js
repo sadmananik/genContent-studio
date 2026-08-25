@@ -46,6 +46,23 @@ export const SHARED_PROJECT_ALERTS = {
   leftMessage: (title) => `You left "${title}".`
 };
 
+export const FAVOURITES_ALERTS = {
+  COPIED_MESSAGE: "Favourite response copied.",
+  COPIED_TITLE: "Copied",
+  EMPTY_DESCRIPTION: "Favourite AI responses from your projects will appear here.",
+  EMPTY_TITLE: "No favourites yet",
+  LOAD_FAILED_TITLE: "Unable to load favourites.",
+  LOADING_DESCRIPTION: "Your favourite AI responses are loading.",
+  LOADING_TITLE: "Loading favourites...",
+  PAGE_DESCRIPTION: "Review favourite AI responses saved across your projects.",
+  PAGE_TITLE: "Favorites",
+  REMOVE_FAILED_MESSAGE: "Favourite could not be removed.",
+  REMOVE_FAILED_TITLE: "Favourite not removed",
+  REMOVED_MESSAGE: "Response removed from favourites.",
+  REMOVED_TITLE: "Favourite removed",
+  RESPONSE_SECTION_TITLE: "Favourite Responses"
+};
+
 export const TEXT_EDITOR_ALERTS = {
   AI_GENERATED_MESSAGE: "Content is ready and shown in the editor.",
   AI_GENERATED_TITLE: "AI generated",
@@ -153,6 +170,38 @@ export const PROFILE_ALERTS = {
   UPDATE_FAILED_TITLE: "Update failed",
   UPDATED_MESSAGE: "Your profile changes were saved.",
   UPDATED_TITLE: "Profile updated"
+};
+
+export const SETTINGS_TEXT = {
+  ACCOUNT_DESCRIPTION: "Your signed-in account details.",
+  ACCOUNT_TITLE: "Account",
+  APPEARANCE_DESCRIPTION: "Choose how GenContent Studio should appear on this device.",
+  APPEARANCE_TITLE: "Appearance",
+  CHANGE_PASSWORD_BUTTON: "Change Password",
+  CHANGE_PASSWORD_CONFIRM_DESCRIPTION: (email) =>
+    `We will send a secure password-change link to ${email}. The link will expire in 5 minutes.`,
+  CHANGE_PASSWORD_CONFIRM_TITLE: "Change Password?",
+  CHANGE_PASSWORD_FAILED_MESSAGE: "Unable to send password-change email. Please try again.",
+  CHANGE_PASSWORD_FAILED_TITLE: "Email not sent",
+  CHANGE_PASSWORD_SUCCESS_DESCRIPTION: (email) =>
+    `A secure password-change link has been sent to ${email}. The link will expire in 5 minutes.`,
+  CHANGE_PASSWORD_SUCCESS_TITLE: "Password change email sent",
+  EDIT_PROFILE_BUTTON: "Edit Profile",
+  PAGE_DESCRIPTION: "Manage your account and application preferences.",
+  PAGE_TITLE: "Settings",
+  SECURITY_DESCRIPTION: "Change your account password securely.",
+  SECURITY_LABEL: "Password",
+  SECURITY_TITLE: "Security",
+  SEND_EMAIL_BUTTON: "Send Email",
+  SENDING_EMAIL_BUTTON: "Sending...",
+  THEME_LABEL: "Theme",
+  THEME_OPTIONS: {
+    DARK: "Dark",
+    LIGHT: "Light",
+    SYSTEM: "System"
+  },
+  THEME_UPDATED_MESSAGE: "Theme preference saved on this device.",
+  THEME_UPDATED_TITLE: "Theme updated"
 };
 
 export const AI_HISTORY_TEXT = {

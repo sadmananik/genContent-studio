@@ -29,6 +29,22 @@ async function sendPasswordResetEmail({ email, expiresInMinutes, name, resetUrl 
   });
 }
 
+async function sendPasswordChangeEmail({ email, expiresInMinutes, name, resetUrl }) {
+  const template = EMAIL_TEMPLATES.PASSWORD_CHANGE;
+  const subject = template.subject;
+  const text = [
+    `Hello ${name},`,
+    "",
+    template.intro,
+    resetUrl,
+    "",
+    getLinkExpiryCopy(expiresInMinutes),
+    template.outro
+  ].join("\n");
+
+  await sendTextEmail({ email, subject, text });
+}
+
 async function sendEmailVerificationEmail({ email, expiresInMinutes, name, verificationUrl }) {
   const template = EMAIL_TEMPLATES.VERIFICATION;
   const subject = template.subject;
@@ -55,11 +71,17 @@ async function sendEmailVerificationEmail({ email, expiresInMinutes, name, verif
   });
 }
 
-async function sendExistingUserProjectInviteEmail({ email, inviterName, projectTitle, sharedUrl }) {
+async function sendExistingUserProjectInviteEmail({
+  email,
+  inviterName,
+  projectTitle,
+  recipientName,
+  sharedUrl
+}) {
   const template = EMAIL_TEMPLATES.EXISTING_USER_PROJECT_INVITE;
   const subject = template.subject(projectTitle);
   const text = [
-    `Hello,`,
+    getGreeting(recipientName),
     "",
     template.intro(inviterName, projectTitle),
     template.action,
@@ -85,6 +107,12 @@ async function sendNewUserProjectInviteEmail({ email, inviterName, projectTitle,
   ].join("\n");
 
   await sendTextEmail({ email, subject, text });
+}
+
+function getGreeting(name) {
+  const safeName = String(name || "").trim();
+
+  return safeName ? `Hello ${safeName},` : "Hello,";
 }
 
 function getLinkExpiryCopy(expiresInMinutes) {
@@ -172,5 +200,6 @@ module.exports = {
   sendEmailVerificationEmail,
   sendExistingUserProjectInviteEmail,
   sendNewUserProjectInviteEmail,
+  sendPasswordChangeEmail,
   sendPasswordResetEmail
 };

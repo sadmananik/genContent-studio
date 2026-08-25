@@ -4,7 +4,11 @@ const User = require("../models/User");
 const { AUTH_MESSAGES } = require("../constants/auth");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
-const { sendEmailVerificationEmail, sendPasswordResetEmail } = require("../utils/email");
+const {
+  sendEmailVerificationEmail,
+  sendPasswordChangeEmail,
+  sendPasswordResetEmail
+} = require("../utils/email");
 const { applyPendingProjectInvites } = require("../services/projectInviteService");
 const { signAuthToken } = require("../utils/token");
 
@@ -187,6 +191,34 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
   res.json({ message: AUTH_MESSAGES.PASSWORD_RESET_GENERIC_RESPONSE });
 });
 
+const requestPasswordChange = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+
+  if (user) {
+    const resetToken = createAuthLinkToken();
+    user.passwordResetTokenHash = hashAuthLinkToken(resetToken);
+    user.passwordResetExpiresAt = buildAuthLinkExpiry(getPasswordResetExpiryMinutes());
+    await user.save();
+
+    try {
+      await sendPasswordChangeEmail({
+        email: user.email,
+        expiresInMinutes: getPasswordResetExpiryMinutes(),
+        name: user.name,
+        resetUrl: buildResetUrl(resetToken)
+      });
+    } catch (error) {
+      user.passwordResetTokenHash = undefined;
+      user.passwordResetExpiresAt = undefined;
+      await user.save();
+      console.error("Failed to send password change email", error.message);
+      throw httpError(500, AUTH_MESSAGES.PASSWORD_CHANGE_GENERIC_RESPONSE);
+    }
+  }
+
+  res.json({ message: AUTH_MESSAGES.PASSWORD_CHANGE_EMAIL_SENT });
+});
+
 const resetPassword = asyncHandler(async (req, res) => {
   const { token, password } = req.body;
 
@@ -276,6 +308,7 @@ function serializeUser(user) {
 
 module.exports = {
   login,
+  requestPasswordChange,
   requestPasswordReset,
   resendVerificationEmail,
   resetPassword,

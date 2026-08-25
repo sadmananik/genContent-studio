@@ -21,9 +21,18 @@ export default function AppHeader() {
     router.push(ROUTES.PROFILE);
   }
 
+  function handleSettings() {
+    router.push(ROUTES.SETTINGS);
+  }
+
   return (
     <header className="flex min-h-[73px] items-center justify-end border-b border-slate-200 bg-white px-5 py-4 md:px-7">
-      <UserProfileMenu user={user} onLogout={handleLogout} onProfile={handleProfile} />
+      <UserProfileMenu
+        user={user}
+        onLogout={handleLogout}
+        onProfile={handleProfile}
+        onSettings={handleSettings}
+      />
     </header>
   );
 }

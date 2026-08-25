@@ -15,7 +15,7 @@ export default function AIHistorySidebar({
 }) {
   return (
     <aside
-      className={`border-r border-slate-200 bg-white transition-all ${
+      className={`ai-history-sidebar border-r border-slate-200 bg-white transition-all ${
         isCollapsed ? "lg:w-16" : "lg:w-72"
       }`}
     >

@@ -1,4 +1,5 @@
 const AIChat = require("../models/AIChat");
+const Project = require("../models/Project");
 const {
   AI_CONTENT_TYPES,
   AI_CONTENT_TYPE_VALUES,
@@ -46,6 +47,25 @@ const listProjectChats = asyncHandler(async (req, res) => {
   const chats = await AIChat.find({ project: req.params.projectId })
     .populate("user", "name email")
     .sort({ createdAt: -1 });
+
+  res.json(chats);
+});
+
+const listFavouriteChats = asyncHandler(async (req, res) => {
+  const accessibleProjectIds = await Project.find({
+    $or: [{ owner: req.user.id }, { collaborators: req.user.id }]
+  }).distinct("_id");
+
+  const chats = await AIChat.find({
+    isFavourite: true,
+    project: { $in: accessibleProjectIds }
+  })
+    .populate(
+      "project",
+      "title type category owner collaborators collaboratorPermissions updatedAt"
+    )
+    .populate("user", "name email")
+    .sort({ updatedAt: -1, createdAt: -1 });
 
   res.json(chats);
 });
@@ -107,6 +127,7 @@ const deleteChat = asyncHandler(async (req, res) => {
 module.exports = {
   createChat,
   deleteChat,
+  listFavouriteChats,
   listProjectChats,
   toggleFavourite,
   updateChat
