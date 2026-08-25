@@ -172,6 +172,17 @@ a {
   border-color: #334155;
 }
 
+:root[data-active-theme="dark"] .shared-project-actions-menu {
+  background: #09090b;
+  border-color: #1f2937;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55);
+}
+
+:root[data-active-theme="dark"] .shared-project-actions-menu::before {
+  background: #09090b;
+  border-color: #1f2937;
+}
+
 .brand {
   display: flex;
   align-items: center;
