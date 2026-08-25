@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Button from "../common/Button";
 
 export default function ImageResponseCard({
+  canEdit = true,
   copied,
   onCopy,
   onDelete,
@@ -21,6 +22,10 @@ export default function ImageResponseCard({
   }, [response.id, response.response]);
 
   function handleSaveEdit() {
+    if (!canEdit) {
+      return;
+    }
+
     onUpdate(response.id, draftResponse);
     setIsEditing(false);
   }
@@ -53,7 +58,12 @@ export default function ImageResponseCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button onClick={() => onFavourite(response.id)} type="button" variant="secondary">
+        <Button
+          disabled={!canEdit}
+          onClick={() => onFavourite(response.id)}
+          type="button"
+          variant="secondary"
+        >
           <Star
             aria-hidden="true"
             className={response.favourite ? "fill-amber-400 text-amber-500" : ""}
@@ -65,23 +75,38 @@ export default function ImageResponseCard({
           {copied ? <Check aria-hidden="true" size={16} /> : <Copy aria-hidden="true" size={16} />}
           {copied ? "Copied" : "Copy"}
         </Button>
-        <Button onClick={() => onInsert(response)} type="button" variant="secondary">
+        <Button
+          disabled={!canEdit}
+          onClick={() => onInsert(response)}
+          type="button"
+          variant="secondary"
+        >
           <ImagePlus aria-hidden="true" size={16} />
           Insert into Canvas
         </Button>
         {isEditing ? (
-          <Button onClick={handleSaveEdit} type="button" variant="secondary">
+          <Button disabled={!canEdit} onClick={handleSaveEdit} type="button" variant="secondary">
             <Save aria-hidden="true" size={16} />
             Save Edit
           </Button>
         ) : (
-          <Button onClick={() => setIsEditing(true)} type="button" variant="secondary">
+          <Button
+            disabled={!canEdit}
+            onClick={() => setIsEditing(true)}
+            type="button"
+            variant="secondary"
+          >
             <Edit3 aria-hidden="true" size={16} />
             Edit
           </Button>
         )}
         {onDelete && (
-          <Button onClick={() => onDelete(response.id)} type="button" variant="ghost">
+          <Button
+            disabled={!canEdit}
+            onClick={() => onDelete(response.id)}
+            type="button"
+            variant="ghost"
+          >
             <Trash2 aria-hidden="true" size={16} />
             Delete
           </Button>

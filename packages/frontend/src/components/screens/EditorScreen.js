@@ -306,7 +306,10 @@ export default function EditorScreen() {
     setIsGenerating(true);
 
     try {
-      const result = await generateTextFromPrompt({ prompt: trimmedPrompt });
+      const result = await generateTextFromPrompt({
+        project: isRealProject ? projectId : undefined,
+        prompt: trimmedPrompt
+      });
       const generatedText = result?.text || "";
       const responseId = `response-${Date.now()}`;
       const response = {
@@ -871,6 +874,7 @@ export default function EditorScreen() {
               </div>
               {selectedResponse ? (
                 <AIResponseCard
+                  canEdit={canEditProject}
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}

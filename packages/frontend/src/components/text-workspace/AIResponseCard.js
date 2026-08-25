@@ -3,6 +3,7 @@ import { useState } from "react";
 import Button from "../common/Button";
 
 export default function AIResponseCard({
+  canEdit = true,
   copied,
   onCopy,
   onDelete,
@@ -15,6 +16,10 @@ export default function AIResponseCard({
   const [draftResponse, setDraftResponse] = useState(response.response);
 
   function handleSaveEdit() {
+    if (!canEdit) {
+      return;
+    }
+
     onUpdate(response.id, draftResponse);
     setIsEditing(false);
   }
@@ -49,6 +54,7 @@ export default function AIResponseCard({
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
           className="group hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+          disabled={!canEdit}
           onClick={() => onFavourite(response.id)}
           variant="secondary"
           type="button"
@@ -76,6 +82,7 @@ export default function AIResponseCard({
         {isEditing ? (
           <Button
             className="hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+            disabled={!canEdit}
             onClick={handleSaveEdit}
             variant="secondary"
             type="button"
@@ -86,6 +93,7 @@ export default function AIResponseCard({
         ) : (
           <Button
             className="hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+            disabled={!canEdit}
             onClick={() => setIsEditing(true)}
             variant="secondary"
             type="button"
@@ -97,6 +105,7 @@ export default function AIResponseCard({
         {onDelete && (
           <Button
             className="hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+            disabled={!canEdit}
             onClick={() => onDelete(response.id)}
             variant="ghost"
             type="button"

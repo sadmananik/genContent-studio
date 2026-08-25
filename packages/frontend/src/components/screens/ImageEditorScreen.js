@@ -677,6 +677,7 @@ export default function ImageEditorScreen() {
               </div>
               {selectedResponse ? (
                 <ImageResponseCard
+                  canEdit={canEditProject}
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}

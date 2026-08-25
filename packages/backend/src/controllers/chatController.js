@@ -7,7 +7,7 @@ const {
 } = require("../constants/projects");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
-const { findAccessibleProject } = require("./projectController");
+const { findAccessibleProject, requireProjectEditAccess } = require("./projectController");
 const { normalizeString, requireTrimmedString } = require("../utils/validation");
 
 const createChat = asyncHandler(async (req, res) => {
@@ -26,7 +26,8 @@ const createChat = asyncHandler(async (req, res) => {
     throw httpError(400, PROJECT_MESSAGES.CONTENT_TYPE_INVALID);
   }
 
-  await findAccessibleProject(project, req.user.id);
+  const accessibleProject = await findAccessibleProject(project, req.user.id);
+  requireProjectEditAccess(accessibleProject, req.user.id);
 
   const chat = await AIChat.create({
     project,
@@ -56,7 +57,8 @@ const toggleFavourite = asyncHandler(async (req, res) => {
     throw httpError(404, PROJECT_MESSAGES.CHAT_NOT_FOUND);
   }
 
-  await findAccessibleProject(chat.project, req.user.id);
+  const accessibleProject = await findAccessibleProject(chat.project, req.user.id);
+  requireProjectEditAccess(accessibleProject, req.user.id);
 
   chat.isFavourite =
     req.body.isFavourite === undefined ? !chat.isFavourite : Boolean(req.body.isFavourite);
@@ -72,7 +74,8 @@ const updateChat = asyncHandler(async (req, res) => {
     throw httpError(404, PROJECT_MESSAGES.CHAT_NOT_FOUND);
   }
 
-  await findAccessibleProject(chat.project, req.user.id);
+  const accessibleProject = await findAccessibleProject(chat.project, req.user.id);
+  requireProjectEditAccess(accessibleProject, req.user.id);
 
   ["prompt", "response"].forEach((field) => {
     if (req.body[field] !== undefined) {
@@ -94,7 +97,8 @@ const deleteChat = asyncHandler(async (req, res) => {
     throw httpError(404, PROJECT_MESSAGES.CHAT_NOT_FOUND);
   }
 
-  await findAccessibleProject(chat.project, req.user.id);
+  const accessibleProject = await findAccessibleProject(chat.project, req.user.id);
+  requireProjectEditAccess(accessibleProject, req.user.id);
   await chat.deleteOne();
 
   res.status(204).send();

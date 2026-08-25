@@ -87,8 +87,15 @@ const getProjectById = asyncHandler(async (req, res) => {
 });
 
 const updateProject = asyncHandler(async (req, res) => {
-  const project = await findAccessibleProject(req.params.id, req.user.id);
+  const project = await Project.findOne({
+    _id: req.params.id,
+    owner: req.user.id
+  });
   const allowedUpdates = ["title", "type", "category", "description", "collaborators"];
+
+  if (!project) {
+    throw httpError(404, PROJECT_MESSAGES.PROJECT_UPDATE_OWNER_ONLY);
+  }
 
   if (req.body.type !== undefined && !PROJECT_TYPE_VALUES.includes(req.body.type)) {
     throw httpError(400, PROJECT_MESSAGES.PROJECT_TYPE_INVALID);
@@ -375,6 +382,14 @@ function getAccessLevelForUser(project, userId) {
     : null;
 }
 
+function requireProjectEditAccess(project, userId) {
+  const projectObject = project.toObject ? project.toObject() : project;
+
+  if (getAccessLevelForUser(projectObject, String(userId)) !== ACCESS_LEVELS.EDITOR) {
+    throw httpError(403, PROJECT_MESSAGES.PROJECT_EDIT_FORBIDDEN);
+  }
+}
+
 module.exports = {
   createProject,
   deleteProject,
@@ -384,5 +399,6 @@ module.exports = {
   leaveProject,
   listProjects,
   listSharedProjects,
+  requireProjectEditAccess,
   updateProject
 };
