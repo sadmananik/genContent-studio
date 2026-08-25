@@ -15,6 +15,7 @@ import {
   ACCESS_LEVELS,
   API_PROJECT_TYPES,
   EDITOR_ACCESS_QUERY,
+  PROJECT_ROLES,
   PROJECT_TYPES
 } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
@@ -388,7 +389,7 @@ function formatProject(project) {
     accessLevel: project.accessLevel,
     canDelete: project.canDelete !== false,
     canManageSharing: project.canManageSharing !== false,
-    canPublish: project.currentUserRole === "owner",
+    canPublish: project.currentUserRole === PROJECT_ROLES.OWNER,
     starterPrompt: project.starterPrompt || "",
     style: project.style || "",
     tone: project.tone || "",

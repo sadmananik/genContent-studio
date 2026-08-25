@@ -7,6 +7,7 @@ import TagSuggestionDropdown from "./TagSuggestionDropdown";
 import {
   TEMPLATE_CATEGORIES,
   TEMPLATE_FORM_FIELDS,
+  TEMPLATE_SOURCE_VALUES,
   TEMPLATE_TEXT,
   TEMPLATE_VISIBILITY
 } from "../../constants/templates";
@@ -17,6 +18,7 @@ const fieldClassName =
 
 export default function TemplateFormModal({
   error,
+  historyOptions = [],
   initialValues,
   isSubmitting,
   mode = "publish",
@@ -28,6 +30,7 @@ export default function TemplateFormModal({
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [isTagInputFocused, setIsTagInputFocused] = useState(false);
   const isEditing = mode === "edit";
+  const hasHistoryOptions = historyOptions.length > 0;
   const activeTagQuery = getActiveTagQuery(values.tags);
   const visibleTagSuggestions = tagSuggestions.filter(
     (tag) => !getSelectedTags(values.tags).includes(tag.toLowerCase())
@@ -48,6 +51,35 @@ export default function TemplateFormModal({
     return () => window.clearTimeout(timeout);
   }, [activeTagQuery, fetchTemplateTagSuggestions, isTagInputFocused]);
 
+  useEffect(() => {
+    if (!hasHistoryOptions) {
+      return undefined;
+    }
+
+    if (
+      values.starterPromptSource === TEMPLATE_SOURCE_VALUES.AI_HISTORY &&
+      !values.starterPromptHistoryId
+    ) {
+      updateValue("starterPromptHistoryId", historyOptions[0].id);
+    }
+
+    if (
+      values.projectType === "text" &&
+      values.starterContentSource === TEMPLATE_SOURCE_VALUES.AI_HISTORY &&
+      !values.starterContentHistoryId
+    ) {
+      updateValue("starterContentHistoryId", historyOptions[0].id);
+    }
+  }, [
+    hasHistoryOptions,
+    historyOptions,
+    values.projectType,
+    values.starterContentHistoryId,
+    values.starterContentSource,
+    values.starterPromptHistoryId,
+    values.starterPromptSource
+  ]);
+
   function updateValue(field, value) {
     setValues((current) => ({ ...current, [field]: value }));
   }
@@ -60,6 +92,29 @@ export default function TemplateFormModal({
         .map((tag) => tag.trim())
         .filter(Boolean)
     };
+
+    const selectedPromptHistory = findHistoryOption(historyOptions, values.starterPromptHistoryId);
+    const selectedContentHistory = findHistoryOption(
+      historyOptions,
+      values.starterContentHistoryId
+    );
+
+    if (values.starterPromptSource === TEMPLATE_SOURCE_VALUES.AI_HISTORY && selectedPromptHistory) {
+      payload.starterPrompt = selectedPromptHistory.prompt || payload.starterPrompt;
+    }
+
+    if (
+      values.projectType === "text" &&
+      values.starterContentSource === TEMPLATE_SOURCE_VALUES.AI_HISTORY &&
+      selectedContentHistory
+    ) {
+      payload.starterContent = selectedContentHistory.content || payload.starterContent;
+    }
+
+    delete payload.starterPromptSource;
+    delete payload.starterPromptHistoryId;
+    delete payload.starterContentSource;
+    delete payload.starterContentHistoryId;
 
     if (payload.projectType === "image" || (!isEditing && !payload.starterContent.trim())) {
       delete payload.starterContent;
@@ -124,6 +179,41 @@ export default function TemplateFormModal({
           </TemplateField>
         </div>
 
+        {hasHistoryOptions && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_PROMPT_SOURCE}>
+              <select
+                className={fieldClassName}
+                onChange={(event) => updateValue("starterPromptSource", event.target.value)}
+                value={values.starterPromptSource}
+              >
+                <option value={TEMPLATE_SOURCE_VALUES.CURRENT}>
+                  {TEMPLATE_TEXT.CURRENT_PROJECT_SOURCE}
+                </option>
+                <option value={TEMPLATE_SOURCE_VALUES.AI_HISTORY}>
+                  {TEMPLATE_TEXT.AI_HISTORY_SOURCE}
+                </option>
+              </select>
+            </TemplateField>
+            {values.projectType === "text" && (
+              <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_CONTENT_SOURCE}>
+                <select
+                  className={fieldClassName}
+                  onChange={(event) => updateValue("starterContentSource", event.target.value)}
+                  value={values.starterContentSource}
+                >
+                  <option value={TEMPLATE_SOURCE_VALUES.CURRENT}>
+                    {TEMPLATE_TEXT.CURRENT_PROJECT_SOURCE}
+                  </option>
+                  <option value={TEMPLATE_SOURCE_VALUES.AI_HISTORY}>
+                    {TEMPLATE_TEXT.AI_HISTORY_SOURCE}
+                  </option>
+                </select>
+              </TemplateField>
+            )}
+          </div>
+        )}
+
         <TemplateField label={TEMPLATE_FORM_FIELDS.TAGS}>
           <span className="relative block">
             <input
@@ -145,24 +235,62 @@ export default function TemplateFormModal({
           </span>
         </TemplateField>
 
-        <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_PROMPT}>
-          <textarea
-            className={`${fieldClassName} min-h-24 resize-y py-2.5 leading-6`}
-            maxLength={4000}
-            onChange={(event) => updateValue("starterPrompt", event.target.value)}
-            value={values.starterPrompt}
-          />
-        </TemplateField>
-
-        {values.projectType === "text" && (
-          <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_CONTENT}>
+        {(!hasHistoryOptions || values.starterPromptSource === TEMPLATE_SOURCE_VALUES.CURRENT) && (
+          <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_PROMPT}>
             <textarea
-              className={`${fieldClassName} min-h-28 resize-y py-2.5 font-mono text-xs leading-6`}
-              onChange={(event) => updateValue("starterContent", event.target.value)}
-              value={values.starterContent}
+              className={`${fieldClassName} min-h-24 resize-y py-2.5 leading-6`}
+              maxLength={4000}
+              onChange={(event) => updateValue("starterPrompt", event.target.value)}
+              value={values.starterPrompt}
             />
           </TemplateField>
         )}
+
+        {hasHistoryOptions && values.starterPromptSource === TEMPLATE_SOURCE_VALUES.AI_HISTORY && (
+          <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_PROMPT}>
+            <select
+              className={fieldClassName}
+              onChange={(event) => updateValue("starterPromptHistoryId", event.target.value)}
+              value={values.starterPromptHistoryId}
+            >
+              {historyOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </TemplateField>
+        )}
+
+        {values.projectType === "text" &&
+          (!hasHistoryOptions ||
+            values.starterContentSource === TEMPLATE_SOURCE_VALUES.CURRENT) && (
+            <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_CONTENT}>
+              <textarea
+                className={`${fieldClassName} min-h-28 resize-y py-2.5 font-mono text-xs leading-6`}
+                onChange={(event) => updateValue("starterContent", event.target.value)}
+                value={values.starterContent}
+              />
+            </TemplateField>
+          )}
+
+        {values.projectType === "text" &&
+          hasHistoryOptions &&
+          values.starterContentSource === TEMPLATE_SOURCE_VALUES.AI_HISTORY && (
+            <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_CONTENT}>
+              <select
+                className={fieldClassName}
+                onChange={(event) => updateValue("starterContentHistoryId", event.target.value)}
+                value={values.starterContentHistoryId}
+              >
+                {historyOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </TemplateField>
+          )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TemplateField label={TEMPLATE_FORM_FIELDS.TONE}>
@@ -254,7 +382,11 @@ function getInitialValues(values = {}) {
     starterContent: typeof values.starterContent === "string" ? values.starterContent : "",
     tone: values.tone || "",
     style: values.style || "",
-    visibility: values.visibility || TEMPLATE_VISIBILITY.PUBLIC
+    visibility: values.visibility || TEMPLATE_VISIBILITY.PUBLIC,
+    starterPromptSource: values.starterPromptSource || TEMPLATE_SOURCE_VALUES.CURRENT,
+    starterPromptHistoryId: values.starterPromptHistoryId || "",
+    starterContentSource: values.starterContentSource || TEMPLATE_SOURCE_VALUES.CURRENT,
+    starterContentHistoryId: values.starterContentHistoryId || ""
   };
 }
 
@@ -280,4 +412,8 @@ function applyTagSuggestion(value, selectedTag) {
     .filter(Boolean)
     .join(", ")
     .concat(", ");
+}
+
+function findHistoryOption(historyOptions, id) {
+  return historyOptions.find((option) => option.id === id);
 }

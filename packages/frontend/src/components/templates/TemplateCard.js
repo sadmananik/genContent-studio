@@ -77,22 +77,22 @@ export default function TemplateCard({
       </div>
 
       <div className="mt-auto pt-5">
-        {showManagementMeta && (
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-            <span
-              className={cn(
-                "rounded-full px-2.5 py-1 font-bold",
-                template.visibility === "public"
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-slate-100 text-slate-600"
-              )}
-            >
-              {template.visibility === "public" ? "Public" : "Hidden"}
-            </span>
-            <span className="text-slate-500">Published {formatDate(template.createdAt)}</span>
-            <span className="text-slate-500">Updated {formatDate(template.updatedAt)}</span>
-          </div>
-        )}
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-1 font-bold",
+              template.visibility === "public"
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-slate-100 text-slate-600"
+            )}
+          >
+            {template.visibility === "public" ? "Public" : "Hidden"}
+          </span>
+          <span className="text-slate-500">Published {formatDateTime(template.createdAt)}</span>
+          {showManagementMeta && (
+            <span className="text-slate-500">Updated {formatDateTime(template.updatedAt)}</span>
+          )}
+        </div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
           <span className="min-w-0 truncate">By {template.creator?.name || "Creator"}</span>
           <span>{TEMPLATE_TEXT.usedCount(template.useCount || 0)}</span>
@@ -113,7 +113,10 @@ export default function TemplateCard({
   );
 }
 
-function formatDate(value) {
+function formatDateTime(value) {
   if (!value) return "recently";
-  return new Date(value).toLocaleDateString();
+  return new Date(value).toLocaleString([], {
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
 }

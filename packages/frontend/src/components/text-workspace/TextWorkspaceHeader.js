@@ -43,6 +43,7 @@ export default function TextWorkspaceHeader({
   isSaving,
   onSave,
   project,
+  templateHistoryOptions = [],
   templateInitialValues,
   statusLabel
 }) {
@@ -308,6 +309,7 @@ export default function TextWorkspaceHeader({
       {isPublishOpen && (
         <TemplateFormModal
           error={null}
+          historyOptions={templateHistoryOptions}
           initialValues={getTemplateInitialValues(project, templateInitialValues)}
           isSubmitting={isPublishing}
           onClose={() => setIsPublishOpen(false)}

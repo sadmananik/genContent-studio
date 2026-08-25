@@ -140,6 +140,18 @@ export default function EditorScreen() {
       })),
     [responses]
   );
+  const templateHistoryOptions = useMemo(
+    () =>
+      responses.map((response) => ({
+        id: response.id,
+        label: `${response.promptPreview || getPromptPreview(response.prompt)} • ${
+          response.timestamp
+        }`,
+        prompt: response.prompt,
+        content: response.response
+      })),
+    [responses]
+  );
   const selectedResponse =
     responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
   const canEditProject = project.canEdit !== false && requestedAccess !== EDITOR_ACCESS_QUERY.VIEW;
@@ -826,6 +838,7 @@ export default function EditorScreen() {
         onNotify={showNotification}
         onSave={handleSave}
         project={project}
+        templateHistoryOptions={templateHistoryOptions}
         statusLabel={statusLabel}
         templateInitialValues={{
           projectType: API_PROJECT_TYPES.TEXT,

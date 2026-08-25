@@ -4,7 +4,7 @@ const Project = require("../models/Project");
 const Template = require("../models/Template");
 const TemplatePreference = require("../models/TemplatePreference");
 const TextContent = require("../models/TextContent");
-const { PROJECT_TYPE_VALUES, PROJECT_TYPES } = require("../constants/projects");
+const { PROJECT_ROLES, PROJECT_TYPE_VALUES, PROJECT_TYPES } = require("../constants/projects");
 const {
   TEMPLATE_MESSAGES,
   TEMPLATE_VISIBILITY,
@@ -272,7 +272,7 @@ const useTemplate = asyncHandler(async (req, res) => {
   res.status(201).json({
     project: {
       ...project.toObject(),
-      currentUserRole: "owner",
+      currentUserRole: PROJECT_ROLES.OWNER,
       accessLevel: "editor",
       canEdit: true,
       canManageSharing: true,

@@ -60,6 +60,16 @@ export default function ImageEditorScreen() {
     timestamp: response.timestamp,
     favourite: response.favourite
   }));
+  const templateHistoryOptions = useMemo(
+    () =>
+      responses.map((response) => ({
+        id: response.id,
+        label: `${response.prompt} • ${response.timestamp}`,
+        prompt: response.prompt,
+        content: response.response
+      })),
+    [responses]
+  );
   const invitedUsers = useMemo(() => {
     const usersByEmail = new Map();
 
@@ -684,6 +694,7 @@ export default function ImageEditorScreen() {
         onNotify={showNotification}
         onSave={handleHeaderSave}
         project={project}
+        templateHistoryOptions={templateHistoryOptions}
         statusLabel={statusLabel}
         templateInitialValues={{
           projectType: API_PROJECT_TYPES.IMAGE,
