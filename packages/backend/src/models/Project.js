@@ -52,7 +52,27 @@ const projectSchema = new mongoose.Schema(
           default: ACCESS_LEVELS.EDITOR
         }
       }
-    ]
+    ],
+    sourceTemplate: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Template",
+      default: null
+    },
+    starterPrompt: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    tone: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    style: {
+      type: String,
+      trim: true,
+      default: ""
+    }
   },
   { timestamps: true }
 );
