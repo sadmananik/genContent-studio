@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
@@ -36,7 +37,7 @@ export default function ForgotPasswordScreen() {
         <h2>Reset password</h2>
         <p>Enter your account email and we&apos;ll send you a secure reset link.</p>
         <label>
-          <span>✉</span>
+          <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
           <input
             autoComplete="email"
             name="email"

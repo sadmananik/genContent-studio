@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AuthVisual from "../common/AuthVisual";
 import Brand from "../common/Brand";
 import Button from "../common/Button";
 import PasswordField from "../common/PasswordField";
@@ -56,7 +58,7 @@ export default function LoginScreen() {
         <h2>Welcome back!</h2>
         <p>Sign in to continue to your account</p>
         <label>
-          <span>✉</span>
+          <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
           <input
             autoComplete="email"
             name="email"
@@ -96,18 +98,7 @@ export default function LoginScreen() {
           Don&apos;t have an account? <Link href={ROUTES.REGISTER}>Sign up</Link>
         </p>
       </form>
-      <div className="robot-scene" aria-hidden="true">
-        <div className="chat-bubble">•••</div>
-        <div className="robot">
-          <span className="antenna left" />
-          <span className="antenna right" />
-          <div className="robot-head">
-            <i />
-            <i />
-          </div>
-          <div className="robot-body" />
-        </div>
-      </div>
+      <AuthVisual />
     </section>
   );
 }

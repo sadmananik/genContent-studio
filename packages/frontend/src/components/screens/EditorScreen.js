@@ -13,7 +13,16 @@ import TipTapEditor from "../text-workspace/TipTapEditor";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
-import { mockPromptActions, mockTextProject } from "../text-workspace/mockTextWorkspaceData";
+import { textPromptActions } from "../text-workspace/promptActions";
+
+const defaultTextProject = {
+  id: "new-text-project",
+  title: "Untitled Text Project",
+  category: "Text Project",
+  type: "Text Project",
+  lastUpdated: "Not saved yet",
+  content: ""
+};
 
 export default function EditorScreen() {
   const searchParams = useSearchParams();
@@ -23,7 +32,7 @@ export default function EditorScreen() {
     return <ImageEditorScreen />;
   }
 
-  const projectId = searchParams.get("projectId") || mockTextProject.id;
+  const projectId = searchParams.get("projectId") || defaultTextProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const aiState = useAppStore((state) => state.aiState);
   const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
@@ -37,10 +46,10 @@ export default function EditorScreen() {
   const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
   const updateAiResponse = useAppStore((state) => state.updateAiResponse);
   const [editor, setEditor] = useState(null);
-  const [project, setProject] = useState(mockTextProject);
+  const [project, setProject] = useState(defaultTextProject);
   const [editorContent, setEditorContent] = useState({
-    html: isRealProject ? "" : mockTextProject.content,
-    text: isRealProject ? "" : stripHtml(mockTextProject.content)
+    html: defaultTextProject.content,
+    text: stripHtml(defaultTextProject.content)
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -72,7 +81,7 @@ export default function EditorScreen() {
     isSaving,
     lastSavedAt,
     saveError,
-    fallback: project.lastUpdated || mockTextProject.lastUpdated
+    fallback: project.lastUpdated || defaultTextProject.lastUpdated
   });
   const history = useMemo(
     () =>
@@ -640,7 +649,7 @@ export default function EditorScreen() {
 
           <aside className="grid min-w-0 content-start gap-5">
             <AIPromptPanel
-              actions={mockPromptActions}
+              actions={textPromptActions}
               error={aiState.error}
               isGenerating={isGenerating}
               onGenerate={handleGenerate}
@@ -707,14 +716,14 @@ export default function EditorScreen() {
 
 function normalizeProject(project) {
   return {
-    ...mockTextProject,
+    ...defaultTextProject,
     id: project._id || project.id,
-    title: project.title || mockTextProject.title,
-    category: project.category || mockTextProject.category,
+    title: project.title || defaultTextProject.title,
+    category: project.category || defaultTextProject.category,
     type: "Text Project",
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
-      : mockTextProject.lastUpdated,
+      : defaultTextProject.lastUpdated,
     collaborators: project.collaborators || []
   };
 }

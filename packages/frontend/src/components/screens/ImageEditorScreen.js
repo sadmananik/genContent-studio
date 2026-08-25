@@ -10,7 +10,7 @@ import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import FabricImageEditor from "../image-workspace/FabricImageEditor";
 import ImageResponseCard from "../image-workspace/ImageResponseCard";
 import { mockImageProject } from "../image-workspace/mockImageWorkspaceData";
-import { mockPromptActions } from "../text-workspace/mockTextWorkspaceData";
+import { textPromptActions } from "../text-workspace/promptActions";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
 
@@ -510,7 +510,7 @@ export default function ImageEditorScreen() {
 
           <aside className="grid min-w-0 content-start gap-5">
             <AIPromptPanel
-              actions={mockPromptActions}
+              actions={textPromptActions}
               isGenerating={isGenerating}
               onGenerate={handleGenerate}
               onPromptChange={setPrompt}
