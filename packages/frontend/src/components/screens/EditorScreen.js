@@ -94,6 +94,7 @@ export default function EditorScreen() {
   const [responses, setResponses] = useState([]);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
+  const [pendingEditorActionCopy, setPendingEditorActionCopy] = useState(null);
   const [recentlyInsertedResponseId, setRecentlyInsertedResponseId] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
@@ -117,7 +118,7 @@ export default function EditorScreen() {
     () =>
       responses.map((response) => ({
         id: response.id,
-        prompt: response.prompt,
+        prompt: response.promptPreview || getPromptPreview(response.prompt),
         timestamp: response.timestamp,
         favourite: response.favourite,
         type: "response"
@@ -277,6 +278,7 @@ export default function EditorScreen() {
       const response = {
         id: responseId,
         prompt: trimmedPrompt,
+        promptPreview: getPromptPreview(trimmedPrompt),
         response: generatedText,
         timestamp: "Just now",
         favourite: false
@@ -459,7 +461,13 @@ export default function EditorScreen() {
       return;
     }
 
-    if (queueUnsavedAction(() => insertResponse(response))) {
+    if (
+      queueUnsavedAction(() => insertResponse(response), {
+        description:
+          "Your current editor content has unsaved changes. Save this draft before inserting the AI response?",
+        title: "Save changes before inserting?"
+      })
+    ) {
       return;
     }
 
@@ -603,12 +611,13 @@ export default function EditorScreen() {
     }
   }
 
-  function queueUnsavedAction(action) {
+  function queueUnsavedAction(action, copy = {}) {
     if (!hasUnsavedChanges) {
       return false;
     }
 
     setPendingEditorAction(() => action);
+    setPendingEditorActionCopy(copy);
     return true;
   }
 
@@ -622,6 +631,7 @@ export default function EditorScreen() {
       setLastSavedAt(new Date());
       pendingEditorAction?.();
       setPendingEditorAction(null);
+      setPendingEditorActionCopy(null);
       showNotification("Saved", "Draft saved before switching.", TOAST_TYPES.SUCCESS);
     } catch (error) {
       setSaveError(error.message || "Draft could not be saved.");
@@ -754,10 +764,16 @@ export default function EditorScreen() {
         <ConfirmDialog
           cancelLabel="Stay Here"
           confirmLabel="Save and Continue"
-          description="Your current editor content has unsaved changes. Save this draft before loading another response?"
-          onCancel={() => setPendingEditorAction(null)}
+          description={
+            pendingEditorActionCopy?.description ||
+            "Your current editor content has unsaved changes. Save this draft before continuing?"
+          }
+          onCancel={() => {
+            setPendingEditorAction(null);
+            setPendingEditorActionCopy(null);
+          }}
           onConfirm={handleConfirmPendingAction}
-          title="Save changes before switching?"
+          title={pendingEditorActionCopy?.title || "Save changes before continuing?"}
         />
       )}
       <ToastNotification
@@ -791,10 +807,23 @@ function formatChatAsResponse(chat) {
     id: chat._id || chat.id,
     sourceId: chat._id || chat.id,
     prompt: chat.prompt,
+    promptPreview: getPromptPreview(chat.prompt),
     response: chat.response,
     timestamp: chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "Saved chat",
     favourite: Boolean(chat.isFavourite)
   };
+}
+
+function getPromptPreview(value, maxLength = 72) {
+  const compactPrompt = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (compactPrompt.length <= maxLength) {
+    return compactPrompt;
+  }
+
+  return `${compactPrompt.slice(0, maxLength - 1).trim()}...`;
 }
 
 function countWords(value) {

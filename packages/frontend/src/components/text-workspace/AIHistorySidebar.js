@@ -83,7 +83,7 @@ export default function AIHistorySidebar({
                         size={16}
                       />
                     </button>
-                    <span>{item.prompt}</span>
+                    <span className="line-clamp-2 min-w-0 break-words">{item.prompt}</span>
                   </span>
                   <span className="mt-1 block text-xs text-slate-500">{item.timestamp}</span>
                 </button>
