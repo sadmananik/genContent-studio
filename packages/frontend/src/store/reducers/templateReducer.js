@@ -2,11 +2,13 @@ import { apiRequest } from "../../lib/apiClient";
 
 const initialTemplateState = {
   templates: [],
+  favoriteTemplates: [],
   myTemplates: [],
   recentTemplates: [],
   selectedTemplate: null,
   tagSuggestions: [],
   loading: false,
+  favoriteLoading: false,
   myLoading: false,
   error: null
 };
@@ -49,6 +51,26 @@ export function createTemplateReducer(set) {
         return myTemplates;
       } catch (error) {
         setTemplateError(set, error, "myLoading");
+        throw error;
+      }
+    },
+
+    fetchFavoriteTemplates: async () => {
+      setTemplateLoading(set, "favoriteLoading", true);
+
+      try {
+        const favoriteTemplates = await apiRequest("/api/templates/favorites");
+        set((state) => ({
+          templateState: {
+            ...state.templateState,
+            favoriteTemplates,
+            favoriteLoading: false,
+            error: null
+          }
+        }));
+        return favoriteTemplates;
+      } catch (error) {
+        setTemplateError(set, error, "favoriteLoading");
         throw error;
       }
     },
@@ -132,6 +154,7 @@ export function createTemplateReducer(set) {
           ...state.templateState,
           templates: removeTemplate(state.templateState.templates, templateId),
           myTemplates: removeTemplate(state.templateState.myTemplates, templateId),
+          favoriteTemplates: removeTemplate(state.templateState.favoriteTemplates, templateId),
           recentTemplates: removeTemplate(state.templateState.recentTemplates, templateId),
           selectedTemplate:
             getTemplateId(state.templateState.selectedTemplate) === templateId
@@ -183,14 +206,24 @@ export function createTemplateReducer(set) {
       set((state) => {
         const template = findTemplate(state.templateState, templateId);
 
-        return template
-          ? {
-              templateState: replaceTemplateEverywhere(state.templateState, {
-                ...template,
-                isFavorite: shouldFavorite
-              })
-            }
-          : {};
+        if (!template) {
+          return {};
+        }
+
+        const updatedTemplate = { ...template, isFavorite: shouldFavorite };
+        const nextTemplateState = replaceTemplateEverywhere(state.templateState, updatedTemplate);
+
+        return {
+          templateState: {
+            ...nextTemplateState,
+            favoriteTemplates: shouldFavorite
+              ? [
+                  updatedTemplate,
+                  ...removeTemplate(state.templateState.favoriteTemplates, templateId)
+                ]
+              : removeTemplate(state.templateState.favoriteTemplates, templateId)
+          }
+        };
       });
     },
 
@@ -223,6 +256,9 @@ function replaceTemplateEverywhere(state, template) {
     ...state,
     templates: replace(state.templates, true),
     myTemplates: replace(state.myTemplates),
+    favoriteTemplates: state.favoriteTemplates.map((item) =>
+      getTemplateId(item) === getTemplateId(template) ? { ...template, isFavorite: true } : item
+    ),
     recentTemplates: state.recentTemplates.map((item) =>
       getTemplateId(item) === getTemplateId(template) ? { ...item, ...template } : item
     ),
@@ -235,9 +271,12 @@ function replaceTemplateEverywhere(state, template) {
 }
 
 function findTemplate(state, templateId) {
-  return [...state.templates, ...state.myTemplates, ...state.recentTemplates].find(
-    (item) => getTemplateId(item) === templateId
-  );
+  return [
+    ...state.templates,
+    ...state.myTemplates,
+    ...state.favoriteTemplates,
+    ...state.recentTemplates
+  ].find((item) => getTemplateId(item) === templateId);
 }
 
 function removeTemplate(items, templateId) {

@@ -74,6 +74,25 @@ const listMyTemplates = asyncHandler(async (req, res) => {
   res.json(templates.map((template) => serializeTemplate(template, favoriteIds, req.user.id)));
 });
 
+const listFavoriteTemplates = asyncHandler(async (req, res) => {
+  const preference = await TemplatePreference.findOne({ user: req.user.id }).select("favorites");
+  const favoriteIds = (preference?.favorites || []).map(String);
+  const templates = favoriteIds.length
+    ? await Template.find({
+        _id: { $in: favoriteIds },
+        $or: [{ visibility: TEMPLATE_VISIBILITY.PUBLIC }, { creator: req.user.id }]
+      }).populate("creator", "name")
+    : [];
+  const templatesById = new Map(templates.map((template) => [String(template._id), template]));
+
+  res.json(
+    favoriteIds
+      .map((templateId) => templatesById.get(templateId))
+      .filter(Boolean)
+      .map((template) => serializeTemplate(template, new Set(favoriteIds), req.user.id))
+  );
+});
+
 const listRecentTemplates = asyncHandler(async (req, res) => {
   const preference = await TemplatePreference.findOne({ user: req.user.id })
     .populate({ path: "recentlyUsed.template", populate: { path: "creator", select: "name" } })
@@ -438,6 +457,7 @@ module.exports = {
   getTemplateById,
   listTemplateTags,
   listMyTemplates,
+  listFavoriteTemplates,
   listRecentTemplates,
   listTemplates,
   publishProjectTemplate,

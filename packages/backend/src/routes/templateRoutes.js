@@ -3,6 +3,7 @@ const {
   deleteTemplate,
   favoriteTemplate,
   getTemplateById,
+  listFavoriteTemplates,
   listMyTemplates,
   listRecentTemplates,
   listTemplateTags,
@@ -21,6 +22,7 @@ const router = express.Router();
 router.use(requireUser);
 router.get("/", listTemplates);
 router.get("/mine", listMyTemplates);
+router.get("/favorites", listFavoriteTemplates);
 router.get("/recent", listRecentTemplates);
 router.get("/tags", listTemplateTags);
 router.post("/projects/:projectId", validateObjectId("projectId"), publishProjectTemplate);
