@@ -1,5 +1,5 @@
-import PlaceholderPage from "../../../components/common/PlaceholderPage";
+import SharedWithMeScreen from "../../../components/screens/SharedWithMeScreen";
 
 export default function SharedPage() {
-  return <PlaceholderPage title="Shared with Me" />;
+  return <SharedWithMeScreen />;
 }

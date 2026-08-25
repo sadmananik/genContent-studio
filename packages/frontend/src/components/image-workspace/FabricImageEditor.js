@@ -7,7 +7,12 @@ import { demoImageSvg } from "./mockImageWorkspaceData";
 
 const canvasSize = { height: 680, width: 1080 };
 
-export default function FabricImageEditor({ generationRequest, onDirtyChange, onReady }) {
+export default function FabricImageEditor({
+  editable = true,
+  generationRequest,
+  onDirtyChange,
+  onReady
+}) {
   const canvasElementRef = useRef(null);
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
@@ -32,7 +37,7 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
         height: canvasSize.height,
         preserveObjectStacking: true,
         renderOnAddRemove: true,
-        selection: true,
+        selection: editable,
         width: canvasSize.width
       });
 
@@ -112,11 +117,27 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
     addGeneratedDemoImage(generationRequest.prompt);
   }, [generationRequest]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
+    canvas.selection = editable;
+    canvas.forEachObject((object) => {
+      object.selectable = editable;
+      object.evented = editable;
+    });
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+  }, [editable]);
+
   function addText() {
     const fabric = fabricRef.current;
     const canvas = canvasRef.current;
 
-    if (!fabric || !canvas) {
+    if (!fabric || !canvas || !editable) {
       return;
     }
 
@@ -139,7 +160,7 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
     const fabric = fabricRef.current;
     const canvas = canvasRef.current;
 
-    if (!fabric || !canvas) {
+    if (!fabric || !canvas || !editable) {
       return;
     }
 
@@ -174,7 +195,7 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
     const fabric = fabricRef.current;
     const canvas = canvasRef.current;
 
-    if (!fabric || !canvas) {
+    if (!fabric || !canvas || !editable) {
       return;
     }
 
@@ -222,7 +243,7 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
 
     setFillColor(nextColor);
 
-    if (!activeObject) {
+    if (!activeObject || !editable) {
       return;
     }
 
@@ -237,7 +258,7 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
 
     setOpacity(nextOpacity);
 
-    if (!activeObject) {
+    if (!activeObject || !editable) {
       return;
     }
 
@@ -250,6 +271,10 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
     const canvas = canvasRef.current;
     const activeObjects = canvas?.getActiveObjects() || [];
 
+    if (!editable) {
+      return;
+    }
+
     activeObjects.forEach((object) => canvas.remove(object));
     canvas?.discardActiveObject();
     canvas?.requestRenderAll();
@@ -259,7 +284,7 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
     const canvas = canvasRef.current;
     const activeObject = canvas?.getActiveObject();
 
-    if (!canvas || !activeObject) {
+    if (!canvas || !activeObject || !editable) {
       return;
     }
 
@@ -276,15 +301,25 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
   return (
     <section className="grid min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-3">
-        <Button onClick={addText} type="button" variant="secondary">
+        <Button disabled={!editable} onClick={addText} type="button" variant="secondary">
           <Type aria-hidden="true" size={17} />
           Text
         </Button>
-        <Button onClick={() => addShape("rect")} type="button" variant="secondary">
+        <Button
+          disabled={!editable}
+          onClick={() => addShape("rect")}
+          type="button"
+          variant="secondary"
+        >
           <Square aria-hidden="true" size={17} />
           Rect
         </Button>
-        <Button onClick={() => addShape("circle")} type="button" variant="secondary">
+        <Button
+          disabled={!editable}
+          onClick={() => addShape("circle")}
+          type="button"
+          variant="secondary"
+        >
           <Circle aria-hidden="true" size={17} />
           Circle
         </Button>
@@ -293,6 +328,7 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
           <input
             aria-label="Selected object color"
             className="h-6 w-8 cursor-pointer border-0 bg-transparent p-0"
+            disabled={!editable}
             onChange={(event) => applyFillColor(event.target.value)}
             type="color"
             value={fillColor}
@@ -303,6 +339,7 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
           <input
             aria-label="Selected object opacity"
             className="w-24 accent-violet-600"
+            disabled={!editable}
             max="100"
             min="10"
             onChange={(event) => applyOpacity(Number(event.target.value))}
@@ -310,15 +347,25 @@ export default function FabricImageEditor({ generationRequest, onDirtyChange, on
             value={opacity}
           />
         </label>
-        <Button onClick={() => moveLayer("front")} type="button" variant="secondary">
+        <Button
+          disabled={!editable}
+          onClick={() => moveLayer("front")}
+          type="button"
+          variant="secondary"
+        >
           <BringToFront aria-hidden="true" size={17} />
           Front
         </Button>
-        <Button onClick={() => moveLayer("back")} type="button" variant="secondary">
+        <Button
+          disabled={!editable}
+          onClick={() => moveLayer("back")}
+          type="button"
+          variant="secondary"
+        >
           <ImagePlus aria-hidden="true" size={17} />
           Back
         </Button>
-        <Button onClick={deleteSelected} type="button" variant="ghost">
+        <Button disabled={!editable} onClick={deleteSelected} type="button" variant="ghost">
           <Trash2 aria-hidden="true" size={17} />
           Delete
         </Button>

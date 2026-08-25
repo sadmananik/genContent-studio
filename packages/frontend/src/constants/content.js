@@ -23,3 +23,48 @@ export const PROJECT_TYPES = {
 };
 
 export const PROJECT_TYPE_OPTIONS = Object.values(PROJECT_TYPES);
+
+export const API_PROJECT_TYPES = {
+  IMAGE: "image",
+  TEXT: "text"
+};
+
+export const ACCESS_LEVELS = {
+  EDITOR: "editor",
+  VIEWER: "viewer"
+};
+
+export const ACCESS_LEVEL_LABELS = {
+  [ACCESS_LEVELS.EDITOR]: "Editor",
+  [ACCESS_LEVELS.VIEWER]: "View only"
+};
+
+export const PROJECT_ROLES = {
+  COLLABORATOR: "collaborator",
+  OWNER: "owner"
+};
+
+export const EDITOR_ACCESS_QUERY = {
+  VIEW: "view"
+};
+
+export const AI_CONTENT_TYPES = {
+  IMAGE: "image",
+  OTHER: "other",
+  TEXT: "text"
+};
+
+export const PERMISSION_MESSAGES = {
+  AI_ACTIONS_DISABLED: "AI actions are disabled for view-only projects.",
+  AI_GENERATION_DISABLED: "AI generation is disabled for view-only projects.",
+  AI_HISTORY_CHANGES_DISABLED: "AI history changes are disabled for view-only projects.",
+  AI_HISTORY_EDIT_DISABLED: "AI history editing is disabled for view-only projects.",
+  CANVAS_EDIT_DISABLED: "Canvas editing is disabled for view-only projects.",
+  SAVE_DISABLED: "Saving is disabled for view-only projects.",
+  SHARING_OWNER_ONLY: "Only project owners can manage sharing.",
+  VIEW_ONLY_TITLE: "View only"
+};
+
+export const API_ERROR_MESSAGES = {
+  TEXT_CONTENT_NOT_FOUND: "Text content not found"
+};

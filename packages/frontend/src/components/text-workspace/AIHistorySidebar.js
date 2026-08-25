@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Star, Trash2 } from "lucide-react";
 import EmptyAIHistory from "./EmptyAIHistory";
+import { AI_HISTORY_TEXT } from "../../constants/notifications";
 
 export default function AIHistorySidebar({
   history,
@@ -34,7 +35,7 @@ export default function AIHistorySidebar({
         <div className="grid gap-2 p-3">
           {isLoading ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-              Loading AI history...
+              {AI_HISTORY_TEXT.LOADING}
             </div>
           ) : error ? (
             <div

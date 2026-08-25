@@ -8,6 +8,7 @@ import { FontSize, TextStyle } from "@tiptap/extension-text-style";
 import { useEffect, useRef } from "react";
 
 export default function TipTapEditor({
+  editable = true,
   editorKey,
   initialContent,
   onContentChange,
@@ -25,6 +26,7 @@ export default function TipTapEditor({
       })
     ],
     content: initialContent,
+    editable,
     editorProps: {
       attributes: {
         class:
@@ -43,6 +45,12 @@ export default function TipTapEditor({
   useEffect(() => {
     onEditorReady(editor);
   }, [editor, onEditorReady]);
+
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable);
+    }
+  }, [editable, editor]);
 
   useEffect(() => {
     if (editor && editorKey && appliedEditorKeyRef.current !== editorKey) {

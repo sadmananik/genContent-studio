@@ -3,6 +3,7 @@ import Button from "../common/Button";
 
 export default function AIPromptPanel({
   actions,
+  disabled = false,
   error,
   isGenerating,
   onGenerate,
@@ -20,7 +21,7 @@ export default function AIPromptPanel({
 
       <textarea
         className="min-h-32 w-full resize-y rounded-lg border border-slate-200 p-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-        disabled={isGenerating}
+        disabled={isGenerating || disabled}
         maxLength={1200}
         onChange={(event) => onPromptChange(event.target.value)}
         onFocus={onPromptFocus}
@@ -42,7 +43,7 @@ export default function AIPromptPanel({
           {actions.map((action) => (
             <button
               className="min-h-8 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:shadow-[0_6px_14px_rgba(101,69,246,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-slate-200 disabled:hover:bg-slate-50 disabled:hover:text-slate-700 disabled:hover:shadow-none"
-              disabled={isGenerating}
+              disabled={isGenerating || disabled}
               key={action}
               onClick={() => onQuickAction(action)}
               type="button"
@@ -52,7 +53,7 @@ export default function AIPromptPanel({
           ))}
         </div>
         <Button
-          disabled={isGenerating || !String(prompt || "").trim()}
+          disabled={isGenerating || disabled || !String(prompt || "").trim()}
           onClick={() => onGenerate()}
           type="button"
         >

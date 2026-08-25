@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { AI_CONTENT_TYPE_VALUES, AI_CONTENT_TYPES } = require("../constants/projects");
 
 const aiChatSchema = new mongoose.Schema(
   {
@@ -23,8 +24,8 @@ const aiChatSchema = new mongoose.Schema(
     },
     contentType: {
       type: String,
-      enum: ["text", "image", "other"],
-      default: "text"
+      enum: AI_CONTENT_TYPE_VALUES,
+      default: AI_CONTENT_TYPES.TEXT
     },
     isFavourite: {
       type: Boolean,

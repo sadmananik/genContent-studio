@@ -1,15 +1,12 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const User = require("../models/User");
+const { AUTH_MESSAGES } = require("../constants/auth");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const { sendEmailVerificationEmail, sendPasswordResetEmail } = require("../utils/email");
 const { signAuthToken } = require("../utils/token");
 
-const PASSWORD_RESET_RESPONSE =
-  "If an account exists for this email, password reset instructions have been sent.";
-const VERIFICATION_EMAIL_RESPONSE =
-  "If an unverified account exists for this email, verification instructions have been sent.";
 const DEFAULT_AUTH_LINK_EXPIRES_IN_MINUTES = 5;
 
 const register = asyncHandler(async (req, res) => {
@@ -20,17 +17,17 @@ const register = asyncHandler(async (req, res) => {
   const normalizedName = String(name || "").trim();
 
   if (!normalizedName || !normalizedEmail || !password) {
-    throw httpError(400, "Name, email, and password are required");
+    throw httpError(400, AUTH_MESSAGES.REGISTER_REQUIRED_FIELDS);
   }
 
   if (password.length < 8) {
-    throw httpError(400, "Password must be at least 8 characters");
+    throw httpError(400, AUTH_MESSAGES.PASSWORD_MIN_LENGTH);
   }
 
   const existingUser = await User.findOne({ email: normalizedEmail }).select("_id");
 
   if (existingUser) {
-    throw httpError(409, "An account with this email already exists");
+    throw httpError(409, AUTH_MESSAGES.REGISTER_DUPLICATE_EMAIL);
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -57,7 +54,7 @@ const register = asyncHandler(async (req, res) => {
   }
 
   res.status(201).json({
-    message: "Account created. Check your email to verify your account before signing in.",
+    message: AUTH_MESSAGES.EMAIL_VERIFICATION_SENT,
     user: serializeUser(user)
   });
 });
@@ -66,17 +63,17 @@ const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    throw httpError(400, "Email and password are required");
+    throw httpError(400, AUTH_MESSAGES.LOGIN_REQUIRED_FIELDS);
   }
 
   const user = await User.findOne({ email: String(email).trim().toLowerCase() });
 
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    throw httpError(401, "Invalid email or password");
+    throw httpError(401, AUTH_MESSAGES.INVALID_CREDENTIALS);
   }
 
   if (user.emailVerified === false) {
-    throw httpError(403, "Please verify your email before signing in.");
+    throw httpError(403, AUTH_MESSAGES.UNVERIFIED_LOGIN);
   }
 
   res.json({
@@ -89,7 +86,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.body;
 
   if (!token) {
-    throw httpError(400, "Verification token is required");
+    throw httpError(400, AUTH_MESSAGES.EMAIL_VERIFICATION_REQUIRED);
   }
 
   const user = await User.findOneAndUpdate(
@@ -105,10 +102,10 @@ const verifyEmail = asyncHandler(async (req, res) => {
   );
 
   if (!user) {
-    throw httpError(400, "This verification link is invalid or has expired");
+    throw httpError(400, AUTH_MESSAGES.EMAIL_VERIFICATION_INVALID);
   }
 
-  res.json({ message: "Email verified successfully. You can now sign in." });
+  res.json({ message: AUTH_MESSAGES.EMAIL_VERIFICATION_SUCCESS });
 });
 
 const resendVerificationEmail = asyncHandler(async (req, res) => {
@@ -117,7 +114,7 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
     .toLowerCase();
 
   if (!email) {
-    throw httpError(400, "Email is required");
+    throw httpError(400, AUTH_MESSAGES.RESEND_EMAIL_REQUIRED);
   }
 
   const user = await User.findOne({ email }).select(
@@ -145,7 +142,7 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
     }
   }
 
-  res.json({ message: VERIFICATION_EMAIL_RESPONSE });
+  res.json({ message: AUTH_MESSAGES.EMAIL_VERIFICATION_GENERIC_RESPONSE });
 });
 
 const requestPasswordReset = asyncHandler(async (req, res) => {
@@ -154,7 +151,7 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
     .toLowerCase();
 
   if (!email) {
-    throw httpError(400, "Email is required");
+    throw httpError(400, AUTH_MESSAGES.RESEND_EMAIL_REQUIRED);
   }
 
   const user = await User.findOne({ email });
@@ -182,18 +179,18 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
     }
   }
 
-  res.json({ message: PASSWORD_RESET_RESPONSE });
+  res.json({ message: AUTH_MESSAGES.PASSWORD_RESET_GENERIC_RESPONSE });
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
   const { token, password } = req.body;
 
   if (!token || !password) {
-    throw httpError(400, "Reset token and new password are required");
+    throw httpError(400, AUTH_MESSAGES.PASSWORD_RESET_REQUIRED_FIELDS);
   }
 
   if (password.length < 8) {
-    throw httpError(400, "Password must be at least 8 characters");
+    throw httpError(400, AUTH_MESSAGES.PASSWORD_MIN_LENGTH);
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -210,10 +207,10 @@ const resetPassword = asyncHandler(async (req, res) => {
   );
 
   if (!user) {
-    throw httpError(400, "This password reset link is invalid or has expired");
+    throw httpError(400, AUTH_MESSAGES.PASSWORD_RESET_INVALID);
   }
 
-  res.json({ message: "Password reset successfully. You can now sign in." });
+  res.json({ message: AUTH_MESSAGES.PASSWORD_RESET_SUCCESS });
 });
 
 function createAuthLinkToken() {

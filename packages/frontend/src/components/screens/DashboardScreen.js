@@ -13,7 +13,12 @@ import {
 } from "../common/Cards";
 import { DASHBOARD_TEXT, SUMMARY_CARD_LABELS } from "../../constants/dashboard";
 import { ROUTES } from "../../constants/navigation";
-import { CONTENT_CATEGORY_SUMMARY_LABELS, PROJECT_TYPES } from "../../constants/content";
+import {
+  API_PROJECT_TYPES,
+  CONTENT_CATEGORY_SUMMARY_LABELS,
+  PROJECT_TYPES
+} from "../../constants/content";
+import { COMMON_UI_TEXT, DASHBOARD_ALERTS, PROJECT_ALERTS } from "../../constants/notifications";
 import { useAppStore } from "../../store";
 
 export default function DashboardScreen() {
@@ -71,11 +76,11 @@ export default function DashboardScreen() {
           />
           {projectState.loading && !hasProjects ? (
             <EmptyState
-              title="Loading projects..."
-              description="Your project workspace is getting everything ready."
+              title={PROJECT_ALERTS.LOADING_TITLE}
+              description={DASHBOARD_ALERTS.PROJECTS_LOADING_DESCRIPTION}
             />
           ) : projectState.error && !hasProjects ? (
-            <EmptyState title="Projects could not load." description={projectState.error} />
+            <EmptyState title={PROJECT_ALERTS.LOAD_FAILED_TITLE} description={projectState.error} />
           ) : hasProjects ? (
             <div className="grid overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)] [&>*+*]:border-t [&>*+*]:border-slate-100">
               {projects.map((project) => (
@@ -104,7 +109,7 @@ function firstName(name = "") {
 }
 
 function formatProjectForDashboard(project) {
-  const type = project.type === "image" ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
+  const type = project.type === API_PROJECT_TYPES.IMAGE ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
 
   return {
     id: project._id || project.id,
@@ -124,8 +129,8 @@ function formatProjectForDashboard(project) {
 }
 
 function buildSummaryCards(projects) {
-  const textCount = projects.filter((project) => project.type === "text").length;
-  const imageCount = projects.filter((project) => project.type === "image").length;
+  const textCount = projects.filter((project) => project.type === API_PROJECT_TYPES.TEXT).length;
+  const imageCount = projects.filter((project) => project.type === API_PROJECT_TYPES.IMAGE).length;
   const sharedCount = projects.filter((project) => (project.collaborators || []).length > 0).length;
 
   return [
@@ -166,7 +171,7 @@ function buildCategoryCounts(projects) {
   const entries = Object.entries(counts);
 
   if (entries.length === 0) {
-    return [{ label: "No categories yet", count: 0 }];
+    return [{ label: DASHBOARD_ALERTS.NO_CATEGORIES_LABEL, count: 0 }];
   }
 
   return entries.map(([category, count]) => ({
@@ -178,21 +183,23 @@ function buildCategoryCounts(projects) {
 function getProjectWorkspaceHref(project) {
   const projectId = project._id || project.id;
   const workspace =
-    project.type === "image" || project.type === PROJECT_TYPES.IMAGE ? "image" : "text";
+    project.type === API_PROJECT_TYPES.IMAGE || project.type === PROJECT_TYPES.IMAGE
+      ? API_PROJECT_TYPES.IMAGE
+      : API_PROJECT_TYPES.TEXT;
 
   return `${ROUTES.EDITOR}?projectId=${projectId}&type=${workspace}`;
 }
 
 function formatUpdatedAt(value) {
   if (!value) {
-    return "Updated just now";
+    return COMMON_UI_TEXT.UPDATED_JUST_NOW;
   }
 
   const updatedAt = new Date(value);
   const diffInSeconds = Math.max(0, Math.floor((Date.now() - updatedAt.getTime()) / 1000));
 
   if (diffInSeconds < 60) {
-    return "Updated just now";
+    return COMMON_UI_TEXT.UPDATED_JUST_NOW;
   }
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);

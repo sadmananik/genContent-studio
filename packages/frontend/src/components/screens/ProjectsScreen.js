@@ -9,8 +9,9 @@ import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
-import { PROJECT_TYPES } from "../../constants/content";
+import { API_PROJECT_TYPES, PROJECT_TYPES } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
+import { COMMON_UI_TEXT, PROJECT_ALERTS } from "../../constants/notifications";
 import { useAppStore } from "../../store";
 
 export default function ProjectsScreen() {
@@ -57,23 +58,23 @@ export default function ProjectsScreen() {
         title: values.title,
         description: values.description,
         category: values.category,
-        type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+        type: values.type === PROJECT_TYPES.IMAGE ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT
       });
 
       setShowProjectForm(false);
       window.sessionStorage.setItem(
         "gencontent-pending-toast",
         JSON.stringify({
-          message: `"${project.title}" is ready.`,
-          title: "Project created",
+          message: PROJECT_ALERTS.createdMessage(project.title),
+          title: PROJECT_ALERTS.CREATED_TITLE,
           type: TOAST_TYPES.SUCCESS
         })
       );
       router.push(getProjectWorkspaceHref(formatProject(project)));
     } catch (error) {
       showNotification(
-        "Create failed",
-        error.message || "Project could not be created.",
+        PROJECT_ALERTS.CREATE_FAILED_TITLE,
+        error.message || PROJECT_ALERTS.CREATE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
     }
@@ -89,14 +90,18 @@ export default function ProjectsScreen() {
         title: values.title,
         description: values.description,
         category: values.category,
-        type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+        type: values.type === PROJECT_TYPES.IMAGE ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT
       });
-      showNotification("Project updated", `"${values.title}" was saved.`, TOAST_TYPES.SUCCESS);
+      showNotification(
+        PROJECT_ALERTS.UPDATED_TITLE,
+        PROJECT_ALERTS.updatedMessage(values.title),
+        TOAST_TYPES.SUCCESS
+      );
       setEditingProject(null);
     } catch (error) {
       showNotification(
-        "Update failed",
-        error.message || "Project could not be updated.",
+        PROJECT_ALERTS.UPDATE_FAILED_TITLE,
+        error.message || PROJECT_ALERTS.UPDATE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
     }
@@ -112,15 +117,15 @@ export default function ProjectsScreen() {
     try {
       await deleteProject(projectPendingDelete.id);
       showNotification(
-        "Project deleted",
-        `"${projectPendingDelete.title}" was deleted.`,
+        PROJECT_ALERTS.DELETED_TITLE,
+        PROJECT_ALERTS.deletedMessage(projectPendingDelete.title),
         TOAST_TYPES.SUCCESS
       );
       setProjectPendingDelete(null);
     } catch (error) {
       showNotification(
-        "Delete failed",
-        error.message || "Project could not be deleted.",
+        PROJECT_ALERTS.DELETE_FAILED_TITLE,
+        error.message || PROJECT_ALERTS.DELETE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
     } finally {
@@ -157,9 +162,12 @@ export default function ProjectsScreen() {
       <SectionHeader title="All Projects" />
 
       {projectState.loading && projects.length === 0 ? (
-        <EmptyState title="Loading projects..." description="Your saved workspaces are loading." />
+        <EmptyState
+          title={PROJECT_ALERTS.LOADING_TITLE}
+          description={PROJECT_ALERTS.LOADING_DESCRIPTION}
+        />
       ) : projectState.error && projects.length === 0 ? (
-        <EmptyState title="Projects could not load." description={projectState.error} />
+        <EmptyState title={PROJECT_ALERTS.LOAD_FAILED_TITLE} description={projectState.error} />
       ) : projects.length === 0 ? (
         <EmptyState
           title={DASHBOARD_TEXT.EMPTY_PROJECTS_TITLE}
@@ -282,7 +290,7 @@ export default function ProjectsScreen() {
           onClose={() => setEditingProject(null)}
           onSubmit={handleUpdateProject}
           submitLabel="Save Changes"
-          title="Edit Project"
+          title={PROJECT_ALERTS.EDIT_MODAL_TITLE}
         />
       )}
 
@@ -290,11 +298,11 @@ export default function ProjectsScreen() {
         <ConfirmDialog
           cancelLabel="Cancel"
           confirmLabel="Delete Project"
-          description={`Delete "${projectPendingDelete.title}"? This cannot be undone.`}
+          description={PROJECT_ALERTS.deleteConfirmDescription(projectPendingDelete.title)}
           isConfirming={deletingProjectId === projectPendingDelete.id}
           onCancel={() => setProjectPendingDelete(null)}
           onConfirm={handleDeleteProject}
-          title="Delete project?"
+          title={PROJECT_ALERTS.DELETE_CONFIRM_TITLE}
         />
       )}
       <ToastNotification
@@ -310,7 +318,7 @@ export default function ProjectsScreen() {
 }
 
 function formatProject(project) {
-  const type = project.type === "image" ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
+  const type = project.type === API_PROJECT_TYPES.IMAGE ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
 
   return {
     id: project._id || project.id,
@@ -325,19 +333,20 @@ function formatProject(project) {
 }
 
 function getProjectWorkspaceHref(project) {
-  const workspace = project.type === PROJECT_TYPES.IMAGE ? "image" : "text";
+  const workspace =
+    project.type === PROJECT_TYPES.IMAGE ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT;
   return `${ROUTES.EDITOR}?projectId=${project.id}&type=${workspace}`;
 }
 
 function formatUpdatedAt(value) {
   if (!value) {
-    return "Updated just now";
+    return COMMON_UI_TEXT.UPDATED_JUST_NOW;
   }
 
   const diffInSeconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
 
   if (diffInSeconds < 60) {
-    return "Updated just now";
+    return COMMON_UI_TEXT.UPDATED_JUST_NOW;
   }
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);
