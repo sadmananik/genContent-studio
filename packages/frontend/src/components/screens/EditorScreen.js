@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
@@ -98,6 +98,7 @@ export default function EditorScreen() {
   const [recentlyInsertedResponseId, setRecentlyInsertedResponseId] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
+  const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const savePayload = useMemo(
     () => ({
@@ -186,6 +187,7 @@ export default function EditorScreen() {
         }
 
         const html = typeof textContent.content === "string" ? textContent.content : "";
+        lastPersistedContentHtmlRef.current = normalizeEditorHtml(html);
 
         if (editor) {
           editor.commands.setContent(html, false);
@@ -201,6 +203,7 @@ export default function EditorScreen() {
         }
 
         if (error.message === "Text content not found") {
+          lastPersistedContentHtmlRef.current = "";
           setEditorContent({ html: "", text: "" });
           setHasUnsavedChanges(false);
 
@@ -361,7 +364,9 @@ export default function EditorScreen() {
 
   const handleEditorChange = useCallback((content) => {
     setEditorContent(content);
-    setHasUnsavedChanges(true);
+    setHasUnsavedChanges(
+      hasEditorContentChanged(content.html, lastPersistedContentHtmlRef.current)
+    );
     setSaveError(null);
   }, []);
 
@@ -379,6 +384,7 @@ export default function EditorScreen() {
 
     try {
       await saveCurrentDraft();
+      lastPersistedContentHtmlRef.current = normalizeEditorHtml(editorContent.html);
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
       showNotification(
@@ -612,7 +618,8 @@ export default function EditorScreen() {
   }
 
   function queueUnsavedAction(action, copy = {}) {
-    if (!hasUnsavedChanges) {
+    if (!hasEditorContentChanged(editorContent.html, lastPersistedContentHtmlRef.current)) {
+      setHasUnsavedChanges(false);
       return false;
     }
 
@@ -627,6 +634,7 @@ export default function EditorScreen() {
 
     try {
       await saveCurrentDraft();
+      lastPersistedContentHtmlRef.current = normalizeEditorHtml(editorContent.html);
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
       pendingEditorAction?.();
@@ -660,8 +668,10 @@ export default function EditorScreen() {
     const html = textToHtml(value);
 
     editor.chain().focus().insertContent(html).run();
-    setEditorContent({ html: editor.getHTML(), text: editor.getText() });
-    setHasUnsavedChanges(true);
+    const nextHtml = editor.getHTML();
+
+    setEditorContent({ html: nextHtml, text: editor.getText() });
+    setHasUnsavedChanges(hasEditorContentChanged(nextHtml, lastPersistedContentHtmlRef.current));
     setSaveError(null);
   }
 
@@ -829,6 +839,17 @@ function getPromptPreview(value, maxLength = 72) {
 function countWords(value) {
   const words = value.trim().match(/\S+/g);
   return words ? words.length : 0;
+}
+
+function hasEditorContentChanged(currentHtml, persistedHtml) {
+  return normalizeEditorHtml(currentHtml) !== normalizeEditorHtml(persistedHtml);
+}
+
+function normalizeEditorHtml(value) {
+  return String(value || "")
+    .replace(/<p>(?:\s|<br\s*\/?>|&nbsp;)*<\/p>/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function getSelectedEditorText(editor) {
