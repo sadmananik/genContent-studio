@@ -10,7 +10,7 @@ const PASSWORD_RESET_RESPONSE =
   "If an account exists for this email, password reset instructions have been sent.";
 const VERIFICATION_EMAIL_RESPONSE =
   "If an unverified account exists for this email, verification instructions have been sent.";
-const LINK_EXPIRES_IN_MINUTES = 5;
+const DEFAULT_AUTH_LINK_EXPIRES_IN_MINUTES = 5;
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, profile } = req.body;
@@ -41,7 +41,7 @@ const register = asyncHandler(async (req, res) => {
     passwordHash,
     emailVerified: false,
     emailVerificationTokenHash: hashAuthLinkToken(verificationToken),
-    emailVerificationExpiresAt: buildAuthLinkExpiry(),
+    emailVerificationExpiresAt: buildAuthLinkExpiry(getEmailVerificationExpiryMinutes()),
     profile
   });
 
@@ -49,6 +49,7 @@ const register = asyncHandler(async (req, res) => {
     await sendEmailVerificationEmail({
       email: user.email,
       name: user.name,
+      expiresInMinutes: getEmailVerificationExpiryMinutes(),
       verificationUrl: buildVerificationUrl(verificationToken)
     });
   } catch (error) {
@@ -126,13 +127,14 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
   if (user && user.emailVerified === false) {
     const verificationToken = createAuthLinkToken();
     user.emailVerificationTokenHash = hashAuthLinkToken(verificationToken);
-    user.emailVerificationExpiresAt = buildAuthLinkExpiry();
+    user.emailVerificationExpiresAt = buildAuthLinkExpiry(getEmailVerificationExpiryMinutes());
     await user.save();
 
     try {
       await sendEmailVerificationEmail({
         email: user.email,
         name: user.name,
+        expiresInMinutes: getEmailVerificationExpiryMinutes(),
         verificationUrl: buildVerificationUrl(verificationToken)
       });
     } catch (error) {
@@ -160,13 +162,18 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
   if (user) {
     const resetToken = createAuthLinkToken();
     user.passwordResetTokenHash = hashAuthLinkToken(resetToken);
-    user.passwordResetExpiresAt = buildAuthLinkExpiry();
+    user.passwordResetExpiresAt = buildAuthLinkExpiry(getPasswordResetExpiryMinutes());
     await user.save();
 
     const resetUrl = buildResetUrl(resetToken);
 
     try {
-      await sendPasswordResetEmail({ email: user.email, name: user.name, resetUrl });
+      await sendPasswordResetEmail({
+        email: user.email,
+        expiresInMinutes: getPasswordResetExpiryMinutes(),
+        name: user.name,
+        resetUrl
+      });
     } catch (error) {
       user.passwordResetTokenHash = undefined;
       user.passwordResetExpiresAt = undefined;
@@ -221,8 +228,26 @@ function hashResetToken(token) {
   return hashAuthLinkToken(token);
 }
 
-function buildAuthLinkExpiry() {
-  return new Date(Date.now() + LINK_EXPIRES_IN_MINUTES * 60 * 1000);
+function buildAuthLinkExpiry(expiresInMinutes) {
+  return new Date(Date.now() + expiresInMinutes * 60 * 1000);
+}
+
+function getPasswordResetExpiryMinutes() {
+  return getConfiguredExpiryMinutes("PASSWORD_RESET_EXPIRES_IN_MINUTES");
+}
+
+function getEmailVerificationExpiryMinutes() {
+  return getConfiguredExpiryMinutes("EMAIL_VERIFICATION_EXPIRES_IN_MINUTES");
+}
+
+function getConfiguredExpiryMinutes(envKey) {
+  const configuredMinutes = Number(process.env[envKey]);
+
+  if (Number.isFinite(configuredMinutes) && configuredMinutes > 0) {
+    return configuredMinutes;
+  }
+
+  return DEFAULT_AUTH_LINK_EXPIRES_IN_MINUTES;
 }
 
 function buildResetUrl(token) {
