@@ -11,6 +11,8 @@ import { ROUTES } from "../../constants/navigation";
 import { VERIFY_EMAIL_TEXT } from "../../constants/notifications";
 import { useAppStore } from "../../store";
 
+const verificationRequests = new Map();
+
 export default function VerifyEmailScreen() {
   const searchParams = useSearchParams();
   const token =
@@ -40,7 +42,7 @@ export default function VerifyEmailScreen() {
       }
 
       try {
-        const response = await verifyEmail(token);
+        const response = await getVerificationRequest(token, verifyEmail);
 
         if (isActive) {
           setMessage(response.message);
@@ -119,4 +121,18 @@ export default function VerifyEmailScreen() {
       <AuthVisual />
     </section>
   );
+}
+
+function getVerificationRequest(token, verifyEmail) {
+  if (!verificationRequests.has(token)) {
+    verificationRequests.set(
+      token,
+      verifyEmail(token).catch((error) => {
+        verificationRequests.delete(token);
+        throw error;
+      })
+    );
+  }
+
+  return verificationRequests.get(token);
 }
