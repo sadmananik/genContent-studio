@@ -610,7 +610,7 @@ export default function EditorScreen() {
     );
   }
 
-  async function handleInviteUser(emailValue) {
+  async function handleInviteUser(emailValue, accessLevel) {
     if (!canManageSharing) {
       showNotification(
         TEXT_EDITOR_ALERTS.SHARING_UNAVAILABLE_TITLE,
@@ -650,7 +650,7 @@ export default function EditorScreen() {
     }
 
     try {
-      const updatedProject = await inviteProjectCollaborator(projectId, email);
+      const updatedProject = await inviteProjectCollaborator(projectId, email, accessLevel);
       setProject(normalizeProject(updatedProject));
       showNotification(
         TEXT_EDITOR_ALERTS.SHARED_TITLE,

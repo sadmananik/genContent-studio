@@ -8,6 +8,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const {
   ACCESS_LEVELS,
+  ACCESS_LEVEL_VALUES,
   PROJECT_FIELD_LABELS,
   PROJECT_MESSAGES,
   PROJECT_ROLES,
@@ -138,6 +139,9 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
   const email = String(req.body.email || "")
     .trim()
     .toLowerCase();
+  const accessLevel = ACCESS_LEVEL_VALUES.includes(req.body.accessLevel)
+    ? req.body.accessLevel
+    : ACCESS_LEVELS.EDITOR;
 
   if (!email) {
     throw httpError(400, PROJECT_MESSAGES.INVITE_EMAIL_REQUIRED);
@@ -160,11 +164,26 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
   }
 
   if (user) {
-    if (
-      !project.collaborators.some((collaboratorId) => String(collaboratorId) === String(user._id))
-    ) {
+    const alreadyCollaborator = project.collaborators.some(
+      (collaboratorId) => String(collaboratorId) === String(user._id)
+    );
+    const existingPermission = project.collaboratorPermissions.find(
+      (permission) => String(permission.user) === String(user._id)
+    );
+    const shouldUpdatePermission =
+      existingPermission && existingPermission.accessLevel !== accessLevel;
+
+    if (!alreadyCollaborator) {
       project.collaborators.push(user._id);
-      project.collaboratorPermissions.push({ user: user._id, accessLevel: ACCESS_LEVELS.EDITOR });
+    }
+
+    if (existingPermission) {
+      existingPermission.accessLevel = accessLevel;
+    } else {
+      project.collaboratorPermissions.push({ accessLevel, user: user._id });
+    }
+
+    if (!alreadyCollaborator || shouldUpdatePermission || !existingPermission) {
       await project.save();
     }
 
@@ -183,7 +202,7 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
       { email, project: project._id },
       {
         $set: {
-          accessLevel: ACCESS_LEVELS.EDITOR,
+          accessLevel,
           invitedBy: req.user.id
         }
       },

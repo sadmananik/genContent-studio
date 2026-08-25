@@ -24,6 +24,7 @@ export default function TextWorkspaceHeader({
   statusLabel
 }) {
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteAccessLevel, setInviteAccessLevel] = useState(ACCESS_LEVELS.EDITOR);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const auth = useAppStore((state) => state.auth);
@@ -38,7 +39,7 @@ export default function TextWorkspaceHeader({
 
   async function handleInviteSubmit(event, emailOverride) {
     event.preventDefault();
-    const invited = await onInviteUser?.(emailOverride || inviteEmail);
+    const invited = await onInviteUser?.(emailOverride || inviteEmail, inviteAccessLevel);
 
     if (invited) {
       setInviteEmail("");
@@ -95,9 +96,11 @@ export default function TextWorkspaceHeader({
             {isShareOpen && (
               <WorkspaceSharePopover
                 currentUser={auth.user}
+                inviteAccessLevel={inviteAccessLevel}
                 inviteEmail={inviteEmail}
                 invitedUsers={invitedUsers}
                 isLoadingUsers={userState.loading}
+                onInviteAccessLevelChange={setInviteAccessLevel}
                 onInviteEmailChange={setInviteEmail}
                 onInviteSubmit={handleInviteSubmit}
                 owner={project.owner}

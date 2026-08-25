@@ -144,13 +144,13 @@ export function createProjectReducer(set) {
       }
     },
 
-    inviteProjectCollaborator: async (projectId, email) => {
+    inviteProjectCollaborator: async (projectId, email, accessLevel) => {
       setProjectRequest(set);
 
       try {
         const project = await apiRequest(`/api/projects/${projectId}/invite`, {
           method: "PATCH",
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ accessLevel, email })
         });
 
         set((state) => ({

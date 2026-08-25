@@ -241,7 +241,7 @@ export default function ImageEditorScreen() {
     setPrompt(`${action}: ${prompt}`.slice(0, 1200));
   }
 
-  async function handleInviteUser(emailValue) {
+  async function handleInviteUser(emailValue, accessLevel) {
     if (!canManageSharing) {
       showNotification(
         TEXT_EDITOR_ALERTS.INVITE_UNAVAILABLE_TITLE,
@@ -281,7 +281,7 @@ export default function ImageEditorScreen() {
     }
 
     try {
-      const updatedProject = await inviteProjectCollaborator(projectId, email);
+      const updatedProject = await inviteProjectCollaborator(projectId, email, accessLevel);
       setProject(normalizeProject(updatedProject));
       showNotification(
         TEXT_EDITOR_ALERTS.SHARED_TITLE,

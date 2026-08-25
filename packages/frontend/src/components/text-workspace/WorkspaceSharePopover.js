@@ -6,9 +6,11 @@ import { SHARE_POPOVER_TEXT } from "../../constants/notifications";
 
 export default function WorkspaceSharePopover({
   currentUser,
+  inviteAccessLevel = ACCESS_LEVELS.EDITOR,
   inviteEmail,
   invitedUsers = [],
   isLoadingUsers = false,
+  onInviteAccessLevelChange,
   onInviteEmailChange,
   onInviteSubmit,
   owner,
@@ -54,6 +56,27 @@ export default function WorkspaceSharePopover({
           type="email"
           value={inviteEmail}
         />
+        <div className="grid gap-2">
+          <span className="text-xs font-bold uppercase text-slate-500">
+            {SHARE_POPOVER_TEXT.ROLE_SELECTOR_LABEL}
+          </span>
+          <div className="grid grid-cols-2 rounded-md border border-slate-200 bg-slate-50 p-1">
+            {ACCESS_LEVEL_OPTIONS.map((option) => (
+              <button
+                className={`min-h-8 rounded px-2 text-sm font-bold transition ${
+                  inviteAccessLevel === option.value
+                    ? "bg-white text-violet-700 shadow-sm ring-1 ring-violet-100"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+                key={option.value}
+                onClick={() => onInviteAccessLevelChange?.(option.value)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </form>
       {isLoadingUsers && (
         <p className="mt-3 text-xs font-medium text-slate-500">
@@ -154,3 +177,8 @@ function getAccessLevelLabel(accessLevel) {
     ? SHARE_POPOVER_TEXT.PROJECT_ROLE_VIEWER
     : SHARE_POPOVER_TEXT.PROJECT_ROLE_EDITOR;
 }
+
+const ACCESS_LEVEL_OPTIONS = [
+  { label: SHARE_POPOVER_TEXT.PROJECT_ROLE_EDITOR, value: ACCESS_LEVELS.EDITOR },
+  { label: SHARE_POPOVER_TEXT.PROJECT_ROLE_VIEWER, value: ACCESS_LEVELS.VIEWER }
+];

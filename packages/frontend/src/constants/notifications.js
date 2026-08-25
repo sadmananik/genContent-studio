@@ -175,5 +175,6 @@ export const SHARE_POPOVER_TEXT = {
   OWNER_ROLE: "Owner",
   PROJECT_ROLE_EDITOR: "Editor",
   PROJECT_ROLE_VIEWER: "Viewer",
+  ROLE_SELECTOR_LABEL: "Permission",
   SEARCHING_USERS: "Checking users..."
 };
