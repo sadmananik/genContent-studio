@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Eye, LogOut, MoreVertical } from "lucide-react";
+import { ChevronDown, ExternalLink, Eye, LogOut } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
@@ -183,7 +183,7 @@ export default function SharedWithMeScreen() {
                     aria-label={`${project.title} actions`}
                     aria-expanded={openActionProjectId === project.id}
                     aria-haspopup="menu"
-                    className={`h-9 w-9 border-slate-200 bg-white text-slate-600 shadow-sm hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 ${
+                    className={`border-slate-200 bg-white px-3 text-slate-700 shadow-sm hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 ${
                       openActionProjectId === project.id
                         ? "border-violet-300 bg-violet-50 text-violet-700"
                         : ""
@@ -194,9 +194,10 @@ export default function SharedWithMeScreen() {
                       )
                     }
                     type="button"
-                    variant="icon"
+                    variant="secondary"
                   >
-                    <MoreVertical aria-hidden="true" size={18} strokeWidth={2.4} />
+                    Actions
+                    <ChevronDown aria-hidden="true" size={16} strokeWidth={2.4} />
                   </Button>
                   {openActionProjectId === project.id && (
                     <div
