@@ -24,17 +24,34 @@ const defaultTextProject = {
   content: ""
 };
 const starterPrompt = "Write an introduction about how AI tools help small businesses.";
+const maxPromptDisplayLength = 180;
 const maxQuickActionContentLength = 3200;
 const quickActionPromptBuilders = {
-  Rewrite: (content) =>
-    `Rewrite the following content while preserving its meaning and making it clearer:\n\n${content}`,
-  "Improve Tone": (content) =>
-    `Improve the tone of the following content so it sounds polished, confident, and natural:\n\n${content}`,
-  Summarise: (content) => `Summarise the following content into a concise version:\n\n${content}`,
-  Expand: (content) =>
-    `Expand the following content with useful detail while keeping the same topic and style:\n\n${content}`,
-  "SEO Suggestions": (content) =>
-    `Suggest SEO keywords, title ideas, and meta description improvements for this content:\n\n${content}`
+  Rewrite: {
+    label: "Rewrite selected/editor content",
+    buildPrompt: (content) =>
+      `Rewrite the following content while preserving its meaning and making it clearer:\n\n${content}`
+  },
+  "Improve Tone": {
+    label: "Improve tone of selected/editor content",
+    buildPrompt: (content) =>
+      `Improve the tone of the following content so it sounds polished, confident, and natural:\n\n${content}`
+  },
+  Summarise: {
+    label: "Summarise selected/editor content",
+    buildPrompt: (content) =>
+      `Summarise the following content into a concise version:\n\n${content}`
+  },
+  Expand: {
+    label: "Expand selected/editor content",
+    buildPrompt: (content) =>
+      `Expand the following content with useful detail while keeping the same topic and style:\n\n${content}`
+  },
+  "SEO Suggestions": {
+    label: "Create SEO suggestions from selected/editor content",
+    buildPrompt: (content) =>
+      `Suggest SEO keywords, title ideas, and meta description improvements for this content:\n\n${content}`
+  }
 };
 
 export default function EditorScreen() {
@@ -320,15 +337,17 @@ export default function EditorScreen() {
       return;
     }
 
-    const buildPrompt = quickActionPromptBuilders[action];
+    const actionConfig = quickActionPromptBuilders[action];
 
-    if (!buildPrompt) {
+    if (!actionConfig) {
       setPrompt(`${action}: ${prompt}`.slice(0, 1200));
       return;
     }
 
-    const actionPrompt = buildPrompt(sourceContent.slice(0, maxQuickActionContentLength));
-    setPrompt(actionPrompt.slice(0, 1200));
+    const limitedContent = sourceContent.slice(0, maxQuickActionContentLength);
+    const actionPrompt = actionConfig.buildPrompt(limitedContent);
+
+    setPrompt(actionConfig.label.slice(0, maxPromptDisplayLength));
     await handleGenerate(actionPrompt);
   }
 
