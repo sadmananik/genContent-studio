@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import AppHeader from "../../components/common/AppHeader";
 import ProtectedRoute from "../../components/common/ProtectedRoute";
@@ -10,6 +11,16 @@ const PROTOTYPE_ROUTES = new Set(["/chat-history", "/collaboration", "/editor"])
 export default function ProtectedLayout({ children }) {
   const pathname = usePathname();
   const isPrototypeRoute = PROTOTYPE_ROUTES.has(pathname);
+
+  useEffect(() => {
+    const theme = window.localStorage.getItem("gencontent-theme-preference") || "system";
+
+    document.documentElement.dataset.theme = ["light", "dark", "system"].includes(theme)
+      ? theme
+      : "system";
+    document.documentElement.style.colorScheme =
+      theme === "system" ? "light dark" : theme === "dark" ? "dark" : "light";
+  }, []);
 
   if (isPrototypeRoute) {
     return (

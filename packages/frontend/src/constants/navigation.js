@@ -1,6 +1,7 @@
 export const ROUTES = {
   DASHBOARD: "/dashboard",
   PROFILE: "/profile",
+  SETTINGS: "/settings",
   PROJECTS: "/projects",
   CHAT_HISTORY: "/chat-history",
   SHARED: "/shared",

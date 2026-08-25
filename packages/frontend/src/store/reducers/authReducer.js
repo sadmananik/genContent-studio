@@ -150,6 +150,22 @@ export function createAuthReducer(set, get) {
       }
     },
 
+    requestPasswordChange: async () => {
+      setAuthRequest(set);
+
+      try {
+        const response = await apiRequest("/api/auth/request-password-change", {
+          method: "POST"
+        });
+
+        finishAuthRequest(set);
+        return response;
+      } catch (error) {
+        setAuthError(set, error);
+        throw error;
+      }
+    },
+
     resetPassword: async (payload) => {
       setAuthRequest(set);
 

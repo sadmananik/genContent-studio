@@ -155,6 +155,38 @@ export const PROFILE_ALERTS = {
   UPDATED_TITLE: "Profile updated"
 };
 
+export const SETTINGS_TEXT = {
+  ACCOUNT_DESCRIPTION: "Your signed-in account details.",
+  ACCOUNT_TITLE: "Account",
+  APPEARANCE_DESCRIPTION: "Choose how GenContent Studio should appear on this device.",
+  APPEARANCE_TITLE: "Appearance",
+  CHANGE_PASSWORD_BUTTON: "Change Password",
+  CHANGE_PASSWORD_CONFIRM_DESCRIPTION: (email) =>
+    `We will send a secure password-change link to ${email}. The link will expire in 5 minutes.`,
+  CHANGE_PASSWORD_CONFIRM_TITLE: "Change Password?",
+  CHANGE_PASSWORD_FAILED_MESSAGE: "Unable to send password-change email. Please try again.",
+  CHANGE_PASSWORD_FAILED_TITLE: "Email not sent",
+  CHANGE_PASSWORD_SUCCESS_DESCRIPTION: (email) =>
+    `A secure password-change link has been sent to ${email}. The link will expire in 5 minutes.`,
+  CHANGE_PASSWORD_SUCCESS_TITLE: "Password change email sent",
+  EDIT_PROFILE_BUTTON: "Edit Profile",
+  PAGE_DESCRIPTION: "Manage your account and application preferences.",
+  PAGE_TITLE: "Settings",
+  SECURITY_DESCRIPTION: "Change your account password securely.",
+  SECURITY_LABEL: "Password",
+  SECURITY_TITLE: "Security",
+  SEND_EMAIL_BUTTON: "Send Email",
+  SENDING_EMAIL_BUTTON: "Sending...",
+  THEME_LABEL: "Theme",
+  THEME_OPTIONS: {
+    DARK: "Dark",
+    LIGHT: "Light",
+    SYSTEM: "System"
+  },
+  THEME_UPDATED_MESSAGE: "Theme preference saved on this device.",
+  THEME_UPDATED_TITLE: "Theme updated"
+};
+
 export const AI_HISTORY_TEXT = {
   LOADING: "Loading AI history..."
 };
