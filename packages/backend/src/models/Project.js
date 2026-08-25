@@ -1,4 +1,9 @@
 const mongoose = require("mongoose");
+const {
+  ACCESS_LEVEL_VALUES,
+  ACCESS_LEVELS,
+  PROJECT_TYPE_VALUES
+} = require("../constants/projects");
 
 const projectSchema = new mongoose.Schema(
   {
@@ -9,7 +14,7 @@ const projectSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["text", "image"],
+      enum: PROJECT_TYPE_VALUES,
       required: true
     },
     category: {
@@ -43,8 +48,8 @@ const projectSchema = new mongoose.Schema(
         },
         accessLevel: {
           type: String,
-          enum: ["viewer", "editor"],
-          default: "editor"
+          enum: ACCESS_LEVEL_VALUES,
+          default: ACCESS_LEVELS.EDITOR
         }
       }
     ]

@@ -7,7 +7,13 @@ import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
-import { PROJECT_TYPES } from "../../constants/content";
+import {
+  ACCESS_LEVEL_LABELS,
+  ACCESS_LEVELS,
+  API_PROJECT_TYPES,
+  EDITOR_ACCESS_QUERY,
+  PROJECT_TYPES
+} from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
@@ -293,8 +299,9 @@ function DetailItem({ label, value }) {
 }
 
 function formatSharedProject(project) {
-  const type = project.type === "image" ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
-  const accessLevel = project.accessLevel === "viewer" ? "viewer" : "editor";
+  const type = project.type === API_PROJECT_TYPES.IMAGE ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
+  const accessLevel =
+    project.accessLevel === ACCESS_LEVELS.VIEWER ? ACCESS_LEVELS.VIEWER : ACCESS_LEVELS.EDITOR;
 
   return {
     id: project._id || project.id,
@@ -307,7 +314,7 @@ function formatSharedProject(project) {
     ownerName: project.owner?.name || "Unknown owner",
     ownerEmail: project.owner?.email || "",
     accessLevel,
-    accessLabel: accessLevel === "viewer" ? "View only" : "Editor",
+    accessLabel: ACCESS_LEVEL_LABELS[accessLevel],
     collaboratorCount: project.collaborators?.length || 0
   };
 }
@@ -328,14 +335,16 @@ function getId(value) {
 }
 
 function getProjectWorkspaceHref(project) {
-  const workspace = project.type === PROJECT_TYPES.IMAGE ? "image" : "text";
-  const access = project.accessLevel === "viewer" ? "&access=view" : "";
+  const workspace =
+    project.type === PROJECT_TYPES.IMAGE ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT;
+  const access =
+    project.accessLevel === ACCESS_LEVELS.VIEWER ? `&access=${EDITOR_ACCESS_QUERY.VIEW}` : "";
   return `${ROUTES.EDITOR}?projectId=${project.id}&type=${workspace}${access}`;
 }
 
 function getAccessBadgeClassName(accessLevel) {
   const baseClasses = "rounded-full px-2.5 py-1 text-xs font-bold";
-  return accessLevel === "viewer"
+  return accessLevel === ACCESS_LEVELS.VIEWER
     ? `${baseClasses} bg-slate-100 text-slate-600`
     : `${baseClasses} bg-emerald-50 text-emerald-700`;
 }

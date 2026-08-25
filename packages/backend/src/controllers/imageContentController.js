@@ -1,4 +1,5 @@
 const ImageContent = require("../models/ImageContent");
+const { PROJECT_MESSAGES, PROJECT_TYPES } = require("../constants/projects");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const { findAccessibleProject } = require("./projectController");
@@ -7,13 +8,13 @@ const upsertImageContent = asyncHandler(async (req, res) => {
   const { project, imageUrl, generationPrompt, canvasState = {} } = req.body;
 
   if (!project) {
-    throw httpError(400, "Project is required");
+    throw httpError(400, PROJECT_MESSAGES.PROJECT_REQUIRED);
   }
 
   const accessibleProject = await findAccessibleProject(project, req.user.id);
 
-  if (accessibleProject.type !== "image") {
-    throw httpError(400, "Image content can only be saved for image projects");
+  if (accessibleProject.type !== PROJECT_TYPES.IMAGE) {
+    throw httpError(400, PROJECT_MESSAGES.IMAGE_CONTENT_TYPE_SAVE_REQUIRED);
   }
 
   const imageContent = await ImageContent.findOneAndUpdate(
@@ -28,8 +29,8 @@ const upsertImageContent = asyncHandler(async (req, res) => {
 const getImageContent = asyncHandler(async (req, res) => {
   const accessibleProject = await findAccessibleProject(req.params.projectId, req.user.id);
 
-  if (accessibleProject.type !== "image") {
-    throw httpError(400, "Image content is only available for image projects");
+  if (accessibleProject.type !== PROJECT_TYPES.IMAGE) {
+    throw httpError(400, PROJECT_MESSAGES.IMAGE_CONTENT_TYPE_REQUIRED);
   }
 
   const imageContent = await ImageContent.findOne({ project: req.params.projectId }).populate(
@@ -38,7 +39,7 @@ const getImageContent = asyncHandler(async (req, res) => {
   );
 
   if (!imageContent) {
-    throw httpError(404, "Image content not found");
+    throw httpError(404, PROJECT_MESSAGES.IMAGE_CONTENT_NOT_FOUND);
   }
 
   res.json(imageContent);

@@ -11,6 +11,15 @@ import AIResponseCard from "../text-workspace/AIResponseCard";
 import EditorToolbar from "../text-workspace/EditorToolbar";
 import TipTapEditor from "../text-workspace/TipTapEditor";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
+import {
+  ACCESS_LEVELS,
+  AI_CONTENT_TYPES,
+  API_ERROR_MESSAGES,
+  API_PROJECT_TYPES,
+  EDITOR_ACCESS_QUERY,
+  PERMISSION_MESSAGES,
+  PROJECT_ROLES
+} from "../../constants/content";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
 import { textPromptActions } from "../text-workspace/promptActions";
@@ -59,7 +68,7 @@ export default function EditorScreen() {
   const workspaceType = searchParams.get("type");
   const requestedAccess = searchParams.get("access");
 
-  if (workspaceType === "image") {
+  if (workspaceType === API_PROJECT_TYPES.IMAGE) {
     return <ImageEditorScreen />;
   }
 
@@ -130,9 +139,9 @@ export default function EditorScreen() {
   );
   const selectedResponse =
     responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
-  const canEditProject = project.canEdit !== false && requestedAccess !== "view";
+  const canEditProject = project.canEdit !== false && requestedAccess !== EDITOR_ACCESS_QUERY.VIEW;
   const canManageSharing =
-    project.canManageSharing !== false && project.currentUserRole !== "collaborator";
+    project.canManageSharing !== false && project.currentUserRole !== PROJECT_ROLES.COLLABORATOR;
   const invitedUsers = useMemo(() => {
     const usersByEmail = new Map();
 
@@ -207,7 +216,7 @@ export default function EditorScreen() {
           return;
         }
 
-        if (error.message === "Text content not found") {
+        if (error.message === API_ERROR_MESSAGES.TEXT_CONTENT_NOT_FOUND) {
           lastPersistedContentHtmlRef.current = "";
           setEditorContent({ html: "", text: "" });
           setHasUnsavedChanges(false);
@@ -262,7 +271,7 @@ export default function EditorScreen() {
     }
 
     const realResponses = aiState.chatHistory
-      .filter((chat) => chat.contentType === "text")
+      .filter((chat) => chat.contentType === AI_CONTENT_TYPES.TEXT)
       .map(formatChatAsResponse);
     setResponses(realResponses);
     setSelectedHistoryId(realResponses[0]?.id || null);
@@ -271,8 +280,8 @@ export default function EditorScreen() {
   async function handleGenerate(promptOverride) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI generation is disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_GENERATION_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -316,7 +325,7 @@ export default function EditorScreen() {
             project: projectId,
             prompt: trimmedPrompt,
             response: generatedText,
-            contentType: "text"
+            contentType: AI_CONTENT_TYPES.TEXT
           });
           const formattedResponse = formatChatAsResponse(savedResponse);
 
@@ -348,8 +357,8 @@ export default function EditorScreen() {
   async function handleQuickAction(action) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI actions are disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_ACTIONS_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -404,7 +413,11 @@ export default function EditorScreen() {
 
   async function handleSave() {
     if (!canEditProject) {
-      showNotification("View only", "Saving is disabled for view-only projects.", TOAST_TYPES.INFO);
+      showNotification(
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.SAVE_DISABLED,
+        TOAST_TYPES.INFO
+      );
       return;
     }
 
@@ -484,8 +497,8 @@ export default function EditorScreen() {
   async function handleUpdateResponse(responseId, updatedResponse) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI history editing is disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_HISTORY_EDIT_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -527,8 +540,8 @@ export default function EditorScreen() {
   async function handleDeleteResponse(responseId) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI history changes are disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_HISTORY_CHANGES_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -572,7 +585,7 @@ export default function EditorScreen() {
     if (!canManageSharing) {
       showNotification(
         "Sharing unavailable",
-        "Only project owners can manage sharing.",
+        PERMISSION_MESSAGES.SHARING_OWNER_ONLY,
         TOAST_TYPES.WARNING
       );
       return false;
@@ -859,10 +872,10 @@ function normalizeProject(project) {
     title: project.title || defaultTextProject.title,
     category: project.category || defaultTextProject.category,
     type: "Text Project",
-    accessLevel: project.accessLevel || "editor",
+    accessLevel: project.accessLevel || ACCESS_LEVELS.EDITOR,
     canEdit: project.canEdit !== false,
     canManageSharing: project.canManageSharing !== false,
-    currentUserRole: project.currentUserRole || "owner",
+    currentUserRole: project.currentUserRole || PROJECT_ROLES.OWNER,
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
       : defaultTextProject.lastUpdated,

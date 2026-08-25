@@ -13,7 +13,11 @@ import {
 } from "../common/Cards";
 import { DASHBOARD_TEXT, SUMMARY_CARD_LABELS } from "../../constants/dashboard";
 import { ROUTES } from "../../constants/navigation";
-import { CONTENT_CATEGORY_SUMMARY_LABELS, PROJECT_TYPES } from "../../constants/content";
+import {
+  API_PROJECT_TYPES,
+  CONTENT_CATEGORY_SUMMARY_LABELS,
+  PROJECT_TYPES
+} from "../../constants/content";
 import { useAppStore } from "../../store";
 
 export default function DashboardScreen() {
@@ -104,7 +108,7 @@ function firstName(name = "") {
 }
 
 function formatProjectForDashboard(project) {
-  const type = project.type === "image" ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
+  const type = project.type === API_PROJECT_TYPES.IMAGE ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
 
   return {
     id: project._id || project.id,
@@ -124,8 +128,8 @@ function formatProjectForDashboard(project) {
 }
 
 function buildSummaryCards(projects) {
-  const textCount = projects.filter((project) => project.type === "text").length;
-  const imageCount = projects.filter((project) => project.type === "image").length;
+  const textCount = projects.filter((project) => project.type === API_PROJECT_TYPES.TEXT).length;
+  const imageCount = projects.filter((project) => project.type === API_PROJECT_TYPES.IMAGE).length;
   const sharedCount = projects.filter((project) => (project.collaborators || []).length > 0).length;
 
   return [
@@ -178,7 +182,9 @@ function buildCategoryCounts(projects) {
 function getProjectWorkspaceHref(project) {
   const projectId = project._id || project.id;
   const workspace =
-    project.type === "image" || project.type === PROJECT_TYPES.IMAGE ? "image" : "text";
+    project.type === API_PROJECT_TYPES.IMAGE || project.type === PROJECT_TYPES.IMAGE
+      ? API_PROJECT_TYPES.IMAGE
+      : API_PROJECT_TYPES.TEXT;
 
   return `${ROUTES.EDITOR}?projectId=${projectId}&type=${workspace}`;
 }

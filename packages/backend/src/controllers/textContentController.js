@@ -1,4 +1,5 @@
 const TextContent = require("../models/TextContent");
+const { PROJECT_MESSAGES, PROJECT_TYPES } = require("../constants/projects");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const { findAccessibleProject } = require("./projectController");
@@ -7,13 +8,13 @@ const upsertTextContent = asyncHandler(async (req, res) => {
   const { project, content = "" } = req.body;
 
   if (!project) {
-    throw httpError(400, "Project is required");
+    throw httpError(400, PROJECT_MESSAGES.PROJECT_REQUIRED);
   }
 
   const accessibleProject = await findAccessibleProject(project, req.user.id);
 
-  if (accessibleProject.type !== "text") {
-    throw httpError(400, "Text content can only be saved for text projects");
+  if (accessibleProject.type !== PROJECT_TYPES.TEXT) {
+    throw httpError(400, PROJECT_MESSAGES.TEXT_CONTENT_TYPE_SAVE_REQUIRED);
   }
 
   const textContent = await TextContent.findOneAndUpdate(
@@ -28,8 +29,8 @@ const upsertTextContent = asyncHandler(async (req, res) => {
 const getTextContent = asyncHandler(async (req, res) => {
   const accessibleProject = await findAccessibleProject(req.params.projectId, req.user.id);
 
-  if (accessibleProject.type !== "text") {
-    throw httpError(400, "Text content is only available for text projects");
+  if (accessibleProject.type !== PROJECT_TYPES.TEXT) {
+    throw httpError(400, PROJECT_MESSAGES.TEXT_CONTENT_TYPE_REQUIRED);
   }
 
   const textContent = await TextContent.findOne({ project: req.params.projectId }).populate(
@@ -38,7 +39,7 @@ const getTextContent = asyncHandler(async (req, res) => {
   );
 
   if (!textContent) {
-    throw httpError(404, "Text content not found");
+    throw httpError(404, PROJECT_MESSAGES.TEXT_CONTENT_NOT_FOUND);
   }
 
   res.json(textContent);

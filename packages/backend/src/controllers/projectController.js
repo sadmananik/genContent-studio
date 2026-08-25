@@ -6,6 +6,13 @@ const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const {
+  ACCESS_LEVELS,
+  PROJECT_FIELD_LABELS,
+  PROJECT_MESSAGES,
+  PROJECT_ROLES,
+  PROJECT_TYPE_VALUES
+} = require("../constants/projects");
+const {
   normalizeObjectIdList,
   normalizeString,
   requireTrimmedString
@@ -13,14 +20,14 @@ const {
 
 const createProject = asyncHandler(async (req, res) => {
   const { title, type, category = "Other", description = "", collaborators = [] } = req.body;
-  const normalizedTitle = requireTrimmedString(title, "Project title");
+  const normalizedTitle = requireTrimmedString(title, PROJECT_FIELD_LABELS.PROJECT_TITLE);
 
   if (!type) {
-    throw httpError(400, "Project type is required");
+    throw httpError(400, PROJECT_MESSAGES.PROJECT_TYPE_REQUIRED);
   }
 
-  if (!["text", "image"].includes(type)) {
-    throw httpError(400, "Project type must be text or image");
+  if (!PROJECT_TYPE_VALUES.includes(type)) {
+    throw httpError(400, PROJECT_MESSAGES.PROJECT_TYPE_INVALID);
   }
 
   const normalizedCollaborators = await validateCollaborators(collaborators, req.user.id);
@@ -34,7 +41,7 @@ const createProject = asyncHandler(async (req, res) => {
     collaborators: normalizedCollaborators,
     collaboratorPermissions: normalizedCollaborators.map((userId) => ({
       user: userId,
-      accessLevel: "editor"
+      accessLevel: ACCESS_LEVELS.EDITOR
     }))
   });
 
@@ -77,8 +84,8 @@ const updateProject = asyncHandler(async (req, res) => {
   const project = await findAccessibleProject(req.params.id, req.user.id);
   const allowedUpdates = ["title", "type", "category", "description", "collaborators"];
 
-  if (req.body.type !== undefined && !["text", "image"].includes(req.body.type)) {
-    throw httpError(400, "Project type must be text or image");
+  if (req.body.type !== undefined && !PROJECT_TYPE_VALUES.includes(req.body.type)) {
+    throw httpError(400, PROJECT_MESSAGES.PROJECT_TYPE_INVALID);
   }
 
   allowedUpdates.forEach((field) => {
@@ -89,7 +96,7 @@ const updateProject = asyncHandler(async (req, res) => {
   });
 
   if (req.body.title !== undefined && !project.title) {
-    throw httpError(400, "Project title is required");
+    throw httpError(400, PROJECT_MESSAGES.PROJECT_TITLE_REQUIRED);
   }
 
   if (req.body.category !== undefined && !project.category) {
@@ -109,7 +116,7 @@ const updateProject = asyncHandler(async (req, res) => {
 
       return {
         user: userId,
-        accessLevel: existingPermission?.accessLevel || "editor"
+        accessLevel: existingPermission?.accessLevel || ACCESS_LEVELS.EDITOR
       };
     });
   }
@@ -126,7 +133,7 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
-    throw httpError(400, "Invite email is required");
+    throw httpError(400, PROJECT_MESSAGES.INVITE_EMAIL_REQUIRED);
   }
 
   const project = await Project.findOne({
@@ -135,24 +142,24 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
   });
 
   if (!project) {
-    throw httpError(404, "Project not found or only owners can invite collaborators");
+    throw httpError(404, PROJECT_MESSAGES.INVITE_OWNER_ONLY);
   }
 
   const user = await User.findOne({ email: email.trim().toLowerCase() });
 
   if (!user) {
-    throw httpError(404, "No user account exists for this email");
+    throw httpError(404, PROJECT_MESSAGES.INVITE_USER_NOT_FOUND);
   }
 
   if (String(user._id) === String(project.owner)) {
-    throw httpError(400, "Project owner is already a collaborator");
+    throw httpError(400, PROJECT_MESSAGES.INVITE_OWNER_ALREADY_COLLABORATOR);
   }
 
   if (
     !project.collaborators.some((collaboratorId) => String(collaboratorId) === String(user._id))
   ) {
     project.collaborators.push(user._id);
-    project.collaboratorPermissions.push({ user: user._id, accessLevel: "editor" });
+    project.collaboratorPermissions.push({ user: user._id, accessLevel: ACCESS_LEVELS.EDITOR });
     await project.save();
   }
 
@@ -171,7 +178,7 @@ const leaveProject = asyncHandler(async (req, res) => {
   });
 
   if (!project) {
-    throw httpError(404, "Shared project not found");
+    throw httpError(404, PROJECT_MESSAGES.LEAVE_SHARED_NOT_FOUND);
   }
 
   project.collaborators = project.collaborators.filter(
@@ -183,7 +190,7 @@ const leaveProject = asyncHandler(async (req, res) => {
 
   await project.save();
 
-  res.json({ message: "You left this shared project." });
+  res.json({ message: PROJECT_MESSAGES.LEAVE_SHARED_SUCCESS });
 });
 
 const deleteProject = asyncHandler(async (req, res) => {
@@ -193,7 +200,7 @@ const deleteProject = asyncHandler(async (req, res) => {
   });
 
   if (!project) {
-    throw httpError(404, "Project not found or only owners can delete projects");
+    throw httpError(404, PROJECT_MESSAGES.PROJECT_DELETE_OWNER_ONLY);
   }
 
   await Promise.all([
@@ -214,7 +221,7 @@ async function findAccessibleProject(projectId, userId) {
     .populate("collaborators", "name email");
 
   if (!project) {
-    throw httpError(404, "Project not found");
+    throw httpError(404, PROJECT_MESSAGES.PROJECT_NOT_FOUND);
   }
 
   return project;
@@ -232,7 +239,7 @@ async function validateCollaborators(collaborators, ownerId) {
   const existingUsers = await User.find({ _id: { $in: collaboratorIds } }).select("_id");
 
   if (existingUsers.length !== collaboratorIds.length) {
-    throw httpError(400, "One or more collaborators do not exist");
+    throw httpError(400, PROJECT_MESSAGES.COLLABORATORS_MISSING_USERS);
   }
 
   return collaboratorIds;
@@ -251,9 +258,10 @@ function serializeProjectForUser(project, userId) {
 
   return {
     ...projectObject,
-    currentUserRole: ownerIdString === userIdString ? "owner" : "collaborator",
+    currentUserRole:
+      ownerIdString === userIdString ? PROJECT_ROLES.OWNER : PROJECT_ROLES.COLLABORATOR,
     accessLevel,
-    canEdit: ownerIdString === userIdString || accessLevel === "editor",
+    canEdit: ownerIdString === userIdString || accessLevel === ACCESS_LEVELS.EDITOR,
     canManageSharing: ownerIdString === userIdString,
     canDelete: ownerIdString === userIdString,
     isSharedWithCurrentUser:
@@ -263,21 +271,21 @@ function serializeProjectForUser(project, userId) {
 
 function getAccessLevelForUser(project, userId) {
   if (getObjectIdString(project.owner) === userId) {
-    return "editor";
+    return ACCESS_LEVELS.EDITOR;
   }
 
   const permission = (project.collaboratorPermissions || []).find(
     (item) => getObjectIdString(item.user) === userId
   );
 
-  if (permission?.accessLevel === "viewer") {
-    return "viewer";
+  if (permission?.accessLevel === ACCESS_LEVELS.VIEWER) {
+    return ACCESS_LEVELS.VIEWER;
   }
 
   return (project.collaborators || []).some(
     (collaboratorId) => getObjectIdString(collaboratorId) === userId
   )
-    ? "editor"
+    ? ACCESS_LEVELS.EDITOR
     : null;
 }
 

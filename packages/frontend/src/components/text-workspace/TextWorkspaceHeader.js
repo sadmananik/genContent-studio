@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Download, Save, Share2, Users } from "lucide-react";
 import Button from "../common/Button";
 import { UserAvatarStack } from "../common/UserAvatar";
+import { ACCESS_LEVEL_LABELS, ACCESS_LEVELS } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
 import WorkspaceExportMenu from "./WorkspaceExportMenu";
 import WorkspaceSharePopover from "./WorkspaceSharePopover";
@@ -56,7 +57,7 @@ export default function TextWorkspaceHeader({
             <>
               <span aria-hidden="true">•</span>
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
-                View only
+                {ACCESS_LEVEL_LABELS[ACCESS_LEVELS.VIEWER]}
               </span>
             </>
           )}

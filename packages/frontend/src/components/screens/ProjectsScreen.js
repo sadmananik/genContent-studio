@@ -9,7 +9,7 @@ import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
 import ProjectFormModal from "../common/ProjectFormModal";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
-import { PROJECT_TYPES } from "../../constants/content";
+import { API_PROJECT_TYPES, PROJECT_TYPES } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
@@ -57,7 +57,7 @@ export default function ProjectsScreen() {
         title: values.title,
         description: values.description,
         category: values.category,
-        type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+        type: values.type === PROJECT_TYPES.IMAGE ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT
       });
 
       setShowProjectForm(false);
@@ -89,7 +89,7 @@ export default function ProjectsScreen() {
         title: values.title,
         description: values.description,
         category: values.category,
-        type: values.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+        type: values.type === PROJECT_TYPES.IMAGE ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT
       });
       showNotification("Project updated", `"${values.title}" was saved.`, TOAST_TYPES.SUCCESS);
       setEditingProject(null);
@@ -310,7 +310,7 @@ export default function ProjectsScreen() {
 }
 
 function formatProject(project) {
-  const type = project.type === "image" ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
+  const type = project.type === API_PROJECT_TYPES.IMAGE ? PROJECT_TYPES.IMAGE : PROJECT_TYPES.TEXT;
 
   return {
     id: project._id || project.id,
@@ -325,7 +325,8 @@ function formatProject(project) {
 }
 
 function getProjectWorkspaceHref(project) {
-  const workspace = project.type === PROJECT_TYPES.IMAGE ? "image" : "text";
+  const workspace =
+    project.type === PROJECT_TYPES.IMAGE ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT;
   return `${ROUTES.EDITOR}?projectId=${project.id}&type=${workspace}`;
 }
 

@@ -11,6 +11,13 @@ import FabricImageEditor from "../image-workspace/FabricImageEditor";
 import ImageResponseCard from "../image-workspace/ImageResponseCard";
 import { mockImageProject } from "../image-workspace/mockImageWorkspaceData";
 import { textPromptActions } from "../text-workspace/promptActions";
+import {
+  ACCESS_LEVELS,
+  AI_CONTENT_TYPES,
+  EDITOR_ACCESS_QUERY,
+  PERMISSION_MESSAGES,
+  PROJECT_ROLES
+} from "../../constants/content";
 import { apiRequest } from "../../lib/apiClient";
 import { useAppStore } from "../../store";
 
@@ -66,9 +73,9 @@ export default function ImageEditorScreen() {
     : lastSavedAt
       ? `Saved ${formatTime(lastSavedAt)}`
       : project.lastUpdated;
-  const canEditProject = project.canEdit !== false && requestedAccess !== "view";
+  const canEditProject = project.canEdit !== false && requestedAccess !== EDITOR_ACCESS_QUERY.VIEW;
   const canManageSharing =
-    project.canManageSharing !== false && project.currentUserRole !== "collaborator";
+    project.canManageSharing !== false && project.currentUserRole !== PROJECT_ROLES.COLLABORATOR;
 
   useEffect(() => {
     const pendingToast = readPendingToast();
@@ -98,7 +105,7 @@ export default function ImageEditorScreen() {
     fetchProjectChatHistory(projectId)
       .then((chatHistory) => {
         const imageResponses = chatHistory
-          .filter((chat) => chat.contentType === "image")
+          .filter((chat) => chat.contentType === AI_CONTENT_TYPES.IMAGE)
           .map(normalizeImageChat);
 
         setResponses(imageResponses);
@@ -160,8 +167,8 @@ export default function ImageEditorScreen() {
   function handleGenerate() {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI generation is disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_GENERATION_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -182,7 +189,7 @@ export default function ImageEditorScreen() {
         const savedResponse = isRealProject
           ? normalizeImageChat(
               await saveAiResponse({
-                contentType: "image",
+                contentType: AI_CONTENT_TYPES.IMAGE,
                 project: projectId,
                 prompt,
                 response: responseText
@@ -215,8 +222,8 @@ export default function ImageEditorScreen() {
   function handleQuickAction(action) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI actions are disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_ACTIONS_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -229,7 +236,7 @@ export default function ImageEditorScreen() {
     if (!canManageSharing) {
       showNotification(
         "Sharing unavailable",
-        "Only project owners can manage sharing.",
+        PERMISSION_MESSAGES.SHARING_OWNER_ONLY,
         TOAST_TYPES.WARNING
       );
       return false;
@@ -307,8 +314,8 @@ export default function ImageEditorScreen() {
   async function handleFavouriteResponse(responseId) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI history changes are disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_HISTORY_CHANGES_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -357,8 +364,8 @@ export default function ImageEditorScreen() {
   async function handleUpdateResponse(responseId, nextResponseText) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI history editing is disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_HISTORY_EDIT_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -396,8 +403,8 @@ export default function ImageEditorScreen() {
   async function handleDeleteResponse(responseId) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "AI history changes are disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.AI_HISTORY_CHANGES_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -430,8 +437,8 @@ export default function ImageEditorScreen() {
   function handleInsertResponse(response) {
     if (!canEditProject) {
       showNotification(
-        "View only",
-        "Canvas editing is disabled for view-only projects.",
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.CANVAS_EDIT_DISABLED,
         TOAST_TYPES.INFO
       );
       return;
@@ -452,7 +459,11 @@ export default function ImageEditorScreen() {
 
   async function handleSaveCanvas(payload) {
     if (!canEditProject) {
-      showNotification("View only", "Saving is disabled for view-only projects.", TOAST_TYPES.INFO);
+      showNotification(
+        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
+        PERMISSION_MESSAGES.SAVE_DISABLED,
+        TOAST_TYPES.INFO
+      );
       return;
     }
 
@@ -654,10 +665,10 @@ function normalizeProject(project) {
     title: project.title || mockImageProject.title,
     category: project.category || mockImageProject.category,
     type: "Image Project",
-    accessLevel: project.accessLevel || "editor",
+    accessLevel: project.accessLevel || ACCESS_LEVELS.EDITOR,
     canEdit: project.canEdit !== false,
     canManageSharing: project.canManageSharing !== false,
-    currentUserRole: project.currentUserRole || "owner",
+    currentUserRole: project.currentUserRole || PROJECT_ROLES.OWNER,
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
       : mockImageProject.lastUpdated,

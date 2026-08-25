@@ -1,17 +1,19 @@
 const nodemailer = require("nodemailer");
+const { AUTH_MESSAGES, EMAIL_TEMPLATES } = require("../constants/auth");
 
 let transporter;
 
 async function sendPasswordResetEmail({ email, expiresInMinutes, name, resetUrl }) {
-  const subject = "Reset your GenContent Studio password";
+  const template = EMAIL_TEMPLATES.PASSWORD_RESET;
+  const subject = template.subject;
   const text = [
     `Hello ${name},`,
     "",
-    "Use the link below to reset your GenContent Studio password:",
+    template.intro,
     resetUrl,
     "",
     getLinkExpiryCopy(expiresInMinutes),
-    "If you did not request this change, you can ignore this email."
+    template.outro
   ].join("\n");
 
   if (shouldUseConsoleDelivery()) {
@@ -28,15 +30,16 @@ async function sendPasswordResetEmail({ email, expiresInMinutes, name, resetUrl 
 }
 
 async function sendEmailVerificationEmail({ email, expiresInMinutes, name, verificationUrl }) {
-  const subject = "Verify your GenContent Studio account";
+  const template = EMAIL_TEMPLATES.VERIFICATION;
+  const subject = template.subject;
   const text = [
     `Hello ${name},`,
     "",
-    "Use the link below to verify your GenContent Studio account:",
+    template.intro,
     verificationUrl,
     "",
     getLinkExpiryCopy(expiresInMinutes),
-    "If you did not create this account, you can ignore this email."
+    template.outro
   ].join("\n");
 
   if (shouldUseConsoleDelivery()) {
@@ -88,7 +91,7 @@ function requireEmailFrom() {
   const from = process.env.EMAIL_FROM;
 
   if (!from) {
-    throw new Error("EMAIL_FROM is not configured");
+    throw new Error(AUTH_MESSAGES.EMAIL_FROM_MISSING);
   }
 
   return from;
