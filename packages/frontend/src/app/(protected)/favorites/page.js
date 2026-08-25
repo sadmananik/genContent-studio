@@ -1,5 +1,5 @@
-import PlaceholderPage from "../../../components/common/PlaceholderPage";
+import FavoritesScreen from "../../../components/screens/FavoritesScreen";
 
 export default function FavoritesPage() {
-  return <PlaceholderPage title="Favorites" />;
+  return <FavoritesScreen />;
 }

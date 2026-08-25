@@ -19,6 +19,7 @@ export const NAV_ITEMS = [
   { icon: "LayoutDashboard", label: "Dashboard", href: ROUTES.DASHBOARD },
   { icon: "FolderKanban", label: "Projects", href: ROUTES.PROJECTS },
   { icon: "Users", label: "Shared with Me", href: ROUTES.SHARED },
+  { icon: "Star", label: "Favorites", href: ROUTES.FAVORITES },
   { icon: "PanelTop", label: "Templates", href: ROUTES.TEMPLATES }
 ];
 

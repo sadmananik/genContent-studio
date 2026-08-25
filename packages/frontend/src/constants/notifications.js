@@ -46,6 +46,23 @@ export const SHARED_PROJECT_ALERTS = {
   leftMessage: (title) => `You left "${title}".`
 };
 
+export const FAVOURITES_ALERTS = {
+  COPIED_MESSAGE: "Favourite response copied.",
+  COPIED_TITLE: "Copied",
+  EMPTY_DESCRIPTION: "Favourite AI responses from your projects will appear here.",
+  EMPTY_TITLE: "No favourites yet",
+  LOAD_FAILED_TITLE: "Unable to load favourites.",
+  LOADING_DESCRIPTION: "Your favourite AI responses are loading.",
+  LOADING_TITLE: "Loading favourites...",
+  PAGE_DESCRIPTION: "Review favourite AI responses saved across your projects.",
+  PAGE_TITLE: "Favorites",
+  REMOVE_FAILED_MESSAGE: "Favourite could not be removed.",
+  REMOVE_FAILED_TITLE: "Favourite not removed",
+  REMOVED_MESSAGE: "Response removed from favourites.",
+  REMOVED_TITLE: "Favourite removed",
+  RESPONSE_SECTION_TITLE: "Favourite Responses"
+};
+
 export const TEXT_EDITOR_ALERTS = {
   AI_GENERATED_MESSAGE: "Content is ready and shown in the editor.",
   AI_GENERATED_TITLE: "AI generated",
