@@ -48,10 +48,10 @@ export default function AIHistorySidebar({
           ) : (
             history.map((item) => (
               <div
-                className={`rounded-lg border p-3 text-left transition ${
+                className={`group rounded-lg border p-3 text-left transition ${
                   selectedHistoryId === item.id
                     ? "border-violet-300 bg-violet-50"
-                    : "border-transparent bg-white hover:border-slate-200 hover:bg-slate-50"
+                    : "border-transparent bg-white hover:border-slate-200 hover:bg-slate-50 hover:shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
                 }`}
                 key={item.id}
               >
@@ -61,7 +61,7 @@ export default function AIHistorySidebar({
                       item.favourite ? `Unfavourite ${item.prompt}` : `Favourite ${item.prompt}`
                     }
                     aria-pressed={item.favourite}
-                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${
+                    className={`group/favourite grid h-6 w-6 shrink-0 place-items-center rounded-md ${
                       item.favourite
                         ? "bg-amber-50 text-amber-500"
                         : "bg-slate-100 text-slate-400 hover:bg-amber-50 hover:text-amber-500"
@@ -71,29 +71,26 @@ export default function AIHistorySidebar({
                   >
                     <Star
                       aria-hidden="true"
-                      className={item.favourite ? "fill-amber-400" : ""}
+                      className={
+                        item.favourite ? "fill-amber-400" : "group-hover/favourite:fill-amber-400"
+                      }
                       size={16}
                     />
                   </button>
                   <button
-                    className="min-w-0 flex-1 text-left"
+                    className="min-w-0 flex-1 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-violet-200"
                     onClick={() => onSelectHistory(item.id)}
                     type="button"
                   >
-                    <span className="line-clamp-2 block break-words text-sm font-bold text-slate-800">
+                    <span className="line-clamp-2 block break-words text-sm font-bold text-slate-800 transition group-hover:text-violet-700 group-hover:underline group-hover:decoration-violet-300 group-hover:underline-offset-4">
                       {item.prompt}
                     </span>
-                    <span className="mt-1 block text-xs text-slate-500">{item.timestamp}</span>
+                    <span className="mt-1 block text-xs text-slate-500 transition group-hover:text-slate-600">
+                      {item.timestamp}
+                    </span>
                   </button>
                 </div>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <button
-                    className="text-xs font-bold text-violet-700 hover:text-violet-900"
-                    onClick={() => onSelectHistory(item.id)}
-                    type="button"
-                  >
-                    Open response
-                  </button>
+                <div className="mt-2 flex justify-end">
                   {onDeleteHistory && (
                     <button
                       aria-label={`Delete ${item.prompt}`}

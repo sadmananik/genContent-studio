@@ -41,7 +41,7 @@ export default function AIPromptPanel({
         <div className="flex flex-wrap gap-2">
           {actions.map((action) => (
             <button
-              className="min-h-8 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="min-h-8 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:shadow-[0_6px_14px_rgba(101,69,246,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-slate-200 disabled:hover:bg-slate-50 disabled:hover:text-slate-700 disabled:hover:shadow-none"
               disabled={isGenerating}
               key={action}
               onClick={() => onQuickAction(action)}
