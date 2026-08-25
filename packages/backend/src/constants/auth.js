@@ -10,6 +10,9 @@ const AUTH_MESSAGES = {
   INVALID_CREDENTIALS: "Invalid email or password",
   LOGIN_REQUIRED_FIELDS: "Email and password are required",
   PASSWORD_MIN_LENGTH: "Password must be at least 8 characters",
+  PASSWORD_CHANGE_EMAIL_SENT: "Password change email sent.",
+  PASSWORD_CHANGE_GENERIC_RESPONSE:
+    "If your account is active, password change instructions have been sent.",
   PASSWORD_RESET_GENERIC_RESPONSE:
     "If an account exists for this email, password reset instructions have been sent.",
   PASSWORD_RESET_INVALID: "This password reset link is invalid or has expired",
@@ -40,6 +43,11 @@ const EMAIL_TEMPLATES = {
   PASSWORD_RESET: {
     subject: "Reset your GenContent Studio password",
     intro: "Use the link below to reset your GenContent Studio password:",
+    outro: "If you did not request this change, you can ignore this email."
+  },
+  PASSWORD_CHANGE: {
+    subject: "Change your GenContent Studio password",
+    intro: "Use the link below to choose a new GenContent Studio password:",
     outro: "If you did not request this change, you can ignore this email."
   },
   VERIFICATION: {

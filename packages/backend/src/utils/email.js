@@ -29,6 +29,22 @@ async function sendPasswordResetEmail({ email, expiresInMinutes, name, resetUrl 
   });
 }
 
+async function sendPasswordChangeEmail({ email, expiresInMinutes, name, resetUrl }) {
+  const template = EMAIL_TEMPLATES.PASSWORD_CHANGE;
+  const subject = template.subject;
+  const text = [
+    `Hello ${name},`,
+    "",
+    template.intro,
+    resetUrl,
+    "",
+    getLinkExpiryCopy(expiresInMinutes),
+    template.outro
+  ].join("\n");
+
+  await sendTextEmail({ email, subject, text });
+}
+
 async function sendEmailVerificationEmail({ email, expiresInMinutes, name, verificationUrl }) {
   const template = EMAIL_TEMPLATES.VERIFICATION;
   const subject = template.subject;
@@ -172,5 +188,6 @@ module.exports = {
   sendEmailVerificationEmail,
   sendExistingUserProjectInviteEmail,
   sendNewUserProjectInviteEmail,
+  sendPasswordChangeEmail,
   sendPasswordResetEmail
 };
