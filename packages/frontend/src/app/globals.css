@@ -754,6 +754,8 @@ a {
   position: relative;
   align-self: center;
   min-height: 520px;
+  isolation: isolate;
+  animation: auth-scene-float 6s ease-in-out infinite;
 }
 
 .robot-scene::before {
@@ -765,6 +767,20 @@ a {
     linear-gradient(135deg, transparent 42%, #d9d0ff 43%, #8a77ff 78%, transparent 79%);
   border-radius: 50%;
   opacity: 0.85;
+}
+
+.robot-scene::after {
+  position: absolute;
+  right: 24%;
+  bottom: 17%;
+  left: 24%;
+  height: 18px;
+  content: "";
+  background: rgba(101, 69, 246, 0.16);
+  border-radius: 50%;
+  filter: blur(10px);
+  z-index: -1;
+  animation: robot-shadow 4.5s ease-in-out infinite;
 }
 
 .chat-bubble {
@@ -779,6 +795,8 @@ a {
   background: linear-gradient(135deg, #8265ff, #5b41e5);
   border-radius: 18px 18px 18px 4px;
   font-size: 25px;
+  box-shadow: 0 16px 30px rgba(91, 65, 229, 0.24);
+  animation: chat-bubble-float 4.5s ease-in-out infinite;
 }
 
 .chat-bubble span {
@@ -819,6 +837,7 @@ a {
   height: 250px;
   transform: scale(1.25);
   transform-origin: top left;
+  animation: robot-float 4.5s ease-in-out infinite;
 }
 
 .robot-head {
@@ -840,15 +859,41 @@ a {
   height: 22px;
   background: #43d5ff;
   border-radius: 20px;
+  transform-origin: center;
+  animation: robot-blink 4.2s ease-in-out infinite;
 }
 
 .robot-body {
+  position: relative;
   width: 92px;
   height: 76px;
   margin: -4px auto 0;
   background: linear-gradient(#ffffff, #eff1ff);
   border: 1px solid #d8ddff;
   border-radius: 28px 28px 36px 36px;
+  box-shadow: 0 12px 22px rgba(62, 57, 177, 0.14);
+}
+
+.robot-body::before,
+.robot-body::after {
+  position: absolute;
+  top: 18px;
+  width: 18px;
+  height: 42px;
+  content: "";
+  background: #ffffff;
+  border: 1px solid #d8ddff;
+  border-radius: 12px;
+}
+
+.robot-body::before {
+  left: -23px;
+  transform: rotate(18deg);
+}
+
+.robot-body::after {
+  right: -23px;
+  transform: rotate(-18deg);
 }
 
 .antenna {
@@ -868,6 +913,8 @@ a {
   content: "";
   background: white;
   border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(130, 101, 255, 0.5);
+  animation: antenna-pulse 2.4s ease-out infinite;
 }
 
 .antenna.left {
@@ -876,6 +923,106 @@ a {
 
 .antenna.right {
   right: 54px;
+}
+
+@keyframes auth-scene-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes robot-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.25);
+  }
+
+  50% {
+    transform: translateY(-13px) scale(1.25);
+  }
+}
+
+@keyframes robot-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: scaleX(0.78);
+    opacity: 0.35;
+  }
+}
+
+@keyframes chat-bubble-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+
+  50% {
+    transform: translateY(-9px) rotate(2deg);
+  }
+}
+
+@keyframes robot-blink {
+  0%,
+  44%,
+  48%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  46% {
+    transform: scaleY(0.12);
+  }
+}
+
+@keyframes antenna-pulse {
+  0%,
+  55%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(130, 101, 255, 0.5);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(130, 101, 255, 0);
+  }
+}
+
+:root[data-active-theme="dark"] .robot-scene::before {
+  background:
+    radial-gradient(circle at 55% 18%, rgba(99, 102, 241, 0.28), transparent 24%),
+    linear-gradient(135deg, transparent 42%, #312e81 43%, #4f46e5 78%, transparent 79%);
+}
+
+:root[data-active-theme="dark"] .robot-scene::after {
+  background: rgba(129, 140, 248, 0.24);
+}
+
+:root[data-active-theme="dark"] .robot-body,
+:root[data-active-theme="dark"] .robot-body::before,
+:root[data-active-theme="dark"] .robot-body::after {
+  background: #e2e8f0;
+  border-color: #64748b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .robot-scene,
+  .robot,
+  .robot-scene::after,
+  .chat-bubble,
+  .robot-head i,
+  .antenna::before,
+  .chat-bubble span {
+    animation: none;
+  }
 }
 
 .app-frame,
