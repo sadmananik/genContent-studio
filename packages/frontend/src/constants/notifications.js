@@ -76,6 +76,8 @@ export const TEXT_EDITOR_ALERTS = {
   COPIED_TITLE: "Copied",
   DELETE_FAILED_MESSAGE: "Response could not be deleted.",
   DELETE_FAILED_TITLE: "Delete failed",
+  DELETE_CONFIRM_TITLE: "Delete AI response?",
+  DELETE_CONFIRM_LABEL: "Delete Response",
   DELETED_MESSAGE: "Response deleted from history.",
   DELETED_TITLE: "Deleted",
   DRAFT_SAVE_FAILED_MESSAGE: "Draft could not be saved.",
@@ -122,6 +124,8 @@ export const TEXT_EDITOR_ALERTS = {
   UPDATED_MESSAGE: "Response updated.",
   UPDATED_TITLE: "Updated",
   alreadyInvitedMessage: (email) => `${email} is already invited.`,
+  deleteConfirmDescription: (prompt) =>
+    `Delete "${prompt || "this response"}" from AI prompt history? This cannot be undone.`,
   sharedMessage: (email) => `${email} was invited to this project.`
 };
 
