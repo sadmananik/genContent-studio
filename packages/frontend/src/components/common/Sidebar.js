@@ -10,7 +10,6 @@ import {
   PanelTop,
   SearchCheck,
   Settings,
-  Trash2,
   Users
 } from "lucide-react";
 import Brand from "./Brand";
@@ -26,7 +25,6 @@ const navIcons = {
   PanelTop,
   SearchCheck,
   Settings,
-  Trash2,
   Users
 };
 

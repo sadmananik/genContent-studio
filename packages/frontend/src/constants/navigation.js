@@ -7,7 +7,6 @@ export const ROUTES = {
   SHARED: "/shared",
   FAVORITES: "/favorites",
   TEMPLATES: "/templates",
-  TRASH: "/trash",
   LOGIN: "/login",
   REGISTER: "/register",
   FORGOT_PASSWORD: "/forgot-password",
@@ -20,8 +19,7 @@ export const NAV_ITEMS = [
   { icon: "LayoutDashboard", label: "Dashboard", href: ROUTES.DASHBOARD },
   { icon: "FolderKanban", label: "Projects", href: ROUTES.PROJECTS },
   { icon: "Users", label: "Shared with Me", href: ROUTES.SHARED },
-  { icon: "PanelTop", label: "Templates", href: ROUTES.TEMPLATES },
-  { icon: "Trash2", label: "Trash", href: ROUTES.TRASH }
+  { icon: "PanelTop", label: "Templates", href: ROUTES.TEMPLATES }
 ];
 
 export const EDITOR_NAV_ITEMS = [
