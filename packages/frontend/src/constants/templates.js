@@ -106,6 +106,7 @@ export const TEMPLATE_TEXT = {
 
 export const TEMPLATE_FORM_FIELDS = {
   CATEGORY: "Category",
+  AI_HISTORY: "AI History",
   DESCRIPTION: "Description",
   PROJECT_TYPE: "Project Type",
   STARTER_CONTENT: "Starter Content",

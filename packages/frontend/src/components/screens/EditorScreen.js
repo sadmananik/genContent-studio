@@ -140,6 +140,18 @@ export default function EditorScreen() {
       })),
     [responses]
   );
+  const templateHistoryOptions = useMemo(
+    () =>
+      responses.map((response) => ({
+        id: response.id,
+        label: `${response.promptPreview || getPromptPreview(response.prompt)} • ${
+          response.timestamp
+        }`,
+        prompt: response.prompt,
+        content: response.response
+      })),
+    [responses]
+  );
   const selectedResponse =
     responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
   const canEditProject = project.canEdit !== false && requestedAccess !== EDITOR_ACCESS_QUERY.VIEW;
@@ -826,7 +838,13 @@ export default function EditorScreen() {
         onNotify={showNotification}
         onSave={handleSave}
         project={project}
+        templateHistoryOptions={templateHistoryOptions}
         statusLabel={statusLabel}
+        templateInitialValues={{
+          projectType: API_PROJECT_TYPES.TEXT,
+          starterContent: editorContent.html,
+          starterPrompt: prompt
+        }}
       />
 
       <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
@@ -1218,7 +1236,7 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function getCollaboratorAccessLevel(project, user) {
@@ -1231,33 +1249,64 @@ function getCollaboratorAccessLevel(project, user) {
 }
 
 function createPdfBlob(title, text) {
-  const lines = wrapPdfText([title, "", text].join("\n"), 82).slice(0, 48);
-  const contentLines = ["BT", "/F1 12 Tf", "14 TL", "72 760 Td"];
-
-  lines.forEach((line, index) => {
-    if (index === 0) {
-      contentLines.push("/F1 16 Tf");
-    } else if (index === 1) {
-      contentLines.push("/F1 12 Tf");
-    }
-
-    contentLines.push(`(${escapePdfText(line)}) Tj`);
-
-    if (index < lines.length - 1) {
-      contentLines.push("T*");
-    }
-  });
-
-  contentLines.push("ET");
-
-  const stream = contentLines.join("\n");
+  const bodyLines = wrapPdfText(text || "", 82);
+  const linesPerPage = 46;
+  const titleLines = wrapPdfText(title || "Text Export", 54);
+  const firstPageBodyCapacity = Math.max(1, linesPerPage - titleLines.length - 1);
+  const pageChunks = [
+    bodyLines.slice(0, firstPageBodyCapacity),
+    ...chunkArray(bodyLines.slice(firstPageBodyCapacity), linesPerPage)
+  ].filter((chunk, index) => chunk.length > 0 || index === 0);
+  const pageCount = Math.max(1, pageChunks.length);
+  const fontObjectNumber = 3 + pageCount * 2;
+  const pageObjectNumbers = Array.from({ length: pageCount }, (_, index) => 3 + index);
+  const contentObjectNumbers = Array.from(
+    { length: pageCount },
+    (_, index) => 3 + pageCount + index
+  );
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
+    `<< /Type /Pages /Kids [${pageObjectNumbers.map((number) => `${number} 0 R`).join(" ")}] /Count ${pageCount} >>`
   ];
+
+  pageChunks.forEach((chunk, index) => {
+    const pageLines = [];
+
+    if (index === 0) {
+      pageLines.push(...titleLines, "");
+    }
+
+    pageLines.push(...chunk);
+
+    const contentLines = ["BT", "/F1 12 Tf", "14 TL", "72 760 Td"];
+    pageLines.forEach((line, lineIndex) => {
+      if (index === 0 && lineIndex < titleLines.length) {
+        if (lineIndex === 0) {
+          contentLines.push("/F1 16 Tf");
+        }
+      }
+
+      if (index === 0 && lineIndex === titleLines.length) {
+        contentLines.push("/F1 12 Tf");
+      }
+
+      contentLines.push(`(${escapePdfText(line)}) Tj`);
+
+      if (lineIndex < pageLines.length - 1) {
+        contentLines.push("T*");
+      }
+    });
+    contentLines.push("ET");
+
+    const contentStream = contentLines.join("\n");
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontObjectNumber} 0 R >> >> /Contents ${contentObjectNumbers[index]} 0 R >>`
+    );
+    objects.push(`<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream`);
+  });
+
+  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
 
@@ -1274,6 +1323,16 @@ function createPdfBlob(title, text) {
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
   return new Blob([pdf], { type: "application/pdf" });
+}
+
+function chunkArray(values, size) {
+  const chunks = [];
+
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+
+  return chunks.length > 0 ? chunks : [[]];
 }
 
 function wrapPdfText(value, maxLineLength) {

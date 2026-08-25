@@ -4,9 +4,8 @@ const Project = require("../models/Project");
 const Template = require("../models/Template");
 const TemplatePreference = require("../models/TemplatePreference");
 const TextContent = require("../models/TextContent");
-const { PROJECT_TYPE_VALUES, PROJECT_TYPES } = require("../constants/projects");
+const { PROJECT_ROLES, PROJECT_TYPE_VALUES, PROJECT_TYPES } = require("../constants/projects");
 const {
-  SYSTEM_TEMPLATES,
   TEMPLATE_MESSAGES,
   TEMPLATE_VISIBILITY,
   TEMPLATE_VISIBILITY_VALUES
@@ -30,8 +29,6 @@ const TEMPLATE_UPDATE_FIELDS = [
 ];
 
 const listTemplates = asyncHandler(async (req, res) => {
-  await ensureSystemTemplates();
-
   const query = { visibility: TEMPLATE_VISIBILITY.PUBLIC };
   const type = normalizeString(req.query.type).toLowerCase();
   const category = normalizeString(req.query.category);
@@ -100,8 +97,6 @@ const listRecentTemplates = asyncHandler(async (req, res) => {
 });
 
 const listTemplateTags = asyncHandler(async (req, res) => {
-  await ensureSystemTemplates();
-
   const search = normalizeString(req.query.search).slice(0, 40);
   const match = {
     tags: { $exists: true, $ne: [] },
@@ -277,7 +272,7 @@ const useTemplate = asyncHandler(async (req, res) => {
   res.status(201).json({
     project: {
       ...project.toObject(),
-      currentUserRole: "owner",
+      currentUserRole: PROJECT_ROLES.OWNER,
       accessLevel: "editor",
       canEdit: true,
       canManageSharing: true,
@@ -308,26 +303,6 @@ const unfavoriteTemplate = asyncHandler(async (req, res) => {
 
   res.json({ isFavorite: false, message: TEMPLATE_MESSAGES.UNFAVORITE_SUCCESS });
 });
-
-async function ensureSystemTemplates() {
-  await Template.bulkWrite(
-    SYSTEM_TEMPLATES.map((template) => ({
-      updateOne: {
-        filter: { systemKey: template.systemKey },
-        update: {
-          $setOnInsert: {
-            ...template,
-            creator: null,
-            isSystem: true,
-            visibility: TEMPLATE_VISIBILITY.PUBLIC
-          }
-        },
-        upsert: true
-      }
-    })),
-    { ordered: false }
-  );
-}
 
 async function findAccessibleTemplate(templateId, userId) {
   const template = await Template.findOne({

@@ -2,14 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, Save, Share2, ShieldCheck, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  LayoutTemplate,
+  Save,
+  Share2,
+  ShieldCheck,
+  Users
+} from "lucide-react";
 import AppModal from "../common/AppModal";
 import Button from "../common/Button";
+import TemplateFormModal from "../templates/TemplateFormModal";
 import { TOAST_TYPES } from "../common/ToastNotification";
 import { UserAvatar, UserAvatarStack } from "../common/UserAvatar";
-import { ACCESS_LEVEL_LABELS, ACCESS_LEVELS } from "../../constants/content";
+import {
+  ACCESS_LEVEL_LABELS,
+  ACCESS_LEVELS,
+  API_PROJECT_TYPES,
+  PROJECT_ROLES,
+  PROJECT_TYPES
+} from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
 import { SHARE_POPOVER_TEXT } from "../../constants/notifications";
+import { TEMPLATE_CATEGORIES, TEMPLATE_TEXT, TEMPLATE_VISIBILITY } from "../../constants/templates";
 import { useAppStore } from "../../store";
 import WorkspaceExportMenu from "./WorkspaceExportMenu";
 import WorkspaceSharePopover from "./WorkspaceSharePopover";
@@ -27,21 +43,28 @@ export default function TextWorkspaceHeader({
   isSaving,
   onSave,
   project,
+  templateHistoryOptions = [],
+  templateInitialValues,
   statusLabel
 }) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteAccessLevel, setInviteAccessLevel] = useState(ACCESS_LEVELS.EDITOR);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [permissionDrafts, setPermissionDrafts] = useState({});
   const [isShareOpen, setIsShareOpen] = useState(false);
   const auth = useAppStore((state) => state.auth);
   const listUsers = useAppStore((state) => state.listUsers);
   const projectState = useAppStore((state) => state.projectState);
+  const publishTemplate = useAppStore((state) => state.publishTemplate);
   const updateProject = useAppStore((state) => state.updateProject);
   const userState = useAppStore((state) => state.userState);
   const owner = project.owner || auth.user;
   const collaboratorAccess = buildCollaboratorAccessMap(project);
+  const canPublishTemplate =
+    project.currentUserRole === PROJECT_ROLES.OWNER && isRealProject(project);
 
   useEffect(() => {
     if (isShareOpen && userState.users.length === 0 && !userState.loading) {
@@ -131,6 +154,31 @@ export default function TextWorkspaceHeader({
         error.message || SHARE_POPOVER_TEXT.PERMISSIONS_UPDATE_FAILED_MESSAGE,
         TOAST_TYPES.ERROR
       );
+    }
+  }
+
+  async function handlePublishTemplate(values) {
+    if (!canPublishTemplate) return;
+    setIsPublishing(true);
+
+    try {
+      await publishTemplate(project.id || project._id, values);
+      setIsPublishOpen(false);
+      onNotify?.(
+        TEMPLATE_TEXT.PUBLISHED_TITLE,
+        values.visibility === TEMPLATE_VISIBILITY.PUBLIC
+          ? TEMPLATE_TEXT.PUBLISHED_MESSAGE
+          : TEMPLATE_TEXT.PUBLISHED_PRIVATE_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
+    } catch (error) {
+      onNotify?.(
+        TEMPLATE_TEXT.PUBLISH_FAILED_TITLE,
+        error.message || TEMPLATE_TEXT.PUBLISH_FAILED_MESSAGE,
+        TOAST_TYPES.ERROR
+      );
+    } finally {
+      setIsPublishing(false);
     }
   }
 
@@ -239,11 +287,35 @@ export default function TextWorkspaceHeader({
             />
           )}
         </div>
+        {canPublishTemplate && (
+          <Button
+            onClick={() => {
+              setIsPublishOpen(true);
+              setIsExportOpen(false);
+              setIsShareOpen(false);
+            }}
+            type="button"
+            variant="secondary"
+          >
+            <LayoutTemplate aria-hidden="true" size={17} />
+            {TEMPLATE_TEXT.PUBLISH_ACTION}
+          </Button>
+        )}
         <Button disabled={isSaving || !canEdit} onClick={onSave} type="button">
           <Save aria-hidden="true" size={17} />
           {isSaving ? "Saving..." : "Save"}
         </Button>
       </div>
+      {isPublishOpen && (
+        <TemplateFormModal
+          error={null}
+          historyOptions={templateHistoryOptions}
+          initialValues={getTemplateInitialValues(project, templateInitialValues)}
+          isSubmitting={isPublishing}
+          onClose={() => setIsPublishOpen(false)}
+          onSubmit={handlePublishTemplate}
+        />
+      )}
       {isPermissionsOpen && (
         <AppModal
           action={SHARE_POPOVER_TEXT.SAVE_PERMISSIONS}
@@ -319,6 +391,38 @@ function buildCollaboratorAccessMap(project) {
     accessMap[String(permission.user?._id || permission.user)] = permission.accessLevel;
     return accessMap;
   }, {});
+}
+
+function getTemplateInitialValues(project, templateInitialValues = {}) {
+  return {
+    ...templateInitialValues,
+    category: getTemplateCategory(templateInitialValues.category || project.category),
+    projectType:
+      templateInitialValues.projectType ||
+      (isImageProject(project) ? API_PROJECT_TYPES.IMAGE : API_PROJECT_TYPES.TEXT),
+    title: templateInitialValues.title || `${project.title} Template`,
+    visibility: templateInitialValues.visibility || TEMPLATE_VISIBILITY.PUBLIC
+  };
+}
+
+function getTemplateCategory(projectCategory) {
+  if (TEMPLATE_CATEGORIES.includes(projectCategory)) return projectCategory;
+
+  const normalizedCategory = String(projectCategory || "").toLowerCase();
+
+  return (
+    TEMPLATE_CATEGORIES.find((category) => normalizedCategory.includes(category.toLowerCase())) ||
+    "Other"
+  );
+}
+
+function isImageProject(project) {
+  const type = String(project.type || "").toLowerCase();
+  return type === API_PROJECT_TYPES.IMAGE || type.includes(PROJECT_TYPES.IMAGE.toLowerCase());
+}
+
+function isRealProject(project) {
+  return /^[a-f\d]{24}$/i.test(project.id || project._id || "");
 }
 
 function getUserId(user) {

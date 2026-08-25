@@ -13,8 +13,10 @@ import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
 import {
   ACCESS_LEVELS,
+  AI_CONTENT_TYPES,
   API_PROJECT_TYPES,
   EDITOR_ACCESS_QUERY,
+  PROJECT_ROLES,
   PROJECT_TYPES
 } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
@@ -28,6 +30,7 @@ export default function ProjectsScreen() {
   const projectState = useAppStore((state) => state.projectState);
   const createProject = useAppStore((state) => state.createProject);
   const deleteProject = useAppStore((state) => state.deleteProject);
+  const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
   const fetchProjects = useAppStore((state) => state.fetchProjects);
   const updateProject = useAppStore((state) => state.updateProject);
   const publishTemplate = useAppStore((state) => state.publishTemplate);
@@ -36,6 +39,8 @@ export default function ProjectsScreen() {
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectPendingDelete, setProjectPendingDelete] = useState(null);
   const [projectPendingPublish, setProjectPendingPublish] = useState(null);
+  const [projectPublishHistoryOptions, setProjectPublishHistoryOptions] = useState([]);
+  const [loadingPublishProjectId, setLoadingPublishProjectId] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [notification, setNotification] = useState(null);
@@ -169,6 +174,28 @@ export default function ProjectsScreen() {
     }
   }
 
+  async function openPublishTemplateModal(project) {
+    setLoadingPublishProjectId(project.id);
+    setOpenActionProjectId(null);
+
+    try {
+      const chatHistory = await fetchProjectChatHistory(project.id);
+      setProjectPublishHistoryOptions(formatTemplateHistoryOptions(chatHistory, project.type));
+      setProjectPendingPublish(project);
+    } catch (error) {
+      setProjectPublishHistoryOptions([]);
+      setProjectPendingPublish(project);
+      showNotification(
+        TEMPLATE_TEXT.PUBLISH_FAILED_TITLE,
+        error.message || TEMPLATE_TEXT.PUBLISH_FAILED_MESSAGE,
+        TOAST_TYPES.WARNING,
+        3000
+      );
+    } finally {
+      setLoadingPublishProjectId(null);
+    }
+  }
+
   function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
@@ -274,14 +301,16 @@ export default function ProjectsScreen() {
                         <button
                           className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100"
                           onClick={() => {
-                            setProjectPendingPublish(project);
-                            setOpenActionProjectId(null);
+                            openPublishTemplateModal(project);
                           }}
                           role="menuitem"
                           type="button"
+                          disabled={loadingPublishProjectId === project.id}
                         >
                           <LayoutTemplate aria-hidden="true" size={16} />
-                          Publish as Template
+                          {loadingPublishProjectId === project.id
+                            ? "Loading History..."
+                            : "Publish as Template"}
                         </button>
                       )}
                       {project.canDelete && (
@@ -350,6 +379,7 @@ export default function ProjectsScreen() {
       {projectPendingPublish && (
         <TemplateFormModal
           error={null}
+          historyOptions={projectPublishHistoryOptions}
           initialValues={{
             ...projectPendingPublish,
             category: getTemplateCategory(projectPendingPublish.category),
@@ -361,7 +391,10 @@ export default function ProjectsScreen() {
             visibility: TEMPLATE_VISIBILITY.PUBLIC
           }}
           isSubmitting={isPublishing}
-          onClose={() => setProjectPendingPublish(null)}
+          onClose={() => {
+            setProjectPendingPublish(null);
+            setProjectPublishHistoryOptions([]);
+          }}
           onSubmit={handlePublishTemplate}
         />
       )}
@@ -388,7 +421,7 @@ function formatProject(project) {
     accessLevel: project.accessLevel,
     canDelete: project.canDelete !== false,
     canManageSharing: project.canManageSharing !== false,
-    canPublish: project.currentUserRole === "owner",
+    canPublish: project.currentUserRole === PROJECT_ROLES.OWNER,
     starterPrompt: project.starterPrompt || "",
     style: project.style || "",
     tone: project.tone || "",
@@ -408,6 +441,34 @@ function getTemplateCategory(projectCategory) {
     TEMPLATE_CATEGORIES.find((category) => normalizedCategory.includes(category.toLowerCase())) ||
     "Other"
   );
+}
+
+function formatTemplateHistoryOptions(chatHistory = [], projectType) {
+  const contentType =
+    projectType === PROJECT_TYPES.IMAGE ? AI_CONTENT_TYPES.IMAGE : AI_CONTENT_TYPES.TEXT;
+
+  return chatHistory
+    .filter((chat) => chat.contentType === contentType)
+    .map((chat) => ({
+      id: chat._id || chat.id,
+      label: `${getPromptPreview(chat.prompt)} • ${
+        chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "Saved chat"
+      }`,
+      prompt: chat.prompt,
+      content: chat.response
+    }));
+}
+
+function getPromptPreview(value, maxLength = 72) {
+  const compactPrompt = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (compactPrompt.length <= maxLength) {
+    return compactPrompt;
+  }
+
+  return `${compactPrompt.slice(0, maxLength - 1).trim()}...`;
 }
 
 function getProjectWorkspaceHref(project) {

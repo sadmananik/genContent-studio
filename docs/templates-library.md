@@ -116,6 +116,18 @@ DELETE /api/templates/:id/favorite
 DELETE /api/templates/:id
 ```
 
+## Default Template Seed
+
+Default system templates are not inserted automatically when users open the Templates page.
+
+Run the seed script when default templates should exist in an environment:
+
+```bash
+yarn workspace @gencontent/backend db:seed:templates
+```
+
+The script is safe to rerun. It uses each template `systemKey` and only inserts missing default templates.
+
 ## Data Rules
 
 Template data stores:

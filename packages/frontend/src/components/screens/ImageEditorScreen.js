@@ -14,6 +14,7 @@ import { textPromptActions } from "../text-workspace/promptActions";
 import {
   ACCESS_LEVELS,
   AI_CONTENT_TYPES,
+  API_PROJECT_TYPES,
   EDITOR_ACCESS_QUERY,
   PERMISSION_MESSAGES,
   PROJECT_ROLES
@@ -59,6 +60,16 @@ export default function ImageEditorScreen() {
     timestamp: response.timestamp,
     favourite: response.favourite
   }));
+  const templateHistoryOptions = useMemo(
+    () =>
+      responses.map((response) => ({
+        id: response.id,
+        label: `${response.prompt} • ${response.timestamp}`,
+        prompt: response.prompt,
+        content: response.response
+      })),
+    [responses]
+  );
   const invitedUsers = useMemo(() => {
     const usersByEmail = new Map();
 
@@ -683,7 +694,12 @@ export default function ImageEditorScreen() {
         onNotify={showNotification}
         onSave={handleHeaderSave}
         project={project}
+        templateHistoryOptions={templateHistoryOptions}
         statusLabel={statusLabel}
+        templateInitialValues={{
+          projectType: API_PROJECT_TYPES.IMAGE,
+          starterPrompt: prompt
+        }}
       />
 
       <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
@@ -824,7 +840,7 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function formatTime(value) {

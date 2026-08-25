@@ -17,6 +17,7 @@ const fieldClassName =
 
 export default function TemplateFormModal({
   error,
+  historyOptions = [],
   initialValues,
   isSubmitting,
   mode = "publish",
@@ -27,7 +28,12 @@ export default function TemplateFormModal({
   const [values, setValues] = useState(() => getInitialValues(initialValues));
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [isTagInputFocused, setIsTagInputFocused] = useState(false);
+  const initialValuesKey = getInitialValuesKey(initialValues);
   const isEditing = mode === "edit";
+  const hasHistoryOptions = historyOptions.length > 0;
+  const selectedHistory = hasHistoryOptions
+    ? findHistoryOption(historyOptions, values.selectedHistoryId) || historyOptions[0]
+    : null;
   const activeTagQuery = getActiveTagQuery(values.tags);
   const visibleTagSuggestions = tagSuggestions.filter(
     (tag) => !getSelectedTags(values.tags).includes(tag.toLowerCase())
@@ -48,6 +54,24 @@ export default function TemplateFormModal({
     return () => window.clearTimeout(timeout);
   }, [activeTagQuery, fetchTemplateTagSuggestions, isTagInputFocused]);
 
+  useEffect(() => {
+    if (!hasHistoryOptions) {
+      return;
+    }
+
+    const firstHistoryId = historyOptions[0]?.id || "";
+
+    if (!values.selectedHistoryId) {
+      updateValue("selectedHistoryId", firstHistoryId);
+    }
+  }, [hasHistoryOptions, historyOptions, values.selectedHistoryId]);
+
+  useEffect(() => {
+    setValues(getInitialValues(initialValues));
+    setTagSuggestions([]);
+    setIsTagInputFocused(false);
+  }, [initialValuesKey, hasHistoryOptions]);
+
   function updateValue(field, value) {
     setValues((current) => ({ ...current, [field]: value }));
   }
@@ -60,6 +84,12 @@ export default function TemplateFormModal({
         .map((tag) => tag.trim())
         .filter(Boolean)
     };
+
+    if (hasHistoryOptions && selectedHistory) {
+      payload.starterPrompt = selectedHistory.prompt || payload.starterPrompt;
+      payload.starterContent = selectedHistory.content || payload.starterContent;
+      delete payload.selectedHistoryId;
+    }
 
     if (payload.projectType === "image" || (!isEditing && !payload.starterContent.trim())) {
       delete payload.starterContent;
@@ -115,6 +145,7 @@ export default function TemplateFormModal({
               ))}
             </select>
           </TemplateField>
+
           <TemplateField label={TEMPLATE_FORM_FIELDS.PROJECT_TYPE}>
             <input
               className={`${fieldClassName} cursor-not-allowed bg-slate-50 capitalize`}
@@ -145,23 +176,45 @@ export default function TemplateFormModal({
           </span>
         </TemplateField>
 
-        <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_PROMPT}>
-          <textarea
-            className={`${fieldClassName} min-h-24 resize-y py-2.5 leading-6`}
-            maxLength={4000}
-            onChange={(event) => updateValue("starterPrompt", event.target.value)}
-            value={values.starterPrompt}
-          />
-        </TemplateField>
-
-        {values.projectType === "text" && (
-          <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_CONTENT}>
-            <textarea
-              className={`${fieldClassName} min-h-28 resize-y py-2.5 font-mono text-xs leading-6`}
-              onChange={(event) => updateValue("starterContent", event.target.value)}
-              value={values.starterContent}
-            />
+        {hasHistoryOptions ? (
+          <TemplateField label={TEMPLATE_FORM_FIELDS.AI_HISTORY}>
+            <select
+              className={fieldClassName}
+              onChange={(event) => updateValue("selectedHistoryId", event.target.value)}
+              value={values.selectedHistoryId}
+            >
+              {historyOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] font-normal leading-5 normal-case text-slate-500">
+              Pick one chat history item and we will reuse it for both the starter prompt and
+              starter content.
+            </p>
           </TemplateField>
+        ) : (
+          <>
+            <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_PROMPT}>
+              <textarea
+                className={`${fieldClassName} min-h-24 resize-y py-2.5 leading-6`}
+                maxLength={4000}
+                onChange={(event) => updateValue("starterPrompt", event.target.value)}
+                value={values.starterPrompt}
+              />
+            </TemplateField>
+
+            {values.projectType === "text" && (
+              <TemplateField label={TEMPLATE_FORM_FIELDS.STARTER_CONTENT}>
+                <textarea
+                  className={`${fieldClassName} min-h-28 resize-y py-2.5 font-mono text-xs leading-6`}
+                  onChange={(event) => updateValue("starterContent", event.target.value)}
+                  value={values.starterContent}
+                />
+              </TemplateField>
+            )}
+          </>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -254,8 +307,24 @@ function getInitialValues(values = {}) {
     starterContent: typeof values.starterContent === "string" ? values.starterContent : "",
     tone: values.tone || "",
     style: values.style || "",
-    visibility: values.visibility || TEMPLATE_VISIBILITY.PUBLIC
+    visibility: values.visibility || TEMPLATE_VISIBILITY.PUBLIC,
+    selectedHistoryId: values.selectedHistoryId || ""
   };
+}
+
+function getInitialValuesKey(values = {}) {
+  return [
+    values.title || "",
+    values.description || "",
+    values.category || "",
+    values.projectType || values.type || "",
+    Array.isArray(values.tags) ? values.tags.join(",") : values.tags || "",
+    values.starterPrompt || "",
+    typeof values.starterContent === "string" ? values.starterContent : "",
+    values.tone || "",
+    values.style || "",
+    values.visibility || ""
+  ].join("|");
 }
 
 function getActiveTagQuery(value) {
@@ -280,4 +349,8 @@ function applyTagSuggestion(value, selectedTag) {
     .filter(Boolean)
     .join(", ")
     .concat(", ");
+}
+
+function findHistoryOption(historyOptions, id) {
+  return historyOptions.find((option) => option.id === id);
 }

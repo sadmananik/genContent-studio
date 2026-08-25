@@ -267,6 +267,71 @@ a {
   color: #f8fafc;
 }
 
+:root[data-active-theme="dark"] .login-screen {
+  border-color: #1f2937;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-active-theme="dark"] .login-screen::after {
+  opacity: 0.2;
+}
+
+:root[data-active-theme="dark"] .login-screen .brand {
+  color: #f8fafc;
+}
+
+:root[data-active-theme="dark"] .login-panel {
+  background: #09090b;
+  border-color: #1f2937;
+}
+
+:root[data-active-theme="dark"] .login-panel h2 {
+  color: #f8fafc;
+}
+
+:root[data-active-theme="dark"] .login-panel p,
+:root[data-active-theme="dark"] .login-panel .form-row,
+:root[data-active-theme="dark"] .login-panel .signup {
+  color: #cbd5e1;
+}
+
+:root[data-active-theme="dark"] .login-panel label,
+:root[data-active-theme="dark"] .login-panel .auth-field {
+  background: #030712;
+  border-color: #334155;
+}
+
+:root[data-active-theme="dark"] .login-panel label > svg,
+:root[data-active-theme="dark"] .password-field > svg {
+  color: #94a3b8;
+}
+
+:root[data-active-theme="dark"] .login-panel input,
+:root[data-active-theme="dark"] .login-panel .auth-field input {
+  background: transparent;
+  color: #f8fafc;
+}
+
+:root[data-active-theme="dark"] .login-panel input::placeholder {
+  color: #64748b;
+}
+
+:root[data-active-theme="dark"] .login-panel .form-row a,
+:root[data-active-theme="dark"] .login-panel .signup a {
+  color: #c4b5fd;
+}
+
+:root[data-active-theme="dark"] .login-panel .form-row a:hover,
+:root[data-active-theme="dark"] .login-panel .signup a:hover {
+  color: #ede9fe;
+}
+
+:root[data-active-theme="dark"] .login-panel .auth-error {
+  background: rgba(127, 29, 29, 0.32);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+}
+
 .brand {
   display: flex;
   align-items: center;
