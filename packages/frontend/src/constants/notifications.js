@@ -161,3 +161,10 @@ export const VERIFY_EMAIL_TEXT = {
   SIGN_IN_CONTINUE: "Continue to sign in",
   TITLE: "Verify email"
 };
+
+export const SHARE_POPOVER_TEXT = {
+  INVITE_EMAIL_LABEL: "Invite by email",
+  INVITE_BUTTON: "Invite",
+  INVITED_COLLABORATORS_LABEL: "Invited collaborators",
+  EMAIL_PLACEHOLDER: "teammate@example.com"
+};
