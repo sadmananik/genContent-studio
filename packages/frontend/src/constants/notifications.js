@@ -109,6 +109,8 @@ export const TEXT_EDITOR_ALERTS = {
 
 export const IMAGE_EDITOR_ALERTS = {
   CANVAS_JSON_EXPORTED_MESSAGE: "Canvas JSON exported.",
+  CANVAS_LOAD_FAILED_MESSAGE: "Saved image canvas could not be loaded.",
+  CANVAS_LOAD_FAILED_TITLE: "Canvas load failed",
   CANVAS_SAVE_FAILED_MESSAGE: "Image could not be saved.",
   CANVAS_SAVE_FAILED_BEFORE_SWITCHING_MESSAGE: "Canvas could not be saved before switching.",
   CANVAS_SAVED_LOCAL_MESSAGE: "Image canvas saved in this browser.",

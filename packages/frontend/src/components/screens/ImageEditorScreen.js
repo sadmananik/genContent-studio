@@ -99,7 +99,13 @@ export default function ImageEditorScreen() {
 
     fetchProjectById(projectId)
       .then((loadedProject) => setProject(normalizeProject(loadedProject)))
-      .catch(() => {});
+      .catch((error) => {
+        showNotification(
+          TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_TITLE,
+          error.message || TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_MESSAGE,
+          TOAST_TYPES.ERROR
+        );
+      });
   }, [fetchProjectById, isRealProject, projectId]);
 
   useEffect(() => {
@@ -143,7 +149,13 @@ export default function ImageEditorScreen() {
           setHasUnsavedChanges(false);
         });
       })
-      .catch(() => {});
+      .catch((error) => {
+        showNotification(
+          IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_TITLE,
+          error.message || IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_MESSAGE,
+          TOAST_TYPES.ERROR
+        );
+      });
   }, [canvas, isRealProject, projectId]);
 
   useEffect(() => {
@@ -505,7 +517,7 @@ export default function ImageEditorScreen() {
     );
   }
 
-  async function handleSaveCanvas(payload) {
+  async function handleSaveCanvas(payload, { notify = true } = {}) {
     if (!canEditProject) {
       showNotification(
         PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
@@ -527,18 +539,21 @@ export default function ImageEditorScreen() {
 
     setHasUnsavedChanges(false);
     setLastSavedAt(new Date());
-    showNotification(
-      TEXT_EDITOR_ALERTS.SAVED_TITLE,
-      isRealProject
-        ? IMAGE_EDITOR_ALERTS.CANVAS_SAVED_MESSAGE
-        : IMAGE_EDITOR_ALERTS.CANVAS_SAVED_LOCAL_MESSAGE,
-      TOAST_TYPES.SUCCESS
-    );
+
+    if (notify) {
+      showNotification(
+        TEXT_EDITOR_ALERTS.SAVED_TITLE,
+        isRealProject
+          ? IMAGE_EDITOR_ALERTS.CANVAS_SAVED_MESSAGE
+          : IMAGE_EDITOR_ALERTS.CANVAS_SAVED_LOCAL_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
+    }
   }
 
-  async function saveCurrentCanvas() {
+  async function saveCurrentCanvas(options) {
     const payload = canvas ? JSON.stringify(canvas.toJSON()) : "{}";
-    await handleSaveCanvas(payload);
+    await handleSaveCanvas(payload, options);
   }
 
   function handleHeaderSave() {
@@ -572,7 +587,7 @@ export default function ImageEditorScreen() {
     setIsSaving(true);
 
     try {
-      await saveCurrentCanvas();
+      await saveCurrentCanvas({ notify: false });
       pendingCanvasAction?.();
       setPendingCanvasAction(null);
       setPendingCanvasActionCopy(null);
@@ -582,6 +597,8 @@ export default function ImageEditorScreen() {
         TOAST_TYPES.SUCCESS
       );
     } catch (error) {
+      setPendingCanvasAction(null);
+      setPendingCanvasActionCopy(null);
       showNotification(
         TEXT_EDITOR_ALERTS.SAVE_FAILED_TITLE,
         error.message || IMAGE_EDITOR_ALERTS.CANVAS_SAVE_FAILED_BEFORE_SWITCHING_MESSAGE,
