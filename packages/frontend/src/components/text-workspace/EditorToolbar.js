@@ -40,11 +40,11 @@ const colorOptions = [
 
 const fontSizes = ["14px", "16px", "18px", "22px", "28px"];
 
-export default function EditorToolbar({ editor }) {
+export default function EditorToolbar({ editor, disabled = false }) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 p-3">
       {toolbarItems.map((tool) => {
-        const isActive = editor ? tool.isActive(editor) : false;
+        const isActive = editor && !disabled ? tool.isActive(editor) : false;
 
         return (
           <button
@@ -53,7 +53,7 @@ export default function EditorToolbar({ editor }) {
                 ? "border-violet-500 bg-violet-50 text-violet-700"
                 : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
             }`}
-            disabled={!editor}
+            disabled={!editor || disabled}
             key={tool.label}
             onClick={() => tool.run(editor)}
             type="button"
@@ -65,7 +65,7 @@ export default function EditorToolbar({ editor }) {
       <span className="mx-1 h-8 w-px bg-slate-200" />
       <select
         className="min-h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700"
-        disabled={!editor}
+        disabled={!editor || disabled}
         onChange={(event) => editor.chain().focus().setFontSize(event.target.value).run()}
         value={editor?.getAttributes("textStyle").fontSize || "16px"}
       >
@@ -80,11 +80,11 @@ export default function EditorToolbar({ editor }) {
           <button
             aria-label={`Set text color to ${color.label}`}
             className={`h-9 w-9 rounded-md border ${
-              editor?.isActive("textStyle", { color: color.value })
+              editor?.isActive("textStyle", { color: color.value }) && !disabled
                 ? "border-violet-500 ring-2 ring-violet-100"
                 : "border-slate-200"
             }`}
-            disabled={!editor}
+            disabled={!editor || disabled}
             key={color.value}
             onClick={() => editor.chain().focus().setColor(color.value).run()}
             style={{ backgroundColor: color.value }}
@@ -94,7 +94,7 @@ export default function EditorToolbar({ editor }) {
       </div>
       <button
         className="min-h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
-        disabled={!editor}
+        disabled={!editor || disabled}
         onClick={() => editor.chain().focus().unsetColor().unsetFontSize().run()}
         type="button"
       >

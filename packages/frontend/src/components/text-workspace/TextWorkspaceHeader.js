@@ -10,6 +10,8 @@ import WorkspaceExportMenu from "./WorkspaceExportMenu";
 import WorkspaceSharePopover from "./WorkspaceSharePopover";
 
 export default function TextWorkspaceHeader({
+  canEdit = true,
+  canManageSharing = true,
   exportOptions,
   invitedUsers = [],
   onExport,
@@ -50,6 +52,14 @@ export default function TextWorkspaceHeader({
           <span>{project.type}</span>
           <span aria-hidden="true">•</span>
           <span>{statusLabel || project.lastUpdated}</span>
+          {!canEdit && (
+            <>
+              <span aria-hidden="true">•</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+                View only
+              </span>
+            </>
+          )}
         </p>
       </div>
 
@@ -58,27 +68,29 @@ export default function TextWorkspaceHeader({
           <Users aria-hidden="true" className="mr-2 text-slate-500" size={17} />
           <UserAvatarStack users={invitedUsers} />
         </div>
-        <div className="relative">
-          <Button
-            onClick={() => {
-              setIsShareOpen((currentValue) => !currentValue);
-              setIsExportOpen(false);
-            }}
-            variant="secondary"
-            type="button"
-          >
-            <Share2 aria-hidden="true" size={17} />
-            Share
-          </Button>
-          {isShareOpen && (
-            <WorkspaceSharePopover
-              inviteEmail={inviteEmail}
-              invitedUsers={invitedUsers}
-              onInviteEmailChange={setInviteEmail}
-              onInviteSubmit={handleInviteSubmit}
-            />
-          )}
-        </div>
+        {canManageSharing && (
+          <div className="relative">
+            <Button
+              onClick={() => {
+                setIsShareOpen((currentValue) => !currentValue);
+                setIsExportOpen(false);
+              }}
+              variant="secondary"
+              type="button"
+            >
+              <Share2 aria-hidden="true" size={17} />
+              Share
+            </Button>
+            {isShareOpen && (
+              <WorkspaceSharePopover
+                inviteEmail={inviteEmail}
+                invitedUsers={invitedUsers}
+                onInviteEmailChange={setInviteEmail}
+                onInviteSubmit={handleInviteSubmit}
+              />
+            )}
+          </div>
+        )}
         <div className="relative">
           <Button
             onClick={() => {
@@ -101,7 +113,7 @@ export default function TextWorkspaceHeader({
             />
           )}
         </div>
-        <Button disabled={isSaving} onClick={onSave} type="button">
+        <Button disabled={isSaving || !canEdit} onClick={onSave} type="button">
           <Save aria-hidden="true" size={17} />
           {isSaving ? "Saving..." : "Save"}
         </Button>

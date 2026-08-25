@@ -17,6 +17,7 @@ import { useAppStore } from "../../store";
 export default function ImageEditorScreen() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId") || mockImageProject.id;
+  const requestedAccess = searchParams.get("access");
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
   const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
@@ -65,6 +66,9 @@ export default function ImageEditorScreen() {
     : lastSavedAt
       ? `Saved ${formatTime(lastSavedAt)}`
       : project.lastUpdated;
+  const canEditProject = project.canEdit !== false && requestedAccess !== "view";
+  const canManageSharing =
+    project.canManageSharing !== false && project.currentUserRole !== "collaborator";
 
   useEffect(() => {
     const pendingToast = readPendingToast();
@@ -154,6 +158,15 @@ export default function ImageEditorScreen() {
   }
 
   function handleGenerate() {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI generation is disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     setIsGenerating(true);
     window.setTimeout(async () => {
       const responseText = buildDemoImageResponse(prompt);
@@ -200,10 +213,28 @@ export default function ImageEditorScreen() {
   }
 
   function handleQuickAction(action) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI actions are disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     setPrompt(`${action}: ${prompt}`.slice(0, 1200));
   }
 
   async function handleInviteUser(emailValue) {
+    if (!canManageSharing) {
+      showNotification(
+        "Sharing unavailable",
+        "Only project owners can manage sharing.",
+        TOAST_TYPES.WARNING
+      );
+      return false;
+    }
+
     const email = emailValue.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -274,6 +305,15 @@ export default function ImageEditorScreen() {
   }
 
   async function handleFavouriteResponse(responseId) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI history changes are disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     const response = responses.find((item) => item.id === responseId);
     const nextFavouriteValue = !response?.favourite;
 
@@ -315,6 +355,15 @@ export default function ImageEditorScreen() {
   }
 
   async function handleUpdateResponse(responseId, nextResponseText) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI history editing is disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     const response = responses.find((item) => item.id === responseId);
 
     setResponses((currentResponses) =>
@@ -345,6 +394,15 @@ export default function ImageEditorScreen() {
   }
 
   async function handleDeleteResponse(responseId) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI history changes are disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     const response = responses.find((item) => item.id === responseId);
 
     if (response?.sourceId) {
@@ -370,6 +428,15 @@ export default function ImageEditorScreen() {
   }
 
   function handleInsertResponse(response) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "Canvas editing is disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     if (queueUnsavedCanvasAction(() => insertResponseIntoCanvas(response))) {
       return;
     }
@@ -384,6 +451,11 @@ export default function ImageEditorScreen() {
   }
 
   async function handleSaveCanvas(payload) {
+    if (!canEditProject) {
+      showNotification("View only", "Saving is disabled for view-only projects.", TOAST_TYPES.INFO);
+      return;
+    }
+
     window.localStorage.setItem(getImageWorkspaceDraftKey(projectId), payload);
 
     if (isRealProject) {
@@ -478,6 +550,8 @@ export default function ImageEditorScreen() {
   return (
     <section className="min-h-screen overflow-hidden bg-slate-50">
       <TextWorkspaceHeader
+        canEdit={canEditProject}
+        canManageSharing={canManageSharing}
         exportOptions={[
           { label: "PNG image", value: "png" },
           { label: "Canvas JSON", value: "json" }
@@ -504,6 +578,7 @@ export default function ImageEditorScreen() {
 
         <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
           <FabricImageEditor
+            editable={canEditProject}
             generationRequest={generationRequest}
             onDirtyChange={setHasUnsavedChanges}
             onReady={setCanvas}
@@ -512,6 +587,7 @@ export default function ImageEditorScreen() {
           <aside className="grid min-w-0 content-start gap-5">
             <AIPromptPanel
               actions={textPromptActions}
+              disabled={!canEditProject}
               isGenerating={isGenerating}
               onGenerate={handleGenerate}
               onPromptChange={setPrompt}
@@ -578,6 +654,10 @@ function normalizeProject(project) {
     title: project.title || mockImageProject.title,
     category: project.category || mockImageProject.category,
     type: "Image Project",
+    accessLevel: project.accessLevel || "editor",
+    canEdit: project.canEdit !== false,
+    canManageSharing: project.canManageSharing !== false,
+    currentUserRole: project.currentUserRole || "owner",
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
       : mockImageProject.lastUpdated,

@@ -57,6 +57,7 @@ const quickActionPromptBuilders = {
 export default function EditorScreen() {
   const searchParams = useSearchParams();
   const workspaceType = searchParams.get("type");
+  const requestedAccess = searchParams.get("access");
 
   if (workspaceType === "image") {
     return <ImageEditorScreen />;
@@ -129,6 +130,9 @@ export default function EditorScreen() {
   );
   const selectedResponse =
     responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
+  const canEditProject = project.canEdit !== false && requestedAccess !== "view";
+  const canManageSharing =
+    project.canManageSharing !== false && project.currentUserRole !== "collaborator";
   const invitedUsers = useMemo(() => {
     const usersByEmail = new Map();
 
@@ -265,6 +269,15 @@ export default function EditorScreen() {
   }, [aiState.chatHistory, isRealProject]);
 
   async function handleGenerate(promptOverride) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI generation is disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     const trimmedPrompt = String(promptOverride || prompt || "").trim();
 
     if (!trimmedPrompt) {
@@ -333,6 +346,15 @@ export default function EditorScreen() {
   }
 
   async function handleQuickAction(action) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI actions are disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     const sourceContent = (getSelectedEditorText(editor) || editorContent.text).trim();
 
     if (!sourceContent) {
@@ -381,6 +403,11 @@ export default function EditorScreen() {
   }
 
   async function handleSave() {
+    if (!canEditProject) {
+      showNotification("View only", "Saving is disabled for view-only projects.", TOAST_TYPES.INFO);
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
 
@@ -455,6 +482,15 @@ export default function EditorScreen() {
   }
 
   async function handleUpdateResponse(responseId, updatedResponse) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI history editing is disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     const response = responses.find((item) => item.id === responseId);
 
     setResponses((currentResponses) =>
@@ -489,6 +525,15 @@ export default function EditorScreen() {
   }
 
   async function handleDeleteResponse(responseId) {
+    if (!canEditProject) {
+      showNotification(
+        "View only",
+        "AI history changes are disabled for view-only projects.",
+        TOAST_TYPES.INFO
+      );
+      return;
+    }
+
     const response = responses.find((item) => item.id === responseId);
 
     if (isRealProject && response?.sourceId) {
@@ -524,6 +569,15 @@ export default function EditorScreen() {
   }
 
   async function handleInviteUser(emailValue) {
+    if (!canManageSharing) {
+      showNotification(
+        "Sharing unavailable",
+        "Only project owners can manage sharing.",
+        TOAST_TYPES.WARNING
+      );
+      return false;
+    }
+
     const email = emailValue.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -675,6 +729,8 @@ export default function EditorScreen() {
   return (
     <section className="min-h-screen overflow-hidden bg-slate-50">
       <TextWorkspaceHeader
+        canEdit={canEditProject}
+        canManageSharing={canManageSharing}
         invitedUsers={invitedUsers}
         isSaving={isSaving}
         onExport={handleExport}
@@ -700,7 +756,7 @@ export default function EditorScreen() {
         <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
           <section className="grid min-w-0 gap-5">
             <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
-              <EditorToolbar editor={editor} />
+              <EditorToolbar disabled={!canEditProject} editor={editor} />
               <div
                 className={`border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide ${
                   saveError
@@ -714,6 +770,7 @@ export default function EditorScreen() {
               </div>
               <TipTapEditor
                 editorKey={project.id}
+                editable={canEditProject}
                 initialContent={editorContent.html}
                 onContentChange={handleEditorChange}
                 onEditorReady={setEditor}
@@ -724,6 +781,7 @@ export default function EditorScreen() {
           <aside className="grid min-w-0 content-start gap-5">
             <AIPromptPanel
               actions={textPromptActions}
+              disabled={!canEditProject}
               error={aiState.error}
               isGenerating={isGenerating}
               onGenerate={handleGenerate}
@@ -801,6 +859,10 @@ function normalizeProject(project) {
     title: project.title || defaultTextProject.title,
     category: project.category || defaultTextProject.category,
     type: "Text Project",
+    accessLevel: project.accessLevel || "editor",
+    canEdit: project.canEdit !== false,
+    canManageSharing: project.canManageSharing !== false,
+    currentUserRole: project.currentUserRole || "owner",
     lastUpdated: project.updatedAt
       ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
       : defaultTextProject.lastUpdated,
