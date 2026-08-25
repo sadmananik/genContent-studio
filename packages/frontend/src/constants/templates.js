@@ -14,11 +14,6 @@ export const TEMPLATE_VISIBILITY = {
   PUBLIC: "public"
 };
 
-export const TEMPLATE_SOURCE_VALUES = {
-  AI_HISTORY: "ai-history",
-  CURRENT: "current"
-};
-
 export const TEMPLATE_CATEGORIES = [
   "Marketing",
   "Blog",
@@ -83,8 +78,6 @@ export const TEMPLATE_TEXT = {
   PUBLISHED_MESSAGE: "The template is available in Browse Templates.",
   PUBLISHED_PRIVATE_MESSAGE: "The private template is available in My Published Templates.",
   PUBLISHED_TITLE: "Template published",
-  CURRENT_PROJECT_SOURCE: "Current Project",
-  AI_HISTORY_SOURCE: "AI History",
   RECENT_SECTION_TITLE: "Recently Used",
   REPUBLISH_FAILED_MESSAGE: "Template could not be published.",
   REPUBLISH_FAILED_TITLE: "Publish failed",
@@ -113,11 +106,10 @@ export const TEMPLATE_TEXT = {
 
 export const TEMPLATE_FORM_FIELDS = {
   CATEGORY: "Category",
+  AI_HISTORY: "AI History",
   DESCRIPTION: "Description",
   PROJECT_TYPE: "Project Type",
-  STARTER_CONTENT_SOURCE: "Starter Content Source",
   STARTER_CONTENT: "Starter Content",
-  STARTER_PROMPT_SOURCE: "Starter Prompt Source",
   STARTER_PROMPT: "Starter Prompt",
   STYLE: "Style",
   TAGS: "Tags",
