@@ -74,7 +74,7 @@ export default function DashboardScreen() {
             title={DASHBOARD_TEXT.RECENT_PROJECTS}
             action={
               <Link
-                className="dashboard-projects-link inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 hover:shadow-[0_10px_22px_rgba(101,69,246,0.14)] focus:outline-none focus:ring-2 focus:ring-violet-100"
+                className="app-button app-button-secondary dashboard-projects-link inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 hover:shadow-[0_10px_22px_rgba(101,69,246,0.14)] focus:outline-none focus:ring-2 focus:ring-violet-100"
                 href={ROUTES.PROJECTS}
               >
                 {DASHBOARD_TEXT.VIEW_ALL_PROJECTS}

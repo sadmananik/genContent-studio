@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, ExternalLink, FileText, ImageIcon, StarOff } from "lucide-react";
 import Button from "../common/Button";
-import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
+import { EmptyState, SectionHeader } from "../common/Cards";
+import ProjectListCard from "../common/ProjectListCard";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { AI_CONTENT_TYPES, API_PROJECT_TYPES, PROJECT_TYPES } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
@@ -107,64 +108,70 @@ export default function FavoritesScreen() {
       ) : (
         <section className="grid gap-4">
           {favourites.map((favourite) => (
-            <article
-              className="group grid gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] md:grid-cols-[2.75rem_minmax(0,1fr)_auto]"
-              key={favourite.id}
-            >
-              <IconBadge tone={favourite.tone}>
-                {favourite.contentType === AI_CONTENT_TYPES.IMAGE ? (
-                  <ImageIcon aria-hidden="true" size={19} />
-                ) : (
-                  <FileText aria-hidden="true" size={19} />
-                )}
-              </IconBadge>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-start gap-2">
-                  <strong className="block min-w-0 flex-1 truncate text-sm font-bold text-slate-950 group-hover:text-violet-700">
-                    {favourite.projectTitle}
-                  </strong>
+            <ProjectListCard
+              actions={
+                <>
                   <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold text-violet-700">
                     {favourite.typeLabel}
                   </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  {favourite.projectCategory} • {favourite.updated}
-                </p>
-                <p className="mt-3 line-clamp-2 text-sm font-semibold text-slate-700">
-                  {favourite.promptPreview}
-                </p>
-                <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">
-                  {favourite.responsePreview}
-                </p>
-              </div>
-              <div className="flex flex-wrap content-start justify-end gap-2">
-                <Button
-                  className="border-violet-100 bg-violet-50 px-3 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800"
-                  onClick={() => router.push(getProjectWorkspaceHref(favourite))}
-                  type="button"
-                  variant="secondary"
-                >
-                  <ExternalLink aria-hidden="true" size={17} />
-                  Open Project
-                </Button>
-                <Button
-                  onClick={() => handleCopyFavourite(favourite)}
-                  type="button"
-                  variant="secondary"
-                >
-                  <Copy aria-hidden="true" size={17} />
-                  {copiedResponseId === favourite.id ? "Copied" : "Copy"}
-                </Button>
-                <Button
-                  onClick={() => handleRemoveFavourite(favourite)}
-                  type="button"
-                  variant="secondary"
-                >
-                  <StarOff aria-hidden="true" size={17} />
-                  Remove
-                </Button>
-              </div>
-            </article>
+                  <Button
+                    className="border-violet-100 bg-violet-50 px-3 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      router.push(getProjectWorkspaceHref(favourite));
+                    }}
+                    type="button"
+                    variant="secondary"
+                  >
+                    <ExternalLink aria-hidden="true" size={17} />
+                    Open Project
+                  </Button>
+                  <Button
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleCopyFavourite(favourite);
+                    }}
+                    type="button"
+                    variant="secondary"
+                  >
+                    <Copy aria-hidden="true" size={17} />
+                    {copiedResponseId === favourite.id ? "Copied" : "Copy"}
+                  </Button>
+                  <Button
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleRemoveFavourite(favourite);
+                    }}
+                    type="button"
+                    variant="secondary"
+                  >
+                    <StarOff aria-hidden="true" size={17} />
+                    Remove
+                  </Button>
+                </>
+              }
+              icon={
+                favourite.contentType === AI_CONTENT_TYPES.IMAGE ? (
+                  <ImageIcon aria-hidden="true" size={19} />
+                ) : (
+                  <FileText aria-hidden="true" size={19} />
+                )
+              }
+              key={favourite.id}
+              onOpen={() => router.push(getProjectWorkspaceHref(favourite))}
+              title={favourite.projectTitle}
+              tone={favourite.tone}
+            >
+              <p className="mt-1 text-xs text-slate-500">
+                {favourite.projectCategory} • {favourite.updated}
+              </p>
+              <p className="mt-3 line-clamp-2 text-sm font-semibold text-slate-700">
+                {favourite.promptPreview}
+              </p>
+              <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">
+                {favourite.responsePreview}
+              </p>
+            </ProjectListCard>
           ))}
         </section>
       )}

@@ -113,6 +113,39 @@ a {
   color: #f8fafc;
 }
 
+.app-button-primary:hover {
+  box-shadow: 0 12px 26px rgba(101, 69, 246, 0.3);
+}
+
+.app-button-secondary:hover,
+.app-button-icon:hover,
+.app-button-ghost:hover {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+  color: #6d28d9;
+  box-shadow: 0 10px 22px rgba(101, 69, 246, 0.14);
+}
+
+:root[data-active-theme="dark"] .app-button-secondary,
+:root[data-active-theme="dark"] .app-button-icon {
+  background: #09090b;
+  border-color: #1f2937;
+  color: #e2e8f0;
+}
+
+:root[data-active-theme="dark"] .app-button-ghost {
+  color: #e2e8f0;
+}
+
+:root[data-active-theme="dark"] .app-button-secondary:hover,
+:root[data-active-theme="dark"] .app-button-icon:hover,
+:root[data-active-theme="dark"] .app-button-ghost:hover {
+  background: #1e1b4b;
+  border-color: #8b5cf6;
+  color: #f8fafc;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+}
+
 :root[data-active-theme="dark"] .ai-history-sidebar {
   background: #020617;
   border-color: #1e293b;
@@ -214,6 +247,21 @@ a {
 }
 
 :root[data-active-theme="dark"] .dashboard-projects-link:hover {
+  background: #1e1b4b;
+  border-color: #8b5cf6;
+  color: #f8fafc;
+}
+
+.shared-project-open-button:hover,
+.shared-project-more-button:hover {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+  color: #6d28d9;
+  box-shadow: 0 10px 22px rgba(101, 69, 246, 0.14);
+}
+
+:root[data-active-theme="dark"] .shared-project-open-button:hover,
+:root[data-active-theme="dark"] .shared-project-more-button:hover {
   background: #1e1b4b;
   border-color: #8b5cf6;
   color: #f8fafc;

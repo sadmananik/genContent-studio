@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
-import { EmptyState, IconBadge, SectionHeader } from "../common/Cards";
+import { EmptyState, SectionHeader } from "../common/Cards";
+import ProjectListCard from "../common/ProjectListCard";
 import ProjectFormModal from "../common/ProjectFormModal";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import { DASHBOARD_TEXT } from "../../constants/dashboard";
@@ -142,13 +143,6 @@ export default function ProjectsScreen() {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
 
-  function handleProjectRowKeyDown(event, project) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      router.push(getProjectWorkspaceHref(project));
-    }
-  }
-
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
@@ -181,106 +175,98 @@ export default function ProjectsScreen() {
       ) : (
         <section className="grid gap-4">
           {projects.map((project) => (
-            <article
-              className={`group relative grid cursor-pointer gap-4 rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/70 hover:shadow-[0_16px_30px_rgba(101,69,246,0.12)] focus:bg-violet-50/70 focus:outline-none focus:ring-4 focus:ring-violet-100 md:grid-cols-[2.75rem_minmax(0,1fr)_auto] md:items-center ${
-                openActionProjectId === project.id
-                  ? "z-30 border-violet-300 bg-violet-50/70"
-                  : "z-0 border-slate-200"
-              }`}
+            <ProjectListCard
+              active={openActionProjectId === project.id}
+              icon={project.icon}
               key={project.id}
-              onClick={() => router.push(getProjectWorkspaceHref(project))}
-              onKeyDown={(event) => handleProjectRowKeyDown(event, project)}
-              role="link"
-              tabIndex={0}
-            >
-              <IconBadge tone={project.tone}>{project.icon}</IconBadge>
-              <div className="min-w-0">
-                <strong className="block truncate text-sm font-bold text-slate-950 group-hover:text-violet-700">
-                  {project.title}
-                </strong>
-                <p className="mt-1 text-xs text-slate-500">
-                  {project.category} • {project.type} Project • {project.updated}
-                </p>
-                {project.description && (
-                  <p className="mt-2 line-clamp-2 text-sm text-slate-600">{project.description}</p>
-                )}
-              </div>
-              <div className="relative flex justify-end" data-project-actions>
-                <Button
-                  aria-label={`${project.title} actions`}
-                  aria-expanded={openActionProjectId === project.id}
-                  aria-haspopup="menu"
-                  className={`border-slate-200 bg-white px-3 text-slate-700 shadow-sm hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 ${
-                    openActionProjectId === project.id
-                      ? "border-violet-300 bg-violet-50 text-violet-700"
-                      : ""
-                  }`}
-                  variant="secondary"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setOpenActionProjectId((currentId) =>
-                      currentId === project.id ? null : project.id
-                    );
-                  }}
-                >
-                  Manage
-                  {openActionProjectId === project.id ? (
-                    <ChevronUp aria-hidden="true" size={16} strokeWidth={2.4} />
-                  ) : (
-                    <ChevronDown aria-hidden="true" size={16} strokeWidth={2.4} />
-                  )}
-                </Button>
-                {openActionProjectId === project.id && (
-                  <div
-                    className="project-actions-menu absolute right-0 top-[calc(100%+0.45rem)] z-50 w-52 rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)] before:absolute before:-top-1.5 before:right-3 before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-slate-200 before:bg-white"
-                    onClick={(event) => event.stopPropagation()}
-                    role="menu"
+              onOpen={() => router.push(getProjectWorkspaceHref(project))}
+              title={project.title}
+              tone={project.tone}
+              actions={
+                <div className="relative flex justify-end" data-project-actions>
+                  <Button
+                    aria-label={`${project.title} actions`}
+                    aria-expanded={openActionProjectId === project.id}
+                    aria-haspopup="menu"
+                    className={`border-slate-200 bg-white px-3 text-slate-700 shadow-sm hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 ${
+                      openActionProjectId === project.id
+                        ? "border-violet-300 bg-violet-50 text-violet-700"
+                        : ""
+                    }`}
+                    variant="secondary"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenActionProjectId((currentId) =>
+                        currentId === project.id ? null : project.id
+                      );
+                    }}
                   >
-                    <button
-                      className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
-                      onClick={() => {
-                        router.push(getProjectWorkspaceHref(project));
-                        setOpenActionProjectId(null);
-                      }}
-                      role="menuitem"
-                      type="button"
+                    Manage
+                    {openActionProjectId === project.id ? (
+                      <ChevronUp aria-hidden="true" size={16} strokeWidth={2.4} />
+                    ) : (
+                      <ChevronDown aria-hidden="true" size={16} strokeWidth={2.4} />
+                    )}
+                  </Button>
+                  {openActionProjectId === project.id && (
+                    <div
+                      className="project-actions-menu absolute right-0 top-[calc(100%+0.45rem)] z-50 w-52 rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)] before:absolute before:-top-1.5 before:right-3 before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-slate-200 before:bg-white"
+                      onClick={(event) => event.stopPropagation()}
+                      role="menu"
                     >
-                      <ExternalLink aria-hidden="true" size={16} />
-                      Open
-                    </button>
-                    <button
-                      className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
-                      onClick={() => {
-                        setEditingProject(project);
-                        setOpenActionProjectId(null);
-                      }}
-                      role="menuitem"
-                      type="button"
-                      disabled={!project.canManageSharing}
-                    >
-                      <Pencil aria-hidden="true" size={16} />
-                      Edit
-                    </button>
-                    {project.canDelete && (
                       <button
-                        className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:text-red-300"
-                        disabled={deletingProjectId === project.id}
+                        className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
                         onClick={() => {
-                          setProjectPendingDelete(project);
+                          router.push(getProjectWorkspaceHref(project));
                           setOpenActionProjectId(null);
                         }}
                         role="menuitem"
                         type="button"
                       >
-                        <Trash2 aria-hidden="true" size={16} />
-                        {deletingProjectId === project.id ? "Deleting..." : "Delete"}
+                        <ExternalLink aria-hidden="true" size={16} />
+                        Open
                       </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </article>
+                      <button
+                        className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
+                        onClick={() => {
+                          setEditingProject(project);
+                          setOpenActionProjectId(null);
+                        }}
+                        role="menuitem"
+                        type="button"
+                        disabled={!project.canManageSharing}
+                      >
+                        <Pencil aria-hidden="true" size={16} />
+                        Edit
+                      </button>
+                      {project.canDelete && (
+                        <button
+                          className="relative z-10 flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:text-red-300"
+                          disabled={deletingProjectId === project.id}
+                          onClick={() => {
+                            setProjectPendingDelete(project);
+                            setOpenActionProjectId(null);
+                          }}
+                          role="menuitem"
+                          type="button"
+                        >
+                          <Trash2 aria-hidden="true" size={16} />
+                          {deletingProjectId === project.id ? "Deleting..." : "Delete"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              }
+            >
+              <p className="mt-1 text-xs text-slate-500">
+                {project.category} • {project.type} Project • {project.updated}
+              </p>
+              {project.description && (
+                <p className="mt-2 line-clamp-2 text-sm text-slate-600">{project.description}</p>
+              )}
+            </ProjectListCard>
           ))}
         </section>
       )}
