@@ -31,7 +31,7 @@ export default function AppModal({
           </div>
           <button
             aria-label="Close"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+            className="app-close-button grid h-9 w-9 shrink-0 place-items-center rounded-md border border-slate-200 text-slate-500"
             onClick={onClose}
             type="button"
           >

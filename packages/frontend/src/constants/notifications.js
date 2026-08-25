@@ -76,9 +76,12 @@ export const TEXT_EDITOR_ALERTS = {
   COPIED_TITLE: "Copied",
   DELETE_FAILED_MESSAGE: "Response could not be deleted.",
   DELETE_FAILED_TITLE: "Delete failed",
+  DELETE_CONFIRM_TITLE: "Delete AI response?",
+  DELETE_CONFIRM_LABEL: "Delete Response",
   DELETED_MESSAGE: "Response deleted from history.",
   DELETED_TITLE: "Deleted",
   DRAFT_SAVE_FAILED_MESSAGE: "Draft could not be saved.",
+  EXIT_WITHOUT_SAVING: "Exit Without Saving",
   EXPORT_PDF_MESSAGE: "PDF export downloaded.",
   EXPORT_TEXT_MESSAGE: "Text export downloaded.",
   EXPORTED_TITLE: "Exported",
@@ -121,6 +124,8 @@ export const TEXT_EDITOR_ALERTS = {
   UPDATED_MESSAGE: "Response updated.",
   UPDATED_TITLE: "Updated",
   alreadyInvitedMessage: (email) => `${email} is already invited.`,
+  deleteConfirmDescription: (prompt) =>
+    `Delete "${prompt || "this response"}" from AI prompt history? This cannot be undone.`,
   sharedMessage: (email) => `${email} was invited to this project.`
 };
 
@@ -137,6 +142,7 @@ export const IMAGE_EDITOR_ALERTS = {
   DELETED_MESSAGE: "Image response deleted from history.",
   DRAFT_RESTORED_MESSAGE: "Saved image canvas loaded.",
   DRAFT_RESTORED_TITLE: "Draft restored",
+  EXIT_WITHOUT_SAVING: "Exit Without Saving",
   GENERATE_FAILED_MESSAGE: "Demo image response could not be saved.",
   GENERATE_FAILED_TITLE: "Generate failed",
   GENERATED_LOCAL_MESSAGE: "Demo image response inserted into the canvas.",

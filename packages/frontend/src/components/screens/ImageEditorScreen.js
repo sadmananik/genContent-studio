@@ -49,6 +49,7 @@ export default function ImageEditorScreen() {
   const [notification, setNotification] = useState(null);
   const [pendingCanvasAction, setPendingCanvasAction] = useState(null);
   const [pendingCanvasActionCopy, setPendingCanvasActionCopy] = useState(null);
+  const [pendingResponseDelete, setPendingResponseDelete] = useState(null);
   const [prompt, setPrompt] = useState("Create a clean product launch social post.");
   const [project, setProject] = useState(mockImageProject);
   const [responses, setResponses] = useState([]);
@@ -471,7 +472,7 @@ export default function ImageEditorScreen() {
     );
   }
 
-  async function handleDeleteResponse(responseId) {
+  function requestDeleteResponse(responseId) {
     if (!canEditProject) {
       showNotification(
         PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
@@ -482,6 +483,21 @@ export default function ImageEditorScreen() {
     }
 
     const response = responses.find((item) => item.id === responseId);
+    if (response) {
+      setPendingResponseDelete(response);
+    }
+  }
+
+  async function handleDeleteResponse(responseId) {
+    if (!canEditProject) {
+      return;
+    }
+
+    const response = responses.find((item) => item.id === responseId);
+    if (!response) {
+      setPendingResponseDelete(null);
+      return;
+    }
 
     if (response?.sourceId) {
       try {
@@ -502,6 +518,7 @@ export default function ImageEditorScreen() {
     setSelectedResponseId((currentSelectedId) =>
       currentSelectedId === responseId ? nextResponses[0]?.id || null : currentSelectedId
     );
+    setPendingResponseDelete(null);
     showNotification(
       TEXT_EDITOR_ALERTS.DELETED_TITLE,
       IMAGE_EDITOR_ALERTS.DELETED_MESSAGE,
@@ -706,7 +723,7 @@ export default function ImageEditorScreen() {
         <AIHistorySidebar
           history={history}
           isCollapsed={isHistoryCollapsed}
-          onDeleteHistory={handleDeleteResponse}
+          onDeleteHistory={requestDeleteResponse}
           onSelectHistory={handleSelectHistory}
           onToggleFavourite={handleFavouriteResponse}
           onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
@@ -745,7 +762,7 @@ export default function ImageEditorScreen() {
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}
-                  onDelete={handleDeleteResponse}
+                  onDelete={requestDeleteResponse}
                   onFavourite={handleFavouriteResponse}
                   onInsert={handleInsertResponse}
                   onUpdate={handleUpdateResponse}
@@ -764,18 +781,29 @@ export default function ImageEditorScreen() {
 
       {pendingCanvasAction && (
         <ConfirmDialog
-          cancelLabel="Stay Here"
+          cancelLabel={IMAGE_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
           confirmLabel="Save and Continue"
           description={
             pendingCanvasActionCopy?.description ||
             IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION
           }
           onCancel={() => {
+            pendingCanvasAction?.();
             setPendingCanvasAction(null);
             setPendingCanvasActionCopy(null);
           }}
           onConfirm={handleConfirmPendingAction}
           title={pendingCanvasActionCopy?.title || IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE}
+        />
+      )}
+      {pendingResponseDelete && (
+        <ConfirmDialog
+          cancelLabel="Cancel"
+          confirmLabel={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_LABEL}
+          description={TEXT_EDITOR_ALERTS.deleteConfirmDescription(pendingResponseDelete.prompt)}
+          onCancel={() => setPendingResponseDelete(null)}
+          onConfirm={() => handleDeleteResponse(pendingResponseDelete.id)}
+          title={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_TITLE}
         />
       )}
 

@@ -108,6 +108,7 @@ export default function EditorScreen() {
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [pendingEditorActionCopy, setPendingEditorActionCopy] = useState(null);
+  const [pendingResponseDelete, setPendingResponseDelete] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
   const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
@@ -581,7 +582,7 @@ export default function EditorScreen() {
     );
   }
 
-  async function handleDeleteResponse(responseId) {
+  function requestDeleteResponse(responseId) {
     if (!canEditProject) {
       showNotification(
         PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
@@ -592,6 +593,21 @@ export default function EditorScreen() {
     }
 
     const response = responses.find((item) => item.id === responseId);
+    if (response) {
+      setPendingResponseDelete(response);
+    }
+  }
+
+  async function handleDeleteResponse(responseId) {
+    if (!canEditProject) {
+      return;
+    }
+
+    const response = responses.find((item) => item.id === responseId);
+    if (!response) {
+      setPendingResponseDelete(null);
+      return;
+    }
 
     if (isRealProject && response?.sourceId) {
       try {
@@ -613,6 +629,7 @@ export default function EditorScreen() {
     setSelectedHistoryId((currentSelectedId) =>
       currentSelectedId === responseId ? null : currentSelectedId
     );
+    setPendingResponseDelete(null);
 
     if (isDeletingSelectedResponse) {
       setPrompt(starterPrompt);
@@ -853,7 +870,7 @@ export default function EditorScreen() {
           history={history}
           isCollapsed={isHistoryCollapsed}
           isLoading={isLoadingHistory}
-          onDeleteHistory={handleDeleteResponse}
+          onDeleteHistory={requestDeleteResponse}
           onSelectHistory={handleSelectHistory}
           onToggleFavourite={handleFavouriteResponse}
           onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
@@ -917,7 +934,7 @@ export default function EditorScreen() {
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}
-                  onDelete={handleDeleteResponse}
+                  onDelete={requestDeleteResponse}
                   onFavourite={handleFavouriteResponse}
                   onUpdate={handleUpdateResponse}
                   response={selectedResponse}
@@ -934,18 +951,29 @@ export default function EditorScreen() {
       </div>
       {pendingEditorAction && (
         <ConfirmDialog
-          cancelLabel="Stay Here"
+          cancelLabel={TEXT_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
           confirmLabel="Save and Continue"
           description={
             pendingEditorActionCopy?.description ||
             "Your current editor content has unsaved changes. Save this draft before continuing?"
           }
           onCancel={() => {
+            pendingEditorAction?.();
             setPendingEditorAction(null);
             setPendingEditorActionCopy(null);
           }}
           onConfirm={handleConfirmPendingAction}
           title={pendingEditorActionCopy?.title || "Save changes before continuing?"}
+        />
+      )}
+      {pendingResponseDelete && (
+        <ConfirmDialog
+          cancelLabel="Cancel"
+          confirmLabel={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_LABEL}
+          description={TEXT_EDITOR_ALERTS.deleteConfirmDescription(pendingResponseDelete.prompt)}
+          onCancel={() => setPendingResponseDelete(null)}
+          onConfirm={() => handleDeleteResponse(pendingResponseDelete.id)}
+          title={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_TITLE}
         />
       )}
       <ToastNotification

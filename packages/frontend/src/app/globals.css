@@ -117,6 +117,23 @@ a {
   box-shadow: 0 12px 26px rgba(101, 69, 246, 0.3);
 }
 
+.app-close-button {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.app-close-button:hover,
+.app-close-button:focus-visible {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+  color: #6d28d9;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(196, 181, 253, 0.35);
+}
+
 .app-button-secondary:hover,
 .app-button-icon:hover,
 .app-button-ghost:hover {
@@ -131,6 +148,18 @@ a {
   background: #09090b;
   border-color: #1f2937;
   color: #e2e8f0;
+}
+
+:root[data-active-theme="dark"] .app-close-button {
+  color: #cbd5e1;
+}
+
+:root[data-active-theme="dark"] .app-close-button:hover,
+:root[data-active-theme="dark"] .app-close-button:focus-visible {
+  background: #312e81;
+  border-color: #a78bfa;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.32);
 }
 
 :root[data-active-theme="dark"] .app-button-ghost {
