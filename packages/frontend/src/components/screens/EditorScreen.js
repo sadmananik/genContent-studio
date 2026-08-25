@@ -827,6 +827,11 @@ export default function EditorScreen() {
         onSave={handleSave}
         project={project}
         statusLabel={statusLabel}
+        templateInitialValues={{
+          projectType: API_PROJECT_TYPES.TEXT,
+          starterContent: editorContent.html,
+          starterPrompt: prompt
+        }}
       />
 
       <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">

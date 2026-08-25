@@ -14,6 +14,7 @@ import { textPromptActions } from "../text-workspace/promptActions";
 import {
   ACCESS_LEVELS,
   AI_CONTENT_TYPES,
+  API_PROJECT_TYPES,
   EDITOR_ACCESS_QUERY,
   PERMISSION_MESSAGES,
   PROJECT_ROLES
@@ -684,6 +685,10 @@ export default function ImageEditorScreen() {
         onSave={handleHeaderSave}
         project={project}
         statusLabel={statusLabel}
+        templateInitialValues={{
+          projectType: API_PROJECT_TYPES.IMAGE,
+          starterPrompt: prompt
+        }}
       />
 
       <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
