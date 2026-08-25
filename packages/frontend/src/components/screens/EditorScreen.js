@@ -95,7 +95,6 @@ export default function EditorScreen() {
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [pendingEditorAction, setPendingEditorAction] = useState(null);
   const [pendingEditorActionCopy, setPendingEditorActionCopy] = useState(null);
-  const [recentlyInsertedResponseId, setRecentlyInsertedResponseId] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
   const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
@@ -291,9 +290,10 @@ export default function EditorScreen() {
 
       setResponses((currentResponses) => [response, ...currentResponses]);
       setSelectedHistoryId(responseId);
+      replaceEditorWithResponse(response);
       showNotification(
         "AI generated",
-        "Content is ready. Insert it into the editor or edit it first.",
+        "Content is ready and shown in the editor.",
         TOAST_TYPES.SUCCESS
       );
 
@@ -454,45 +454,6 @@ export default function EditorScreen() {
     );
   }
 
-  function handleInsertResponse(response) {
-    if (!editor) {
-      return;
-    }
-
-    if (recentlyInsertedResponseId === response.id) {
-      showNotification(
-        "Already inserted",
-        "That response was just inserted into the editor.",
-        TOAST_TYPES.INFO,
-        2500
-      );
-      return;
-    }
-
-    if (
-      queueUnsavedAction(() => insertResponse(response), {
-        description:
-          "Your current editor content has unsaved changes. Save this draft before inserting the AI response?",
-        title: "Save changes before inserting?"
-      })
-    ) {
-      return;
-    }
-
-    insertResponse(response);
-  }
-
-  function insertResponse(response) {
-    insertTextIntoEditor(response.response);
-    setSelectedHistoryId(response.id);
-    setPrompt(response.prompt);
-    setRecentlyInsertedResponseId(response.id);
-    window.setTimeout(() => {
-      setRecentlyInsertedResponseId((currentId) => (currentId === response.id ? null : currentId));
-    }, 2000);
-    showNotification("Inserted", "Response added to the editor.", TOAST_TYPES.SUCCESS);
-  }
-
   async function handleUpdateResponse(responseId, updatedResponse) {
     const response = responses.find((item) => item.id === responseId);
 
@@ -501,6 +462,10 @@ export default function EditorScreen() {
         response.id === responseId ? { ...response, response: updatedResponse } : response
       )
     );
+
+    if (selectedHistoryId === responseId && response) {
+      replaceEditorWithResponse({ ...response, response: updatedResponse });
+    }
 
     if (isRealProject && response?.sourceId) {
       try {
@@ -540,11 +505,21 @@ export default function EditorScreen() {
     }
 
     const nextResponses = responses.filter((item) => item.id !== responseId);
+    const nextSelectedResponse = nextResponses[0] || null;
 
     setResponses(nextResponses);
     setSelectedHistoryId((currentSelectedId) =>
-      currentSelectedId === responseId ? nextResponses[0]?.id || null : currentSelectedId
+      currentSelectedId === responseId ? nextSelectedResponse?.id || null : currentSelectedId
     );
+
+    if (selectedHistoryId === responseId) {
+      setPrompt(nextSelectedResponse?.prompt || starterPrompt);
+    }
+
+    if (response && isEditorShowingResponse(response, editorContent.html)) {
+      clearEditorContent();
+    }
+
     showNotification("Deleted", "Response deleted from history.", TOAST_TYPES.SUCCESS, 3000);
   }
 
@@ -616,6 +591,7 @@ export default function EditorScreen() {
 
     if (responseItem) {
       setPrompt(responseItem.prompt);
+      replaceEditorWithResponse(responseItem);
     }
   }
 
@@ -669,11 +645,30 @@ export default function EditorScreen() {
   function insertTextIntoEditor(value) {
     const html = textToHtml(value);
 
-    editor.chain().focus().insertContent(html).run();
+    editor.commands.setContent(html, true);
+    editor.commands.focus("end");
     const nextHtml = editor.getHTML();
 
     setEditorContent({ html: nextHtml, text: editor.getText() });
     setHasUnsavedChanges(hasEditorContentChanged(nextHtml, lastPersistedContentHtmlRef.current));
+    setSaveError(null);
+  }
+
+  function replaceEditorWithResponse(response) {
+    if (!response) {
+      return;
+    }
+
+    insertTextIntoEditor(response.response);
+  }
+
+  function clearEditorContent() {
+    if (editor) {
+      editor.commands.clearContent(true);
+    }
+
+    setEditorContent({ html: "", text: "" });
+    setHasUnsavedChanges(hasEditorContentChanged("", lastPersistedContentHtmlRef.current));
     setSaveError(null);
   }
 
@@ -758,7 +753,6 @@ export default function EditorScreen() {
                   onCopy={handleCopyResponse}
                   onDelete={handleDeleteResponse}
                   onFavourite={handleFavouriteResponse}
-                  onInsert={handleInsertResponse}
                   onUpdate={handleUpdateResponse}
                   response={selectedResponse}
                   selected
@@ -861,6 +855,10 @@ function normalizeEditorHtml(value) {
     .replace(/<p>(?:\s|<br\s*\/?>|&nbsp;)*<\/p>/gi, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isEditorShowingResponse(response, editorHtml) {
+  return normalizeEditorHtml(editorHtml) === normalizeEditorHtml(textToHtml(response.response));
 }
 
 function getSelectedEditorText(editor) {

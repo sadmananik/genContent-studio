@@ -1,4 +1,4 @@
-import { Check, Copy, Edit3, Save, Star, TextCursorInput, Trash2 } from "lucide-react";
+import { Check, Copy, Edit3, Save, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
 import Button from "../common/Button";
 
@@ -7,7 +7,6 @@ export default function AIResponseCard({
   onCopy,
   onDelete,
   onFavourite,
-  onInsert,
   onUpdate,
   response,
   selected
@@ -48,35 +47,60 @@ export default function AIResponseCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button onClick={() => onFavourite(response.id)} variant="secondary" type="button">
+        <Button
+          className="group hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+          onClick={() => onFavourite(response.id)}
+          variant="secondary"
+          type="button"
+        >
           <Star
             aria-hidden="true"
-            className={response.favourite ? "fill-amber-400 text-amber-500" : ""}
+            className={
+              response.favourite
+                ? "fill-amber-400 text-amber-500"
+                : "text-slate-500 group-hover:fill-amber-400 group-hover:text-amber-500"
+            }
             size={16}
           />
           Favourite
         </Button>
-        <Button onClick={() => onCopy(response)} variant="secondary" type="button">
+        <Button
+          className="hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+          onClick={() => onCopy(response)}
+          variant="secondary"
+          type="button"
+        >
           {copied ? <Check aria-hidden="true" size={16} /> : <Copy aria-hidden="true" size={16} />}
           {copied ? "Copied" : "Copy"}
         </Button>
-        <Button onClick={() => onInsert(response)} variant="secondary" type="button">
-          <TextCursorInput aria-hidden="true" size={16} />
-          Insert into Editor
-        </Button>
         {isEditing ? (
-          <Button onClick={handleSaveEdit} variant="secondary" type="button">
+          <Button
+            className="hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+            onClick={handleSaveEdit}
+            variant="secondary"
+            type="button"
+          >
             <Save aria-hidden="true" size={16} />
             Save Edit
           </Button>
         ) : (
-          <Button onClick={() => setIsEditing(true)} variant="secondary" type="button">
+          <Button
+            className="hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+            onClick={() => setIsEditing(true)}
+            variant="secondary"
+            type="button"
+          >
             <Edit3 aria-hidden="true" size={16} />
             Edit
           </Button>
         )}
         {onDelete && (
-          <Button onClick={() => onDelete(response.id)} variant="ghost" type="button">
+          <Button
+            className="hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+            onClick={() => onDelete(response.id)}
+            variant="ghost"
+            type="button"
+          >
             <Trash2 aria-hidden="true" size={16} />
             Delete
           </Button>
