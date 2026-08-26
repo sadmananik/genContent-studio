@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
@@ -15,20 +15,25 @@ import {
   ACCESS_LEVELS,
   AI_CONTENT_TYPES,
   API_PROJECT_TYPES,
-  EDITOR_ACCESS_QUERY,
   PERMISSION_MESSAGES,
   PROJECT_ROLES
 } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
-import { IMAGE_EDITOR_ALERTS, TEXT_EDITOR_ALERTS } from "../../constants/notifications";
+import {
+  AI_COLLABORATION_ALERTS,
+  COLLABORATION_ACTIVITY_ALERTS,
+  IMAGE_EDITOR_ALERTS,
+  TEXT_EDITOR_ALERTS
+} from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
+import { getAuthSession } from "../../lib/auth";
+import { createCollaborationProvider } from "../../lib/collaboration";
 import { useAppStore } from "../../store";
 
 export default function ImageEditorScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId") || mockImageProject.id;
-  const requestedAccess = searchParams.get("access");
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
   const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
@@ -39,7 +44,14 @@ export default function ImageEditorScreen() {
   const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
   const updateAiResponse = useAppStore((state) => state.updateAiResponse);
   const collaborationState = useAppStore((state) => state.collaborationState);
+  const setActiveCollaborators = useAppStore((state) => state.setActiveCollaborators);
+  const setSocketConnected = useAppStore((state) => state.setSocketConnected);
+  const setCollaborationError = useAppStore((state) => state.setCollaborationError);
   const [canvas, setCanvas] = useState(null);
+  const [collaborationProvider, setCollaborationProvider] = useState(null);
+  const [remoteCanvasPointers, setRemoteCanvasPointers] = useState([]);
+  const [remoteCanvasState, setRemoteCanvasState] = useState(null);
+  const [isProjectLoaded, setIsProjectLoaded] = useState(!isRealProject);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [generationRequest, setGenerationRequest] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -56,6 +68,13 @@ export default function ImageEditorScreen() {
   const [responses, setResponses] = useState([]);
   const [selectedResponseId, setSelectedResponseId] = useState(null);
   const selectedResponse = responses.find((response) => response.id === selectedResponseId);
+  const canvasRef = useRef(null);
+  const projectRef = useRef(project);
+  projectRef.current = project;
+  const handleCanvasReady = useCallback((readyCanvas) => {
+    canvasRef.current = readyCanvas;
+    setCanvas(readyCanvas);
+  }, []);
   const history = responses.map((response) => ({
     id: response.id,
     prompt: response.prompt,
@@ -93,9 +112,125 @@ export default function ImageEditorScreen() {
     : lastSavedAt
       ? `Saved ${formatTime(lastSavedAt)}`
       : project.lastUpdated;
-  const canEditProject = project.canEdit !== false && requestedAccess !== EDITOR_ACCESS_QUERY.VIEW;
+  const canEditProject = project.canEdit !== false;
   const canManageSharing =
     project.canManageSharing !== false && project.currentUserRole !== PROJECT_ROLES.COLLABORATOR;
+
+  const handleCollaborationEvent = useCallback(
+    (event, payload) => {
+      if (event === "project:joined" || event === "project:presence-updated") {
+        setActiveCollaborators(payload?.collaborators || []);
+      }
+
+      if (event === "project:joined" && payload?.canvasState) {
+        setRemoteCanvasState(payload.canvasState);
+      }
+
+      if (event === "canvas:update" && String(payload?.projectId) === String(projectId)) {
+        setRemoteCanvasState(payload.canvasState);
+      }
+
+      if (event === "canvas:pointer" && String(payload?.projectId) === String(projectId)) {
+        setRemoteCanvasPointers((currentPointers) =>
+          upsertRemoteCanvasPointer(currentPointers, payload)
+        );
+      }
+
+      if (event === "connection-error") {
+        setSocketConnected(false);
+        setCollaborationError(payload);
+      }
+
+      if (
+        event === "project:permission-updated" &&
+        String(payload?.projectId) === String(projectId) &&
+        getIdString(payload?.userId) === getCurrentUserId()
+      ) {
+        const nextAccessLevel = payload.accessLevel;
+        showNotification(
+          TEXT_EDITOR_ALERTS.COLLABORATION_PERMISSION_CHANGED_TITLE,
+          TEXT_EDITOR_ALERTS.COLLABORATION_PERMISSION_CHANGED_MESSAGE(nextAccessLevel),
+          nextAccessLevel === ACCESS_LEVELS.EDITOR ? TOAST_TYPES.SUCCESS : TOAST_TYPES.WARNING,
+          7000
+        );
+        setProject((currentProject) => ({
+          ...currentProject,
+          accessLevel: nextAccessLevel,
+          canEdit: nextAccessLevel === ACCESS_LEVELS.EDITOR
+        }));
+      }
+
+      if (event === "project:sharing-updated" && String(payload?.projectId) === String(projectId)) {
+        setProject((projectState) => ({
+          ...projectState,
+          collaborators: payload.collaborators || projectState.collaborators,
+          collaboratorPermissions:
+            payload.collaboratorPermissions || projectState.collaboratorPermissions
+        }));
+      }
+
+      if (
+        event === "project:access-revoked" &&
+        getIdString(payload?.userId) === getCurrentUserId()
+      ) {
+        showNotification(
+          "Access removed",
+          "You no longer have access to this project.",
+          TOAST_TYPES.ERROR
+        );
+        router.push(ROUTES.SHARED);
+      }
+
+      if (event === "project:user-joined" && String(payload?.projectId) === String(projectId)) {
+        showNotification(
+          COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_TITLE,
+          COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_MESSAGE(
+            payload.user?.name || payload.user?.email || "A collaborator"
+          ),
+          TOAST_TYPES.INFO,
+          4000
+        );
+      }
+
+      if (event === "project:user-left" && String(payload?.projectId) === String(projectId)) {
+        setRemoteCanvasPointers((currentPointers) =>
+          currentPointers.filter((cursor) => cursor.id !== getIdString(payload.userId))
+        );
+        showNotification(
+          COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_TITLE,
+          COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_MESSAGE(
+            payload.user?.name || payload.user?.email || "A collaborator"
+          ),
+          TOAST_TYPES.INFO,
+          4000
+        );
+      }
+
+      if (event === "ai:generation-started" && String(payload?.projectId) === String(projectId)) {
+        showNotification(
+          AI_COLLABORATION_ALERTS.GENERATION_STARTED_TITLE,
+          AI_COLLABORATION_ALERTS.GENERATION_STARTED_MESSAGE(
+            payload.user?.name || "A collaborator",
+            payload.prompt || "a new prompt"
+          ),
+          TOAST_TYPES.INFO,
+          7000
+        );
+      }
+
+      if (event === "ai:generation-finished" && String(payload?.projectId) === String(projectId)) {
+        showNotification(
+          AI_COLLABORATION_ALERTS.GENERATION_FINISHED_TITLE,
+          AI_COLLABORATION_ALERTS.GENERATION_FINISHED_MESSAGE(
+            payload.user?.name || "A collaborator"
+          ),
+          TOAST_TYPES.SUCCESS,
+          5000
+        );
+      }
+    },
+    [projectId, router, setActiveCollaborators, setCollaborationError, setSocketConnected]
+  );
 
   useEffect(() => {
     const pendingToast = readPendingToast();
@@ -113,6 +248,7 @@ export default function ImageEditorScreen() {
     fetchProjectById(projectId)
       .then((loadedProject) => {
         setProject(normalizeProject(loadedProject));
+        setIsProjectLoaded(true);
         if (loadedProject.starterPrompt) {
           setPrompt(loadedProject.starterPrompt);
         }
@@ -125,6 +261,42 @@ export default function ImageEditorScreen() {
         );
       });
   }, [fetchProjectById, isRealProject, projectId]);
+
+  useEffect(() => {
+    if (!isRealProject || !isProjectLoaded) {
+      return undefined;
+    }
+
+    const session = getAuthSession();
+    if (!session?.token) {
+      return undefined;
+    }
+
+    const provider = createCollaborationProvider({
+      onEvent: handleCollaborationEvent,
+      projectId,
+      token: session.token,
+      user: session.user
+    });
+    setCollaborationProvider(provider);
+    provider.socket.on("connect", () => setSocketConnected(true));
+    provider.connect();
+
+    return () => {
+      provider.destroy();
+      setCollaborationProvider(null);
+      setActiveCollaborators([]);
+      setRemoteCanvasPointers([]);
+      setSocketConnected(false);
+    };
+  }, [
+    handleCollaborationEvent,
+    isProjectLoaded,
+    isRealProject,
+    projectId,
+    setActiveCollaborators,
+    setSocketConnected
+  ]);
 
   useEffect(() => {
     if (!isRealProject) {
@@ -734,10 +906,13 @@ export default function ImageEditorScreen() {
 
         <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
           <FabricImageEditor
+            collaborationProvider={collaborationProvider}
             editable={canEditProject}
             generationRequest={generationRequest}
             onDirtyChange={setHasUnsavedChanges}
-            onReady={setCanvas}
+            onReady={handleCanvasReady}
+            remoteCanvasPointers={remoteCanvasPointers}
+            remoteCanvasState={remoteCanvasState}
           />
 
           <aside className="grid min-w-0 content-start gap-5">
@@ -884,6 +1059,43 @@ function getCollaboratorAccessLevel(project, user) {
   );
 
   return permission?.accessLevel;
+}
+
+function getCurrentUserId() {
+  const user = getAuthSession()?.user;
+  return getIdString(user?.id || user?._id);
+}
+
+function getIdString(value) {
+  return String(value?._id || value?.id || value || "");
+}
+
+function upsertRemoteCanvasPointer(currentPointers, payload) {
+  const userId = getIdString(payload.user?.id || payload.user?._id);
+
+  if (!userId || !payload.pointer) {
+    return currentPointers;
+  }
+
+  const nextPointer = {
+    color: getUserColor(userId),
+    id: userId,
+    name: payload.user?.name || payload.user?.email || "Collaborator",
+    x: Number(payload.pointer.x) || 0,
+    y: Number(payload.pointer.y) || 0
+  };
+
+  return [nextPointer, ...currentPointers.filter((cursor) => cursor.id !== userId)];
+}
+
+function getUserColor(id = "") {
+  const colors = ["#7c3aed", "#0891b2", "#db2777", "#ca8a04", "#059669"];
+  const hash = [...String(id)].reduce(
+    (currentHash, character) => (currentHash * 31 + character.charCodeAt(0)) | 0,
+    0
+  );
+
+  return colors[(hash >>> 0) % colors.length];
 }
 
 function buildDemoImageResponse(prompt) {

@@ -135,17 +135,17 @@ export default function WorkspaceSharePopover({
           </p>
           {invitedUsers.map((user) => (
             <div
-              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-violet-50 px-3 py-2 ring-1 ring-violet-100"
+              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-white px-3 py-2 ring-1 ring-slate-200"
               key={user.email || user.name}
             >
               <UserAvatar className="h-9 w-9" user={user} />
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-slate-900">
+                <p className="truncate text-sm font-bold text-slate-950">
                   {user.name || user.email}
                 </p>
-                <p className="truncate text-xs text-slate-500">{user.email}</p>
+                <p className="truncate text-xs font-medium text-slate-600">{user.email}</p>
               </div>
-              <span className="rounded-full bg-violet-600 px-2 py-1 text-xs font-bold text-white">
+              <span className="rounded-full bg-slate-950 px-2 py-1 text-xs font-bold text-white ring-1 ring-slate-300">
                 {getAccessLevelLabel(user.accessLevel)}
               </span>
             </div>

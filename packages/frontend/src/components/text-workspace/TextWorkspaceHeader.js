@@ -63,12 +63,25 @@ export default function TextWorkspaceHeader({
   const updateProject = useAppStore((state) => state.updateProject);
   const userState = useAppStore((state) => state.userState);
   const owner = project.owner || auth.user;
-  const activeUsers = activeCollaborators.length
+  const baseActiveUsers = activeCollaborators.length
     ? activeCollaborators
     : auth.user
       ? [auth.user]
       : [];
   const collaboratorAccess = buildCollaboratorAccessMap(project);
+  const activeUsers = baseActiveUsers.map((user) => {
+    const accessLevel = getUserProjectAccessLevel(project, user, collaboratorAccess);
+    const permissionLabel =
+      project.currentUserRole === PROJECT_ROLES.OWNER && getUserId(user) === getUserId(owner)
+        ? SHARE_POPOVER_TEXT.OWNER_ROLE
+        : ACCESS_LEVEL_LABELS[accessLevel] || SHARE_POPOVER_TEXT.PROJECT_ROLE_EDITOR;
+    const label = user?.name || user?.email || "User";
+
+    return {
+      ...user,
+      tooltipLabel: `${label} - ${permissionLabel}`
+    };
+  });
   const canPublishTemplate =
     project.currentUserRole === PROJECT_ROLES.OWNER && isRealProject(project);
 
@@ -398,6 +411,17 @@ function buildCollaboratorAccessMap(project) {
     accessMap[String(permission.user?._id || permission.user)] = permission.accessLevel;
     return accessMap;
   }, {});
+}
+
+function getUserProjectAccessLevel(project, user, collaboratorAccess) {
+  const userId = getUserId(user);
+  const ownerId = getUserId(project.owner);
+
+  if (userId && ownerId && userId === ownerId) {
+    return ACCESS_LEVELS.EDITOR;
+  }
+
+  return collaboratorAccess[userId] || user?.accessLevel || ACCESS_LEVELS.EDITOR;
 }
 
 function getTemplateInitialValues(project, templateInitialValues = {}) {

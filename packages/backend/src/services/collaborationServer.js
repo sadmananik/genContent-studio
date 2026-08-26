@@ -7,6 +7,7 @@ const { verifyAuthToken } = require("../utils/token");
 const { ACCESS_LEVELS } = require("../constants/projects");
 
 const projectDocuments = new Map();
+const projectCanvasStates = new Map();
 const projectAwareness = new Map();
 let collaborationIo = null;
 
@@ -71,6 +72,7 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
         socket.emit("project:joined", {
           accessLevel,
           collaborators: getRoomUsers(io, room),
+          canvasState: projectCanvasStates.get(String(projectId)) || null,
           projectId: String(projectId),
           yjsUpdate: encodeDocument(projectId)
         });
@@ -122,6 +124,34 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
           update: encodeDocument(projectId)
         });
       }
+    });
+
+    socket.on("canvas:update", ({ projectId, canvasState } = {}) => {
+      if (
+        !isCurrentProject(socket, projectId) ||
+        socket.data.accessLevel !== ACCESS_LEVELS.EDITOR ||
+        !canvasState
+      ) {
+        return;
+      }
+
+      projectCanvasStates.set(String(projectId), canvasState);
+      socket.to(getProjectRoom(projectId)).emit("canvas:update", {
+        canvasState,
+        projectId: String(projectId)
+      });
+    });
+
+    socket.on("canvas:pointer", ({ projectId, pointer } = {}) => {
+      if (!isCurrentProject(socket, projectId) || !pointer) {
+        return;
+      }
+
+      socket.to(getProjectRoom(projectId)).emit("canvas:pointer", {
+        pointer,
+        projectId: String(projectId),
+        user: serializeUser(socket.user)
+      });
     });
 
     socket.on("yjs:awareness-update", ({ projectId, update } = {}) => {
@@ -281,6 +311,12 @@ function emitProjectEvent(projectId, event, payload = {}, options = {}) {
     const socket = collaborationIo.sockets.sockets.get(socketId);
 
     if (socket && String(socket.user?._id) !== String(options.excludeUserId)) {
+      if (
+        event === "project:permission-updated" &&
+        String(socket.user?._id) === String(payload.userId)
+      ) {
+        socket.data.accessLevel = payload.accessLevel;
+      }
       socket.emit(event, payload);
     }
   }

@@ -8,14 +8,20 @@ import { demoImageSvg } from "./mockImageWorkspaceData";
 const canvasSize = { height: 680, width: 1080 };
 
 export default function FabricImageEditor({
+  collaborationProvider,
   editable = true,
   generationRequest,
   onDirtyChange,
-  onReady
+  onReady,
+  remoteCanvasPointers = [],
+  remoteCanvasState
 }) {
   const canvasElementRef = useRef(null);
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
+  const applyingRemoteStateRef = useRef(false);
+  const collaborationProviderRef = useRef(collaborationProvider);
+  collaborationProviderRef.current = collaborationProvider;
   const [activeObjectType, setActiveObjectType] = useState("None");
   const [fillColor, setFillColor] = useState("#8b5cf6");
   const [opacity, setOpacity] = useState(100);
@@ -80,9 +86,17 @@ export default function FabricImageEditor({
       await addDemoBackgroundImage(fabric, canvas, isMounted);
 
       const markDirty = () => {
-        if (!isInitializing) {
+        if (!isInitializing && !applyingRemoteStateRef.current) {
           onDirtyChange?.(true);
+          collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
         }
+      };
+      const emitPointer = (event) => {
+        const pointer = getCanvasPointer(event.e, canvas);
+        collaborationProviderRef.current?.emitCanvasPointer({
+          x: Math.round(pointer.x),
+          y: Math.round(pointer.y)
+        });
       };
       const syncSelection = () => {
         const activeObject = canvas.getActiveObject();
@@ -96,8 +110,12 @@ export default function FabricImageEditor({
       };
 
       canvas.on("object:modified", markDirty);
+      canvas.on("object:moving", markDirty);
+      canvas.on("object:scaling", markDirty);
+      canvas.on("object:rotating", markDirty);
       canvas.on("object:added", markDirty);
       canvas.on("object:removed", markDirty);
+      canvas.on("mouse:move", emitPointer);
       canvas.on("selection:created", syncSelection);
       canvas.on("selection:updated", syncSelection);
       canvas.on("selection:cleared", syncSelection);
@@ -115,6 +133,25 @@ export default function FabricImageEditor({
       canvasRef.current = null;
     };
   }, [onDirtyChange, onReady]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas || !remoteCanvasState) {
+      return;
+    }
+
+    applyingRemoteStateRef.current = true;
+    canvas
+      .loadFromJSON(remoteCanvasState)
+      .then(() => {
+        canvas.requestRenderAll();
+        onDirtyChange?.(false);
+      })
+      .finally(() => {
+        applyingRemoteStateRef.current = false;
+      });
+  }, [onDirtyChange, remoteCanvasState]);
 
   useEffect(() => {
     if (!generationRequest || !canvasRef.current || !fabricRef.current) {
@@ -241,7 +278,7 @@ export default function FabricImageEditor({
     canvas.add(generatedImage, card, title, caption);
     canvas.setActiveObject(generatedImage);
     canvas.requestRenderAll();
-    onDirtyChange?.(true);
+    notifyCanvasChange();
   }
 
   function applyFillColor(nextColor) {
@@ -253,10 +290,9 @@ export default function FabricImageEditor({
     if (!activeObject || !editable) {
       return;
     }
-
     activeObject.set("fill", nextColor);
     canvas.requestRenderAll();
-    onDirtyChange?.(true);
+    notifyCanvasChange();
   }
 
   function applyOpacity(nextOpacity) {
@@ -268,10 +304,9 @@ export default function FabricImageEditor({
     if (!activeObject || !editable) {
       return;
     }
-
     activeObject.set("opacity", nextOpacity / 100);
     canvas.requestRenderAll();
-    onDirtyChange?.(true);
+    notifyCanvasChange();
   }
 
   function deleteSelected() {
@@ -283,8 +318,8 @@ export default function FabricImageEditor({
     }
 
     activeObjects.forEach((object) => canvas.remove(object));
-    canvas?.discardActiveObject();
     canvas?.requestRenderAll();
+    notifyCanvasChange();
   }
 
   function moveLayer(direction) {
@@ -302,7 +337,18 @@ export default function FabricImageEditor({
     }
 
     canvas.requestRenderAll();
+    notifyCanvasChange();
+  }
+
+  function notifyCanvasChange() {
+    const canvas = canvasRef.current;
+
+    if (!canvas || applyingRemoteStateRef.current) {
+      return;
+    }
+
     onDirtyChange?.(true);
+    collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
   }
 
   return (
@@ -312,12 +358,7 @@ export default function FabricImageEditor({
           <Type aria-hidden="true" size={17} />
           Text
         </Button>
-        <Button
-          disabled={!editable}
-          onClick={() => addShape("rect")}
-          type="button"
-          variant="secondary"
-        >
+        <Button disabled={!editable} type="button" variant="secondary">
           <Square aria-hidden="true" size={17} />
           Rect
         </Button>
@@ -384,10 +425,32 @@ export default function FabricImageEditor({
 
       <div className="overflow-auto bg-white p-3">
         <div
-          className="mx-auto rounded-md bg-white"
+          className="relative mx-auto rounded-md bg-white"
           style={{ height: canvasSize.height, width: canvasSize.width }}
         >
           <canvas height={canvasSize.height} ref={canvasElementRef} width={canvasSize.width} />
+          {remoteCanvasPointers.map((cursor) => (
+            <span
+              className="pointer-events-none absolute z-10"
+              key={cursor.id}
+              style={{
+                left: cursor.x,
+                top: cursor.y,
+                transform: "translate(4px, 4px)"
+              }}
+            >
+              <span
+                className="block h-3 w-3 rounded-full ring-2 ring-white"
+                style={{ backgroundColor: cursor.color }}
+              />
+              <span
+                className="mt-1 block whitespace-nowrap rounded bg-slate-950 px-2 py-1 text-xs font-bold text-white shadow-lg"
+                style={{ borderTop: `3px solid ${cursor.color}` }}
+              >
+                {cursor.name}
+              </span>
+            </span>
+          ))}
         </div>
       </div>
     </section>
@@ -493,4 +556,21 @@ function buildGeneratedDemoSvg(accentColor) {
   <rect x="370" y="206" width="132" height="14" rx="7" fill="#475569" opacity="0.38"/>
   <rect x="370" y="250" width="96" height="34" rx="17" fill="${accentColor}" opacity="0.86"/>
 </svg>`;
+}
+
+function getCanvasPointer(event, canvas) {
+  const canvasElement = canvas.upperCanvasEl || canvas.lowerCanvasEl;
+  const bounds = canvasElement?.getBoundingClientRect();
+
+  if (!bounds) {
+    return { x: 0, y: 0 };
+  }
+
+  const scaleX = canvasSize.width / bounds.width;
+  const scaleY = canvasSize.height / bounds.height;
+
+  return {
+    x: (event.clientX - bounds.left) * scaleX,
+    y: (event.clientY - bounds.top) * scaleY
+  };
 }
