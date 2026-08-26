@@ -1,0 +1,46 @@
+name: Cypress E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: e2e
+      MONGODB_URI_TEST: ${{ secrets.MONGODB_URI_TEST }}
+      E2E_TEST_SECRET: ${{ secrets.E2E_TEST_SECRET }}
+      AUTH_TOKEN_SECRET_TEST: ${{ secrets.AUTH_TOKEN_SECRET_TEST }}
+      AUTH_TOKEN_SECRET: ${{ secrets.AUTH_TOKEN_SECRET_TEST }}
+      FRONTEND_ORIGIN: http://localhost:3000
+      FRONTEND_URL: http://localhost:3000
+      API_URL: http://localhost:4000
+      EMAIL_DELIVERY_MODE: console
+      OPENAI_TEST_MODE: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - name: Verify test database configuration
+        run: test -n "$MONGODB_URI_TEST" && test -n "$E2E_TEST_SECRET" && test -n "$AUTH_TOKEN_SECRET_TEST"
+      - name: Generate E2E run ID
+        run: echo "E2E_RUN_ID=e2e_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+      - name: Start backend
+        run: yarn workspace @gencontent/backend start > /tmp/gencontent-backend.log 2>&1 &
+      - name: Start frontend
+        run: yarn workspace @gencontent/frontend dev > /tmp/gencontent-frontend.log 2>&1 &
+      - name: Wait for services
+        run: npx wait-on http://localhost:4000/health http://localhost:3000
+      - name: Run Cypress
+        run: yarn test:e2e
+      - name: Cleanup E2E data
+        if: always()
+        run: node packages/backend/scripts/cleanupE2EData.js "$E2E_RUN_ID"

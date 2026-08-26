@@ -2,6 +2,7 @@ const nodemailer = require("nodemailer");
 const { AUTH_MESSAGES, EMAIL_TEMPLATES } = require("../constants/auth");
 
 let transporter;
+const testMailbox = [];
 
 async function sendPasswordResetEmail({ email, expiresInMinutes, name, resetUrl }) {
   const template = EMAIL_TEMPLATES.PASSWORD_RESET;
@@ -158,6 +159,10 @@ function requireEmailFrom() {
 }
 
 function shouldUseConsoleDelivery() {
+  if (process.env.NODE_ENV === "e2e") {
+    return true;
+  }
+
   const mode = String(process.env.EMAIL_DELIVERY_MODE || "")
     .trim()
     .toLowerCase();
@@ -184,6 +189,10 @@ async function sendTextEmail({ email, subject, text }) {
 }
 
 function logEmailToConsole({ email, subject, text }) {
+  if (process.env.NODE_ENV === "e2e") {
+    testMailbox.push({ email, subject, text, createdAt: new Date().toISOString() });
+  }
+
   console.log(
     [
       "----- GenContent Studio email -----",
@@ -196,7 +205,17 @@ function logEmailToConsole({ email, subject, text }) {
   );
 }
 
+function getTestMailbox() {
+  return [...testMailbox];
+}
+
+function clearTestMailbox() {
+  testMailbox.length = 0;
+}
+
 module.exports = {
+  clearTestMailbox,
+  getTestMailbox,
   sendEmailVerificationEmail,
   sendExistingUserProjectInviteEmail,
   sendNewUserProjectInviteEmail,

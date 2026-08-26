@@ -8,6 +8,7 @@
     "build": "find src -name '*.js' -print -exec node --check {} \\;",
     "db:clear": "node scripts/clearMongoCollections.js",
     "db:seed:templates": "node scripts/seedDefaultTemplates.js",
+    "db:cleanup:e2e": "node scripts/cleanupE2EData.js",
     "start": "node src/server.js",
     "lint": "find src -name '*.js' -print -exec node --check {} \\;"
   },

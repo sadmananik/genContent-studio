@@ -10,11 +10,14 @@ const projectRoutes = require("./routes/projectRoutes");
 const textContentRoutes = require("./routes/textContentRoutes");
 const templateRoutes = require("./routes/templateRoutes");
 const userRoutes = require("./routes/userRoutes");
+const testRoutes = require("./routes/testRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const { attachCollaborationServer } = require("./services/collaborationServer");
 
-dotenv.config();
+dotenv.config({
+  path: process.env.NODE_ENV === "e2e" ? ".env.test" : ".env"
+});
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -56,6 +59,7 @@ app.use("/api/text-content", textContentRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/image-content", imageContentRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/test", testRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
