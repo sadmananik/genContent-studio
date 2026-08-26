@@ -108,6 +108,14 @@ const updateProject = asyncHandler(async (req, res) => {
     throw httpError(404, PROJECT_MESSAGES.PROJECT_UPDATE_OWNER_ONLY);
   }
 
+  const previousPermissions = new Map(
+    project.collaboratorPermissions.map((permission) => [
+      getObjectIdString(permission.user),
+      permission.accessLevel
+    ])
+  );
+  const previousCollaborators = new Set(project.collaborators.map(getObjectIdString));
+
   if (req.body.type !== undefined && !PROJECT_TYPE_VALUES.includes(req.body.type)) {
     throw httpError(400, PROJECT_MESSAGES.PROJECT_TYPE_INVALID);
   }
@@ -157,10 +165,36 @@ const updateProject = asyncHandler(async (req, res) => {
   const updatedProject = await Project.findById(project._id)
     .populate("owner", "name email")
     .populate("collaborators", "name email");
+  const permissionChanges = [];
+
+  updatedProject.collaboratorPermissions.forEach((permission) => {
+    const userId = getObjectIdString(permission.user);
+
+    if (previousPermissions.get(userId) !== permission.accessLevel) {
+      permissionChanges.push({ accessLevel: permission.accessLevel, userId });
+    }
+  });
 
   emitProjectEvent(project._id, "project:sharing-updated", {
     projectId: String(project._id),
-    collaborators: updatedProject.collaborators
+    collaborators: updatedProject.collaborators,
+    collaboratorPermissions: updatedProject.collaboratorPermissions,
+    permissionChanges
+  });
+  permissionChanges.forEach(({ accessLevel, userId }) => {
+    emitProjectEvent(project._id, "project:permission-updated", {
+      accessLevel,
+      projectId: String(project._id),
+      userId
+    });
+  });
+  previousCollaborators.forEach((userId) => {
+    if (!updatedProject.collaborators.some((user) => getObjectIdString(user) === userId)) {
+      emitProjectEvent(project._id, "project:access-revoked", {
+        projectId: String(project._id),
+        userId
+      });
+    }
   });
 
   res.json(serializeProjectForUser(updatedProject, req.user.id));

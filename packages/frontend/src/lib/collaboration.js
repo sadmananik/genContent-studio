@@ -34,6 +34,7 @@ export function createCollaborationProvider({ projectId, token, user, onEvent })
   socket.on("connect", () => socket.emit("project:join", { projectId }));
   socket.on("project:joined", ({ yjsUpdate, ...event }) => {
     applyUpdate(yjsUpdate);
+    emitLocalAwareness();
     onEvent?.("project:joined", event);
   });
   socket.on("yjs:sync", ({ update }) => applyUpdate(update));
@@ -54,6 +55,7 @@ export function createCollaborationProvider({ projectId, token, user, onEvent })
       socket.connect();
     },
     destroy() {
+      awareness.setLocalState(null);
       socket.emit("project:leave");
       socket.disconnect();
       doc.off("update", emitDocumentUpdate);
@@ -73,6 +75,14 @@ export function createCollaborationProvider({ projectId, token, user, onEvent })
     applyingRemoteUpdate = true;
     Y.applyUpdate(doc, Uint8Array.from(update), "remote");
     applyingRemoteUpdate = false;
+  }
+
+  function emitLocalAwareness() {
+    const clientIds = [awareness.clientID];
+    socket.emit("yjs:awareness-update", {
+      projectId,
+      update: Array.from(encodeAwarenessUpdate(awareness, clientIds))
+    });
   }
 }
 

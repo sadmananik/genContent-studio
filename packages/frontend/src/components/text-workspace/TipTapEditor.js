@@ -6,6 +6,9 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import { FontSize, TextStyle } from "@tiptap/extension-text-style";
 import Collaboration from "@tiptap/extension-collaboration";
+import { Extension } from "@tiptap/core";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { useEffect, useRef } from "react";
 
 export default function TipTapEditor({
@@ -29,7 +32,10 @@ export default function TipTapEditor({
         placeholder: "Start writing your content here..."
       }),
       ...(collaborationProvider
-        ? [Collaboration.configure({ document: collaborationProvider.doc })]
+        ? [
+            Collaboration.configure({ document: collaborationProvider.doc }),
+            createCollaborationCursorExtension(collaborationProvider)
+          ]
         : [])
     ],
     content: initialContent,
@@ -122,4 +128,110 @@ export default function TipTapEditor({
       <EditorContent editor={editor} />
     </div>
   );
+}
+
+function createCollaborationCursorExtension(provider) {
+  return Extension.create({
+    name: "collaborationCursor",
+
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          key: new PluginKey("collaborationCursor"),
+          state: {
+            init: () => DecorationSet.empty,
+            apply: (transaction, decorations) => {
+              if (transaction.docChanged || transaction.getMeta("collaboration-awareness")) {
+                return createCursorDecorations(transaction.doc, provider.awareness);
+              }
+
+              return decorations.map(transaction.mapping, transaction.doc);
+            }
+          },
+          props: {
+            decorations: (state) => createCursorDecorations(state.doc, provider.awareness)
+          },
+          view: (view) => {
+            const handleAwarenessChange = () => {
+              view.dispatch(view.state.tr.setMeta("collaboration-awareness", true));
+            };
+
+            provider.awareness.on("change", handleAwarenessChange);
+            return {
+              destroy() {
+                provider.awareness.off("change", handleAwarenessChange);
+              },
+              update(updatedView, previousState) {
+                const { from, to } = updatedView.state.selection;
+                const currentCursor = provider.awareness.getLocalState()?.cursor;
+
+                if (currentCursor?.anchor !== from || currentCursor?.head !== to) {
+                  provider.awareness.setLocalStateField("cursor", { anchor: from, head: to });
+                }
+
+                if (!updatedView.state.doc.eq(previousState.doc)) {
+                  handleAwarenessChange();
+                }
+              }
+            };
+          }
+        })
+      ];
+    }
+  });
+}
+
+function createCursorDecorations(doc, awareness) {
+  const decorations = [];
+
+  awareness.getStates().forEach((state, clientId) => {
+    const cursor = state.cursor;
+    const user = state.user;
+
+    if (!cursor || !user || clientId === awareness.clientID) {
+      return;
+    }
+
+    const from = clampPosition(cursor.anchor, doc.content.size);
+    const to = clampPosition(cursor.head, doc.content.size);
+    const start = Math.min(from, to);
+    const end = Math.max(from, to);
+    const color = user.color || "#7c3aed";
+    const name = user.name || "Collaborator";
+
+    if (start !== end) {
+      decorations.push(
+        Decoration.inline(start, end, {
+          class: "collaboration-selection",
+          style: `background-color: ${color}33`
+        })
+      );
+    }
+
+    decorations.push(
+      Decoration.widget(
+        to,
+        () => {
+          const cursorElement = document.createElement("span");
+          cursorElement.className = "collaboration-cursor";
+          cursorElement.style.backgroundColor = color;
+          cursorElement.setAttribute("aria-label", `${name} cursor`);
+
+          const label = document.createElement("span");
+          label.className = "collaboration-cursor-label";
+          label.style.backgroundColor = color;
+          label.textContent = name;
+          cursorElement.appendChild(label);
+          return cursorElement;
+        },
+        { key: `collaboration-cursor-${clientId}` }
+      )
+    );
+  });
+
+  return DecorationSet.create(doc, decorations);
+}
+
+function clampPosition(position, maximum) {
+  return Math.max(1, Math.min(Number(position) || 1, maximum));
 }

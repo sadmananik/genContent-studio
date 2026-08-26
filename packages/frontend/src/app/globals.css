@@ -56,6 +56,35 @@ body {
   color: #94a3b8;
 }
 
+.collaboration-cursor {
+  position: relative;
+  display: inline-block;
+  width: 2px;
+  height: 1.45em;
+  margin-left: -1px;
+  vertical-align: text-bottom;
+  pointer-events: none;
+}
+
+.collaboration-cursor-label {
+  position: absolute;
+  left: -1px;
+  bottom: 100%;
+  z-index: 10;
+  padding: 2px 6px;
+  border-radius: 4px 4px 4px 0;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  transform: translateY(-2px);
+}
+
+.collaboration-selection {
+  border-radius: 2px;
+}
+
 :root[data-active-theme="dark"] body {
   background: radial-gradient(circle at 30% 0%, #111827 0, #060713 34%, #030712 76%);
 }

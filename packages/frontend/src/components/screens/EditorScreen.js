@@ -16,12 +16,15 @@ import {
   AI_CONTENT_TYPES,
   API_ERROR_MESSAGES,
   API_PROJECT_TYPES,
-  EDITOR_ACCESS_QUERY,
   PERMISSION_MESSAGES,
   PROJECT_ROLES
 } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
-import { TEXT_EDITOR_ALERTS } from "../../constants/notifications";
+import {
+  AI_COLLABORATION_ALERTS,
+  COLLABORATION_ACTIVITY_ALERTS,
+  TEXT_EDITOR_ALERTS
+} from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
 import { getAuthSession } from "../../lib/auth";
 import { createCollaborationProvider } from "../../lib/collaboration";
@@ -122,6 +125,17 @@ export default function EditorScreen() {
   const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
   const projectStarterContentRef = useRef("");
   const restoredHistoryResponseRef = useRef(null);
+  const editorRef = useRef(null);
+  const projectRef = useRef(project);
+  const responsesRef = useRef(responses);
+  const selectedHistoryIdRef = useRef(selectedHistoryId);
+  const editorContentRef = useRef(editorContent);
+  const lastPermissionNotificationRef = useRef(null);
+  projectRef.current = project;
+  editorRef.current = editor;
+  responsesRef.current = responses;
+  selectedHistoryIdRef.current = selectedHistoryId;
+  editorContentRef.current = editorContent;
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const characterCount = useMemo(() => countCharacters(editorContent.text), [editorContent.text]);
   const readingTimeLabel = useMemo(() => getReadingTimeLabel(wordCount), [wordCount]);
@@ -165,12 +179,13 @@ export default function EditorScreen() {
   );
   const selectedResponse =
     responses.find((response) => response.id === selectedHistoryId) || responses[0] || null;
-  const canEditProject = project.canEdit !== false && requestedAccess !== EDITOR_ACCESS_QUERY.VIEW;
+  const canEditProject = project.canEdit !== false;
   const canManageSharing =
     project.canManageSharing !== false && project.currentUserRole !== PROJECT_ROLES.COLLABORATOR;
 
   const handleCollaborationEvent = useCallback(
     (event, payload) => {
+      console.log(`Collaboration event: ${event}`, payload);
       if (event === "project:joined" || event === "project:presence-updated") {
         setActiveCollaborators(payload?.collaborators || []);
       }
@@ -184,40 +199,51 @@ export default function EditorScreen() {
         setCollaborationError(payload);
       }
 
-      if (event === "project:sharing-updated" && payload?.projectId === projectId) {
-        const currentUserId = getAuthSession()?.user?.id;
-        const isOwner =
-          String(project.owner?._id || project.owner?.id || project.owner) ===
-          String(currentUserId);
-        const permission = payload.collaboratorPermissions?.find(
-          (item) => String(item.user) === String(currentUserId)
-        );
-        const nextAccessLevel = isOwner
-          ? ACCESS_LEVELS.EDITOR
-          : permission?.accessLevel || ACCESS_LEVELS.VIEWER;
-        const wasEditor = project.canEdit !== false;
-        const isEditor = nextAccessLevel === ACCESS_LEVELS.EDITOR;
+      const isCurrentProject = String(payload?.projectId) === String(projectId);
+      const currentUserId = getCurrentUserId();
 
-        if (wasEditor !== isEditor) {
-          showNotification(
-            TEXT_EDITOR_ALERTS.COLLABORATION_PERMISSION_CHANGED_TITLE,
-            TEXT_EDITOR_ALERTS.COLLABORATION_PERMISSION_CHANGED_MESSAGE(nextAccessLevel),
-            isEditor ? TOAST_TYPES.SUCCESS : TOAST_TYPES.WARNING,
-            7000
-          );
+      if (event === "project:sharing-updated" && isCurrentProject) {
+        const permissionChanges = Array.isArray(payload.permissionChanges)
+          ? payload.permissionChanges
+          : [];
+        const changedPermission = permissionChanges.find(
+          (permission) => getIdString(permission.userId) === currentUserId
+        );
+        const sharedPermission = (payload.collaboratorPermissions || []).find(
+          (permission) => getIdString(permission.user?._id || permission.user) === currentUserId
+        );
+
+        const currentProject = projectRef.current;
+        const isCollaborator = currentProject.currentUserRole !== PROJECT_ROLES.OWNER;
+        const nextAccessLevel = changedPermission?.accessLevel || sharedPermission?.accessLevel;
+
+        if (isCollaborator && nextAccessLevel && nextAccessLevel !== currentProject.accessLevel) {
+          notifyPermissionChange(nextAccessLevel);
         }
 
-        setProject((currentProject) => ({
-          ...currentProject,
-          accessLevel: nextAccessLevel,
-          canEdit: isEditor
+        setProject((projectState) => ({
+          ...projectState,
+          accessLevel: isCollaborator
+            ? nextAccessLevel || projectState.accessLevel
+            : projectState.accessLevel,
+          canEdit:
+            isCollaborator && nextAccessLevel
+              ? nextAccessLevel === ACCESS_LEVELS.EDITOR
+              : projectState.canEdit,
+          collaborators: payload.collaborators || projectState.collaborators,
+          collaboratorPermissions:
+            payload.collaboratorPermissions || projectState.collaboratorPermissions
         }));
       }
 
+      console.log(`Collaboration eventeee: ${event}`, payload);
+
       if (
         event === "project:permission-updated" &&
-        payload?.userId === getAuthSession()?.user?.id
+        isCurrentProject &&
+        getIdString(payload?.userId) === currentUserId
       ) {
+        notifyPermissionChange(payload.accessLevel);
         setProject((currentProject) => ({
           ...currentProject,
           accessLevel: payload.accessLevel,
@@ -225,7 +251,34 @@ export default function EditorScreen() {
         }));
       }
 
-      if (event === "project:access-revoked" && payload?.userId === getAuthSession()?.user?.id) {
+      function notifyPermissionChange(accessLevel) {
+        if (!accessLevel) {
+          return;
+        }
+
+        const notificationKey = `${projectId}:${currentUserId}:${accessLevel}`;
+        const now = Date.now();
+
+        if (
+          lastPermissionNotificationRef.current?.key === notificationKey &&
+          now - lastPermissionNotificationRef.current.timestamp < 1500
+        ) {
+          return;
+        }
+
+        lastPermissionNotificationRef.current = { key: notificationKey, timestamp: now };
+        showNotification(
+          TEXT_EDITOR_ALERTS.COLLABORATION_PERMISSION_CHANGED_TITLE,
+          TEXT_EDITOR_ALERTS.COLLABORATION_PERMISSION_CHANGED_MESSAGE(accessLevel),
+          accessLevel === ACCESS_LEVELS.EDITOR ? TOAST_TYPES.SUCCESS : TOAST_TYPES.WARNING,
+          7000
+        );
+      }
+
+      if (
+        event === "project:access-revoked" &&
+        getIdString(payload?.userId) === getCurrentUserId()
+      ) {
         showNotification(
           "Access removed",
           "You no longer have access to this project.",
@@ -233,15 +286,93 @@ export default function EditorScreen() {
         );
         router.push(ROUTES.SHARED);
       }
+
+      if (event === "ai:generation-started" && payload?.projectId === projectId) {
+        showNotification(
+          AI_COLLABORATION_ALERTS.GENERATION_STARTED_TITLE,
+          AI_COLLABORATION_ALERTS.GENERATION_STARTED_MESSAGE(
+            payload.user?.name || "A collaborator",
+            payload.prompt || "a new prompt"
+          ),
+          TOAST_TYPES.INFO,
+          7000
+        );
+      }
+
+      if (event === "ai:generation-finished" && payload?.projectId === projectId) {
+        showNotification(
+          AI_COLLABORATION_ALERTS.GENERATION_FINISHED_TITLE,
+          AI_COLLABORATION_ALERTS.GENERATION_FINISHED_MESSAGE(
+            payload.user?.name || "A collaborator"
+          ),
+          TOAST_TYPES.SUCCESS,
+          5000
+        );
+      }
+
+      if (event === "ai:response-created" && payload?.projectId === projectId && payload.chat) {
+        const response = formatChatAsResponse(payload.chat);
+        setResponses((currentResponses) =>
+          currentResponses.some((item) => item.id === response.id)
+            ? currentResponses
+            : [response, ...currentResponses]
+        );
+      }
+
+      if (event === "project:user-joined" && payload?.projectId === projectId) {
+        showNotification(
+          COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_TITLE,
+          COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_MESSAGE(
+            payload.user?.name || payload.user?.email || "A collaborator"
+          ),
+          TOAST_TYPES.INFO,
+          4000
+        );
+      }
+
+      if (event === "project:user-left" && payload?.projectId === projectId) {
+        showNotification(
+          COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_TITLE,
+          COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_MESSAGE(
+            payload.user?.name || payload.user?.email || "A collaborator"
+          ),
+          TOAST_TYPES.INFO,
+          4000
+        );
+      }
+
+      if (event === "ai:response-deleted" && payload?.projectId === projectId) {
+        const deletedResponse = responsesRef.current.find(
+          (item) => item.sourceId === payload.chatId
+        );
+        setResponses((currentResponses) =>
+          currentResponses.filter((item) => item.sourceId !== payload.chatId)
+        );
+        setSelectedHistoryId((currentId) => (currentId === payload.chatId ? null : currentId));
+
+        if (
+          payload.chatId === selectedHistoryIdRef.current ||
+          (deletedResponse &&
+            isEditorShowingResponse(
+              deletedResponse,
+              editorRef.current?.getHTML() || editorContentRef.current.html
+            ))
+        ) {
+          setPrompt(starterPrompt);
+          clearEditorContent();
+        }
+        showNotification(
+          COLLABORATION_ACTIVITY_ALERTS.RESPONSE_DELETED_TITLE,
+          COLLABORATION_ACTIVITY_ALERTS.RESPONSE_DELETED_MESSAGE(
+            payload.user?.name || "A collaborator",
+            getPromptPreview(payload.prompt)
+          ),
+          TOAST_TYPES.INFO,
+          4000
+        );
+      }
     },
-    [
-      projectId,
-      project.canEdit,
-      router,
-      setActiveCollaborators,
-      setCollaborationError,
-      setSocketConnected
-    ]
+    [projectId, router, setActiveCollaborators, setCollaborationError, setSocketConnected]
   );
 
   useEffect(() => {
@@ -471,6 +602,15 @@ export default function EditorScreen() {
     setIsGenerating(true);
 
     try {
+      const currentUser = getAuthSession()?.user;
+      collaborationProvider?.socket.emit("project:event", {
+        event: "ai:generation-started",
+        payload: {
+          projectId,
+          prompt: getPromptPreview(trimmedPrompt),
+          user: { id: currentUser?.id, name: currentUser?.name || currentUser?.email }
+        }
+      });
       const result = await generateTextFromPrompt({
         project: isRealProject ? projectId : undefined,
         prompt: trimmedPrompt
@@ -504,6 +644,14 @@ export default function EditorScreen() {
             contentType: AI_CONTENT_TYPES.TEXT
           });
           const formattedResponse = formatChatAsResponse(savedResponse);
+
+          collaborationProvider?.socket.emit("project:event", {
+            event: "ai:generation-finished",
+            payload: {
+              projectId,
+              user: { id: currentUser?.id, name: currentUser?.name || currentUser?.email }
+            }
+          });
 
           setResponses((currentResponses) =>
             currentResponses.map((item) =>
@@ -781,7 +929,10 @@ export default function EditorScreen() {
     if (isDeletingSelectedResponse) {
       setPrompt(starterPrompt);
       clearEditorContent();
-    } else if (response && isEditorShowingResponse(response, editorContent.html)) {
+    } else if (
+      response &&
+      isEditorShowingResponse(response, editorRef.current?.getHTML() || editorContent.html)
+    ) {
       clearEditorContent();
     }
 
@@ -961,15 +1112,15 @@ export default function EditorScreen() {
   function insertTextIntoEditor(value) {
     const html = textToHtml(value);
 
-    if (!editor) {
+    if (!editorRef.current) {
       setEditorContent({ html, text: String(value || "") });
       setHasUnsavedChanges(hasEditorContentChanged(html, lastPersistedContentHtmlRef.current));
       return;
     }
 
-    editor.commands.setContent(html, true);
-    editor.commands.focus("end");
-    const nextHtml = editor.getHTML();
+    editorRef.current.commands.setContent(html, true);
+    editorRef.current.commands.focus("end");
+    const nextHtml = editorRef.current.getHTML();
 
     setEditorContent({ html: nextHtml, text: editor.getText() });
     setHasUnsavedChanges(hasEditorContentChanged(nextHtml, lastPersistedContentHtmlRef.current));
@@ -985,8 +1136,8 @@ export default function EditorScreen() {
   }
 
   function clearEditorContent() {
-    if (editor) {
-      editor.commands.clearContent(true);
+    if (editorRef.current) {
+      editorRef.current.commands.clearContent(true);
     }
 
     setEditorContent({ html: "", text: "" });
@@ -1162,6 +1313,15 @@ function normalizeProject(project) {
     collaborators: project.collaborators || [],
     collaboratorPermissions: project.collaboratorPermissions || []
   };
+}
+
+function getCurrentUserId() {
+  const user = getAuthSession()?.user;
+  return getIdString(user?.id || user?._id);
+}
+
+function getIdString(value) {
+  return String(value?._id || value?.id || value || "");
 }
 
 function formatChatAsResponse(chat) {

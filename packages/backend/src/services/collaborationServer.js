@@ -7,6 +7,7 @@ const { verifyAuthToken } = require("../utils/token");
 const { ACCESS_LEVELS } = require("../constants/projects");
 
 const projectDocuments = new Map();
+const projectAwareness = new Map();
 let collaborationIo = null;
 
 function attachCollaborationServer(httpServer, frontendOrigin) {
@@ -73,6 +74,15 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
           projectId: String(projectId),
           yjsUpdate: encodeDocument(projectId)
         });
+        const awareness = projectAwareness.get(String(projectId));
+        for (const socketId of awareness?.keys() || []) {
+          if (!io.sockets.sockets.has(socketId)) {
+            awareness.delete(socketId);
+          }
+        }
+        for (const update of awareness?.values() || []) {
+          socket.emit("yjs:awareness-update", { projectId: String(projectId), update });
+        }
         socket.to(room).emit("project:user-joined", {
           projectId: String(projectId),
           user: serializeUser(socket.user)
@@ -116,6 +126,10 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
 
     socket.on("yjs:awareness-update", ({ projectId, update } = {}) => {
       if (isCurrentProject(socket, projectId)) {
+        if (!projectAwareness.has(String(projectId))) {
+          projectAwareness.set(String(projectId), new Map());
+        }
+        projectAwareness.get(String(projectId)).set(socket.id, update || []);
         socket.to(getProjectRoom(projectId)).emit("yjs:awareness-update", {
           projectId: String(projectId),
           update: Array.from(Uint8Array.from(update || []))
@@ -134,8 +148,10 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
       const room = projectId && getProjectRoom(projectId);
 
       if (room) {
+        projectAwareness.get(String(projectId))?.delete(socket.id);
         socket.to(room).emit("project:user-left", {
           projectId,
+          user: serializeUser(socket.user),
           userId: String(socket.user._id)
         });
         setTimeout(() => broadcastPresence(io, room, projectId), 0);
@@ -154,9 +170,11 @@ function leaveProjectRoom(io, socket, reason) {
   }
 
   const room = getProjectRoom(projectId);
+  projectAwareness.get(String(projectId))?.delete(socket.id);
   socket.to(room).emit("project:user-left", {
     projectId,
     reason,
+    user: serializeUser(socket.user),
     userId: String(socket.user._id)
   });
   socket.leave(room);
@@ -259,7 +277,13 @@ function emitProjectEvent(projectId, event, payload = {}, options = {}) {
     return;
   }
 
-  collaborationIo.to(room).emit(event, payload);
+  for (const socketId of collaborationIo.sockets.adapter.rooms.get(room) || []) {
+    const socket = collaborationIo.sockets.sockets.get(socketId);
+
+    if (socket && String(socket.user?._id) !== String(options.excludeUserId)) {
+      socket.emit(event, payload);
+    }
+  }
 }
 
 module.exports = { attachCollaborationServer, emitProjectEvent };
