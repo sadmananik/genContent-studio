@@ -1104,6 +1104,11 @@ export default function EditorScreen() {
         project: projectId,
         content: editorContent.html
       });
+      recordWorkspaceAudit("ai_content_saved", {
+        aiChatId: selectedResponse?.sourceId,
+        prompt: selectedResponse?.prompt || prompt,
+        contentType: AI_CONTENT_TYPES.TEXT
+      });
     } else {
       window.localStorage.setItem("gencontent-demo-text-workspace", JSON.stringify(savePayload));
     }
@@ -1133,6 +1138,22 @@ export default function EditorScreen() {
     }
 
     insertTextIntoEditor(response.response);
+    recordWorkspaceAudit("ai_content_inserted", {
+      aiChatId: response.sourceId,
+      contentType: AI_CONTENT_TYPES.TEXT,
+      prompt: response.prompt
+    });
+  }
+
+  function recordWorkspaceAudit(actionType, metadata) {
+    if (!isRealProject) {
+      return;
+    }
+
+    apiRequest(`/api/projects/${projectId}/audit-history`, {
+      method: "POST",
+      body: JSON.stringify({ actionType, metadata, workspace: "text" })
+    }).catch(() => {});
   }
 
   function clearEditorContent() {

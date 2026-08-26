@@ -7,6 +7,8 @@ const {
   findAccessibleProject,
   requireProjectEditAccess
 } = require("../controllers/projectController");
+const { AI_CONTENT_TYPES, AUDIT_ACTION_TYPES, AUDIT_WORKSPACES } = require("../constants/projects");
+const { recordAuditEvent } = require("../services/auditService");
 
 const router = express.Router();
 
@@ -15,10 +17,18 @@ router.post(
   requireUser,
   asyncHandler(async (req, res) => {
     const { project, prompt } = req.body || {};
+    let accessibleProject;
 
     if (project && Types.ObjectId.isValid(project)) {
-      const accessibleProject = await findAccessibleProject(project, req.user.id);
+      accessibleProject = await findAccessibleProject(project, req.user.id);
       requireProjectEditAccess(accessibleProject, req.user.id);
+      await recordAuditEvent({
+        actionType: AUDIT_ACTION_TYPES.AI_PROMPT_SUBMITTED,
+        actor: req.user.id,
+        metadata: { contentType: AI_CONTENT_TYPES.TEXT, prompt },
+        project,
+        workspace: AUDIT_WORKSPACES.TEXT
+      });
     }
 
     const result = await generateText({ prompt });

@@ -25,6 +25,22 @@ const AI_CONTENT_TYPES = {
 
 const AI_CONTENT_TYPE_VALUES = Object.values(AI_CONTENT_TYPES);
 
+const AUDIT_ACTION_TYPES = {
+  AI_CONTENT_INSERTED: "ai_content_inserted",
+  AI_CONTENT_SAVED: "ai_content_saved",
+  AI_PROMPT_DELETED: "ai_prompt_deleted",
+  AI_PROMPT_SUBMITTED: "ai_prompt_submitted",
+  AI_PROMPT_UPDATED: "ai_prompt_updated",
+  AI_RESPONSE_DELETED: "ai_response_deleted",
+  AI_RESPONSE_GENERATED: "ai_response_generated",
+  AI_RESPONSE_UPDATED: "ai_response_updated"
+};
+
+const AUDIT_WORKSPACES = {
+  IMAGE: "image",
+  TEXT: "text"
+};
+
 const PROJECT_MESSAGES = {
   CHAT_NOT_FOUND: "Chat not found",
   COLLABORATORS_INVALID_ID: "Collaborators contains an invalid user id",
@@ -63,6 +79,8 @@ const PROJECT_FIELD_LABELS = {
 module.exports = {
   ACCESS_LEVELS,
   ACCESS_LEVEL_VALUES,
+  AUDIT_ACTION_TYPES,
+  AUDIT_WORKSPACES,
   AI_CONTENT_TYPES,
   AI_CONTENT_TYPE_VALUES,
   PROJECT_MESSAGES,

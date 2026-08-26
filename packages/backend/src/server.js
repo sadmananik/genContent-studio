@@ -39,6 +39,7 @@ app.get("/api", (req, res) => {
       "/api/users",
       "/api/projects",
       "/api/chats",
+      "/api/projects/:projectId/audit-history",
       "/api/text-content",
       "/api/image-content",
       "/api/templates",

@@ -720,6 +720,11 @@ export default function ImageEditorScreen() {
   function insertResponseIntoCanvas(response) {
     setPrompt(response.prompt);
     setGenerationRequest({ id: Date.now(), prompt: response.prompt });
+    recordWorkspaceAudit("ai_content_inserted", {
+      aiChatId: response.sourceId,
+      contentType: AI_CONTENT_TYPES.IMAGE,
+      prompt: response.prompt
+    });
     showNotification(
       IMAGE_EDITOR_ALERTS.INSERTED_TITLE,
       IMAGE_EDITOR_ALERTS.INSERTED_MESSAGE,
@@ -745,6 +750,10 @@ export default function ImageEditorScreen() {
         generationPrompt: prompt,
         project: projectId
       });
+      recordWorkspaceAudit("ai_content_saved", {
+        contentType: AI_CONTENT_TYPES.IMAGE,
+        prompt
+      });
     }
 
     setHasUnsavedChanges(false);
@@ -764,6 +773,17 @@ export default function ImageEditorScreen() {
   async function saveCurrentCanvas(options) {
     const payload = canvas ? JSON.stringify(canvas.toJSON()) : "{}";
     await handleSaveCanvas(payload, options);
+  }
+
+  function recordWorkspaceAudit(actionType, metadata) {
+    if (!isRealProject) {
+      return;
+    }
+
+    apiRequest(`/api/projects/${projectId}/audit-history`, {
+      method: "POST",
+      body: JSON.stringify({ actionType, metadata, workspace: "image" })
+    }).catch(() => {});
   }
 
   function handleHeaderSave() {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Download,
+  History,
   LayoutTemplate,
   Save,
   Share2,
@@ -12,6 +13,7 @@ import {
   Users
 } from "lucide-react";
 import AppModal from "../common/AppModal";
+import AuditHistoryModal from "../common/AuditHistoryModal";
 import Button from "../common/Button";
 import TemplateFormModal from "../templates/TemplateFormModal";
 import { TOAST_TYPES } from "../common/ToastNotification";
@@ -56,6 +58,7 @@ export default function TextWorkspaceHeader({
   const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [permissionDrafts, setPermissionDrafts] = useState({});
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isAuditOpen, setIsAuditOpen] = useState(false);
   const auth = useAppStore((state) => state.auth);
   const listUsers = useAppStore((state) => state.listUsers);
   const projectState = useAppStore((state) => state.projectState);
@@ -242,6 +245,12 @@ export default function TextWorkspaceHeader({
       </div>
 
       <div className="flex flex-wrap gap-2">
+        {canPublishTemplate && (
+          <Button onClick={() => setIsAuditOpen(true)} type="button" variant="secondary">
+            <History aria-hidden="true" size={17} />
+            Audit history
+          </Button>
+        )}
         <div className="flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2">
           <Users aria-hidden="true" className="mr-2 text-slate-500" size={17} />
           <UserAvatarStack users={activeUsers} />
@@ -369,6 +378,12 @@ export default function TextWorkspaceHeader({
             })}
           </div>
         </AppModal>
+      )}
+      {isAuditOpen && (
+        <AuditHistoryModal
+          onClose={() => setIsAuditOpen(false)}
+          projectId={project.id || project._id}
+        />
       )}
     </header>
   );
