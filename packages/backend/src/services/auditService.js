@@ -1,6 +1,8 @@
 const AuditLog = require("../models/AuditLog");
+const { AUDIT_ACTION_TYPES } = require("../constants/projects");
 
 const MAX_PREVIEW_LENGTH = 500;
+const DUPLICATE_PROMPT_WINDOW_MS = 2 * 60 * 1000;
 
 async function recordAuditEvent({ project, actor, actionType, workspace, metadata = {} }) {
   return AuditLog.create({
@@ -10,6 +12,22 @@ async function recordAuditEvent({ project, actor, actionType, workspace, metadat
     workspace,
     metadata: snapshotMetadata(metadata)
   });
+}
+
+async function hasRecentPromptSubmission({ project, actor, workspace, prompt, contentType }) {
+  const recentThreshold = new Date(Date.now() - DUPLICATE_PROMPT_WINDOW_MS);
+
+  return Boolean(
+    await AuditLog.exists({
+      actionType: AUDIT_ACTION_TYPES.AI_PROMPT_SUBMITTED,
+      actor,
+      createdAt: { $gte: recentThreshold },
+      "metadata.contentType": contentType,
+      "metadata.prompt": preview(prompt),
+      project,
+      workspace
+    })
+  );
 }
 
 function preview(value) {
@@ -30,4 +48,4 @@ function snapshotMetadata(metadata) {
   );
 }
 
-module.exports = { preview, recordAuditEvent, snapshotMetadata };
+module.exports = { hasRecentPromptSubmission, preview, recordAuditEvent, snapshotMetadata };

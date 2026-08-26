@@ -13,7 +13,11 @@ const httpError = require("../utils/httpError");
 const { findAccessibleProject, requireProjectEditAccess } = require("./projectController");
 const { normalizeString, requireTrimmedString } = require("../utils/validation");
 const { emitProjectEvent } = require("../services/collaborationServer");
-const { preview, recordAuditEvent } = require("../services/auditService");
+const {
+  hasRecentPromptSubmission,
+  preview,
+  recordAuditEvent
+} = require("../services/auditService");
 
 const createChat = asyncHandler(async (req, res) => {
   const { project, prompt, response, contentType = AI_CONTENT_TYPES.TEXT } = req.body;
@@ -46,24 +50,36 @@ const createChat = asyncHandler(async (req, res) => {
     normalizedContentType === AI_CONTENT_TYPES.IMAGE
       ? AUDIT_WORKSPACES.IMAGE
       : AUDIT_WORKSPACES.TEXT;
-  await recordAuditEvent({
-    actionType: AUDIT_ACTION_TYPES.AI_PROMPT_SUBMITTED,
+  const promptAlreadySubmitted = await hasRecentPromptSubmission({
     actor: req.user.id,
-    metadata: {
-      aiChatId: String(chat._id),
-      prompt: normalizedPrompt,
-      contentType: normalizedContentType
-    },
+    contentType: normalizedContentType,
     project,
+    prompt: normalizedPrompt,
     workspace
   });
+
+  if (!promptAlreadySubmitted) {
+    await recordAuditEvent({
+      actionType: AUDIT_ACTION_TYPES.AI_PROMPT_SUBMITTED,
+      actor: req.user.id,
+      metadata: {
+        aiChatId: String(chat._id),
+        prompt: normalizedPrompt,
+        contentType: normalizedContentType
+      },
+      project,
+      workspace
+    });
+  }
+
   await recordAuditEvent({
     actionType: AUDIT_ACTION_TYPES.AI_RESPONSE_GENERATED,
     actor: req.user.id,
     metadata: {
       aiChatId: String(chat._id),
       prompt: normalizedPrompt,
-      contentType: normalizedContentType
+      contentType: normalizedContentType,
+      promptAlreadySubmitted
     },
     project,
     workspace
