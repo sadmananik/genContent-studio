@@ -1,3 +1,5 @@
+import { ACCESS_LEVELS } from "./content";
+
 export const COMMON_UI_TEXT = {
   TRY_AGAIN: "Try Again",
   UPDATED_JUST_NOW: "Updated just now"
@@ -93,6 +95,11 @@ export const TEXT_EDITOR_ALERTS = {
   FAVOURITE_SAVED_TITLE: "Favourite saved",
   GENERATION_FAILED_MESSAGE: "Could not generate text from OpenAI.",
   GENERATION_FAILED_TITLE: "Generation failed",
+  COLLABORATION_PERMISSION_CHANGED_TITLE: "Project access changed",
+  COLLABORATION_PERMISSION_CHANGED_MESSAGE: (role) =>
+    role === ACCESS_LEVELS.VIEWER
+      ? "Your access is now view-only. Unsaved edits cannot be saved."
+      : "Your project editing permission was updated.",
   INVITE_FAILED_MESSAGE: "User could not be invited.",
   INVITE_FAILED_TITLE: "Invite failed",
   INVITE_INVALID_EMAIL_MESSAGE: "Enter a valid email address to invite.",

@@ -41,6 +41,21 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+:root[data-active-theme="dark"] .ProseMirror {
+  color: #e5e7eb;
+}
+
+:root[data-active-theme="dark"] .ProseMirror h1,
+:root[data-active-theme="dark"] .ProseMirror h2,
+:root[data-active-theme="dark"] .ProseMirror h3,
+:root[data-active-theme="dark"] .ProseMirror strong {
+  color: #f8fafc;
+}
+
+:root[data-active-theme="dark"] .ProseMirror:empty:before {
+  color: #94a3b8;
+}
+
 :root[data-active-theme="dark"] body {
   background: radial-gradient(circle at 30% 0%, #111827 0, #060713 34%, #030712 76%);
 }

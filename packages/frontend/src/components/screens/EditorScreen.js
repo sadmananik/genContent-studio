@@ -23,6 +23,8 @@ import {
 import { ROUTES } from "../../constants/navigation";
 import { TEXT_EDITOR_ALERTS } from "../../constants/notifications";
 import { apiRequest } from "../../lib/apiClient";
+import { getAuthSession } from "../../lib/auth";
+import { createCollaborationProvider } from "../../lib/collaboration";
 import { useAppStore } from "../../store";
 import { textPromptActions } from "../text-workspace/promptActions";
 
@@ -88,6 +90,10 @@ export default function EditorScreen() {
   const sendTextGenerationRequest = useAppStore((state) => state.sendTextGenerationRequest);
   const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
   const updateAiResponse = useAppStore((state) => state.updateAiResponse);
+  const setActiveCollaborators = useAppStore((state) => state.setActiveCollaborators);
+  const setSocketConnected = useAppStore((state) => state.setSocketConnected);
+  const setCollaborationError = useAppStore((state) => state.setCollaborationError);
+  const collaborationState = useAppStore((state) => state.collaborationState);
   const [editor, setEditor] = useState(null);
   const [project, setProject] = useState(defaultTextProject);
   const [editorContent, setEditorContent] = useState({
@@ -111,7 +117,11 @@ export default function EditorScreen() {
   const [pendingResponseDelete, setPendingResponseDelete] = useState(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [collaborationProvider, setCollaborationProvider] = useState(null);
+  const [collaborationReady, setCollaborationReady] = useState(false);
   const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
+  const projectStarterContentRef = useRef("");
+  const restoredHistoryResponseRef = useRef(null);
   const wordCount = useMemo(() => countWords(editorContent.text), [editorContent.text]);
   const characterCount = useMemo(() => countCharacters(editorContent.text), [editorContent.text]);
   const readingTimeLabel = useMemo(() => getReadingTimeLabel(wordCount), [wordCount]);
@@ -158,6 +168,118 @@ export default function EditorScreen() {
   const canEditProject = project.canEdit !== false && requestedAccess !== EDITOR_ACCESS_QUERY.VIEW;
   const canManageSharing =
     project.canManageSharing !== false && project.currentUserRole !== PROJECT_ROLES.COLLABORATOR;
+
+  const handleCollaborationEvent = useCallback(
+    (event, payload) => {
+      if (event === "project:joined" || event === "project:presence-updated") {
+        setActiveCollaborators(payload?.collaborators || []);
+      }
+
+      if (event === "project:joined") {
+        setCollaborationReady(true);
+      }
+
+      if (event === "connection-error") {
+        setSocketConnected(false);
+        setCollaborationError(payload);
+      }
+
+      if (event === "project:sharing-updated" && payload?.projectId === projectId) {
+        const currentUserId = getAuthSession()?.user?.id;
+        const isOwner =
+          String(project.owner?._id || project.owner?.id || project.owner) ===
+          String(currentUserId);
+        const permission = payload.collaboratorPermissions?.find(
+          (item) => String(item.user) === String(currentUserId)
+        );
+        const nextAccessLevel = isOwner
+          ? ACCESS_LEVELS.EDITOR
+          : permission?.accessLevel || ACCESS_LEVELS.VIEWER;
+        const wasEditor = project.canEdit !== false;
+        const isEditor = nextAccessLevel === ACCESS_LEVELS.EDITOR;
+
+        if (wasEditor !== isEditor) {
+          showNotification(
+            TEXT_EDITOR_ALERTS.COLLABORATION_PERMISSION_CHANGED_TITLE,
+            TEXT_EDITOR_ALERTS.COLLABORATION_PERMISSION_CHANGED_MESSAGE(nextAccessLevel),
+            isEditor ? TOAST_TYPES.SUCCESS : TOAST_TYPES.WARNING,
+            7000
+          );
+        }
+
+        setProject((currentProject) => ({
+          ...currentProject,
+          accessLevel: nextAccessLevel,
+          canEdit: isEditor
+        }));
+      }
+
+      if (
+        event === "project:permission-updated" &&
+        payload?.userId === getAuthSession()?.user?.id
+      ) {
+        setProject((currentProject) => ({
+          ...currentProject,
+          accessLevel: payload.accessLevel,
+          canEdit: payload.accessLevel === ACCESS_LEVELS.EDITOR
+        }));
+      }
+
+      if (event === "project:access-revoked" && payload?.userId === getAuthSession()?.user?.id) {
+        showNotification(
+          "Access removed",
+          "You no longer have access to this project.",
+          TOAST_TYPES.ERROR
+        );
+        router.push(ROUTES.SHARED);
+      }
+    },
+    [
+      projectId,
+      project.canEdit,
+      router,
+      setActiveCollaborators,
+      setCollaborationError,
+      setSocketConnected
+    ]
+  );
+
+  useEffect(() => {
+    if (!isRealProject || isLoadingContent) {
+      return undefined;
+    }
+
+    const session = getAuthSession();
+    if (!session?.token) {
+      return undefined;
+    }
+
+    const provider = createCollaborationProvider({
+      onEvent: handleCollaborationEvent,
+      projectId,
+      token: session.token,
+      user: session.user
+    });
+    setCollaborationReady(false);
+    setCollaborationProvider(provider);
+    provider.socket.on("connect", () => setSocketConnected(true));
+    provider.connect();
+
+    return () => {
+      provider.destroy();
+      setCollaborationProvider(null);
+      setCollaborationReady(false);
+      setActiveCollaborators([]);
+      setSocketConnected(false);
+    };
+  }, [
+    handleCollaborationEvent,
+    isLoadingContent,
+    isRealProject,
+    projectId,
+    setActiveCollaborators,
+    setSocketConnected
+  ]);
   const invitedUsers = useMemo(() => {
     const usersByEmail = new Map();
 
@@ -201,8 +323,15 @@ export default function EditorScreen() {
       .then((loadedProject) => {
         if (isActive) {
           setProject(normalizeProject(loadedProject));
+          projectStarterContentRef.current = loadedProject.starterContent || "";
           if (loadedProject.starterPrompt) {
             setPrompt(loadedProject.starterPrompt);
+          }
+          if (typeof loadedProject.starterContent === "string" && loadedProject.starterContent) {
+            setEditorContent({
+              html: loadedProject.starterContent,
+              text: stripHtml(loadedProject.starterContent)
+            });
           }
         }
       })
@@ -222,7 +351,15 @@ export default function EditorScreen() {
           return;
         }
 
-        const html = typeof textContent.content === "string" ? textContent.content : "";
+        const html =
+          typeof textContent.content === "string" && textContent.content
+            ? textContent.content
+            : projectStarterContentRef.current;
+
+        if (!html && projectStarterContentRef.current === "") {
+          setHasUnsavedChanges(false);
+          return;
+        }
         lastPersistedContentHtmlRef.current = normalizeEditorHtml(html);
 
         if (editor) {
@@ -262,9 +399,8 @@ export default function EditorScreen() {
         }
       });
 
-    setResponses([]);
     setSelectedHistoryId(null);
-    setIsLoadingHistory(true);
+    restoredHistoryResponseRef.current = null;
     setHistoryError(null);
 
     fetchProjectChatHistory(projectId)
@@ -285,7 +421,7 @@ export default function EditorScreen() {
     return () => {
       isActive = false;
     };
-  }, [clearAiError, editor, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
+  }, [clearAiError, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
 
   useEffect(() => {
     if (!isRealProject) {
@@ -297,7 +433,18 @@ export default function EditorScreen() {
       .map(formatChatAsResponse);
     setResponses(realResponses);
     setSelectedHistoryId(realResponses[0]?.id || null);
-  }, [aiState.chatHistory, isRealProject]);
+
+    const latestResponse = realResponses[0];
+    if (
+      !isLoadingContent &&
+      !editorContent.text.trim() &&
+      latestResponse &&
+      restoredHistoryResponseRef.current !== latestResponse.id
+    ) {
+      restoredHistoryResponseRef.current = latestResponse.id;
+      replaceEditorWithResponse(latestResponse);
+    }
+  }, [aiState.chatHistory, editorContent.text, isLoadingContent, isRealProject]);
 
   async function handleGenerate(promptOverride) {
     if (!canEditProject) {
@@ -814,6 +961,12 @@ export default function EditorScreen() {
   function insertTextIntoEditor(value) {
     const html = textToHtml(value);
 
+    if (!editor) {
+      setEditorContent({ html, text: String(value || "") });
+      setHasUnsavedChanges(hasEditorContentChanged(html, lastPersistedContentHtmlRef.current));
+      return;
+    }
+
     editor.commands.setContent(html, true);
     editor.commands.focus("end");
     const nextHtml = editor.getHTML();
@@ -844,6 +997,7 @@ export default function EditorScreen() {
   return (
     <section className="min-h-screen overflow-hidden bg-slate-50">
       <TextWorkspaceHeader
+        activeCollaborators={collaborationState.activeCollaborators}
         canEdit={canEditProject}
         canManageSharing={canManageSharing}
         invitedUsers={invitedUsers}
@@ -893,7 +1047,9 @@ export default function EditorScreen() {
                 {statusLabel} • {wordCount} words • {characterCount} characters • {readingTimeLabel}
               </div>
               <TipTapEditor
-                editorKey={project.id}
+                collaborationProvider={collaborationReady ? collaborationProvider : null}
+                key={`${project.id}-${collaborationReady ? "shared" : "local"}`}
+                editorKey={`${project.id}-${collaborationReady ? "shared" : "local"}`}
                 editable={canEditProject}
                 initialContent={editorContent.html}
                 onContentChange={handleEditorChange}

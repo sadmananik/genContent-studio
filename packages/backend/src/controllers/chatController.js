@@ -10,6 +10,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const { findAccessibleProject, requireProjectEditAccess } = require("./projectController");
 const { normalizeString, requireTrimmedString } = require("../utils/validation");
+const { emitProjectEvent } = require("../services/collaborationServer");
 
 const createChat = asyncHandler(async (req, res) => {
   const { project, prompt, response, contentType = AI_CONTENT_TYPES.TEXT } = req.body;
@@ -37,6 +38,8 @@ const createChat = asyncHandler(async (req, res) => {
     response: normalizedResponse,
     contentType: normalizedContentType
   });
+
+  emitProjectEvent(project, "ai:response-created", { projectId: String(project), chat });
 
   res.status(201).json(chat);
 });
@@ -107,6 +110,7 @@ const updateChat = asyncHandler(async (req, res) => {
   });
 
   await chat.save();
+  emitProjectEvent(chat.project, "ai:response-updated", { projectId: String(chat.project), chat });
   res.json(chat);
 });
 
@@ -120,6 +124,11 @@ const deleteChat = asyncHandler(async (req, res) => {
   const accessibleProject = await findAccessibleProject(chat.project, req.user.id);
   requireProjectEditAccess(accessibleProject, req.user.id);
   await chat.deleteOne();
+
+  emitProjectEvent(chat.project, "ai:response-deleted", {
+    chatId: String(chat._id),
+    projectId: String(chat.project)
+  });
 
   res.status(204).send();
 });

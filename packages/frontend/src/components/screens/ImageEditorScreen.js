@@ -38,6 +38,7 @@ export default function ImageEditorScreen() {
   const sendImageGenerationRequest = useAppStore((state) => state.sendImageGenerationRequest);
   const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
   const updateAiResponse = useAppStore((state) => state.updateAiResponse);
+  const collaborationState = useAppStore((state) => state.collaborationState);
   const [canvas, setCanvas] = useState(null);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [generationRequest, setGenerationRequest] = useState(null);
@@ -696,6 +697,7 @@ export default function ImageEditorScreen() {
   return (
     <section className="min-h-screen overflow-hidden bg-slate-50">
       <TextWorkspaceHeader
+        activeCollaborators={collaborationState.activeCollaborators}
         canEdit={canEditProject}
         canManageSharing={canManageSharing}
         exportOptions={[
