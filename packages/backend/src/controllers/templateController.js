@@ -1,10 +1,16 @@
 const ImageContent = require("../models/ImageContent");
+const AIChat = require("../models/AIChat");
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const Template = require("../models/Template");
 const TemplatePreference = require("../models/TemplatePreference");
 const TextContent = require("../models/TextContent");
-const { PROJECT_ROLES, PROJECT_TYPE_VALUES, PROJECT_TYPES } = require("../constants/projects");
+const {
+  AI_CONTENT_TYPES,
+  PROJECT_ROLES,
+  PROJECT_TYPE_VALUES,
+  PROJECT_TYPES
+} = require("../constants/projects");
 const {
   TEMPLATE_MESSAGES,
   TEMPLATE_VISIBILITY,
@@ -262,6 +268,20 @@ const useTemplate = asyncHandler(async (req, res) => {
         content: typeof template.starterContent === "string" ? template.starterContent : "",
         lastUpdatedBy: req.user.id
       });
+
+      if (
+        template.starterPrompt &&
+        typeof template.starterContent === "string" &&
+        template.starterContent
+      ) {
+        await AIChat.create({
+          contentType: AI_CONTENT_TYPES.TEXT,
+          project: project._id,
+          prompt: template.starterPrompt,
+          response: template.starterContent,
+          user: req.user.id
+        });
+      }
     } else {
       await ImageContent.create({
         project: project._id,
@@ -274,6 +294,7 @@ const useTemplate = asyncHandler(async (req, res) => {
     if (project?._id) {
       await Promise.all([
         TextContent.deleteMany({ project: project._id }),
+        AIChat.deleteMany({ project: project._id }),
         ImageContent.deleteMany({ project: project._id }),
         Project.deleteOne({ _id: project._id })
       ]);

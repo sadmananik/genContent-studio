@@ -1,3 +1,5 @@
+import { ACCESS_LEVELS } from "./content";
+
 export const COMMON_UI_TEXT = {
   TRY_AGAIN: "Try Again",
   UPDATED_JUST_NOW: "Updated just now"
@@ -93,6 +95,11 @@ export const TEXT_EDITOR_ALERTS = {
   FAVOURITE_SAVED_TITLE: "Favourite saved",
   GENERATION_FAILED_MESSAGE: "Could not generate text from OpenAI.",
   GENERATION_FAILED_TITLE: "Generation failed",
+  COLLABORATION_PERMISSION_CHANGED_TITLE: "Project access changed",
+  COLLABORATION_PERMISSION_CHANGED_MESSAGE: (role) =>
+    role === ACCESS_LEVELS.VIEWER
+      ? "Your project permission changed to View only. You can view content but cannot edit it."
+      : "Your project editing permission was updated.",
   INVITE_FAILED_MESSAGE: "User could not be invited.",
   INVITE_FAILED_TITLE: "Invite failed",
   INVITE_INVALID_EMAIL_MESSAGE: "Enter a valid email address to invite.",
@@ -127,6 +134,23 @@ export const TEXT_EDITOR_ALERTS = {
   deleteConfirmDescription: (prompt) =>
     `Delete "${prompt || "this response"}" from AI prompt history? This cannot be undone.`,
   sharedMessage: (email) => `${email} was invited to this project.`
+};
+
+export const AI_COLLABORATION_ALERTS = {
+  GENERATION_STARTED_TITLE: "AI generation started",
+  GENERATION_STARTED_MESSAGE: (userName, prompt) => `${userName} is generating: "${prompt}"`,
+  GENERATION_FINISHED_TITLE: "AI response ready",
+  GENERATION_FINISHED_MESSAGE: (userName) => `${userName} generated a new response.`
+};
+
+export const COLLABORATION_ACTIVITY_ALERTS = {
+  USER_JOINED_TITLE: "Collaborator joined",
+  USER_JOINED_MESSAGE: (userName) => `${userName} joined this project.`,
+  USER_LEFT_TITLE: "Collaborator left",
+  USER_LEFT_MESSAGE: (userName) => `${userName} left this project.`,
+  RESPONSE_DELETED_TITLE: "AI response deleted",
+  RESPONSE_DELETED_MESSAGE: (userName, prompt) =>
+    `${userName} deleted${prompt ? ` "${prompt}"` : " an AI response"}.`
 };
 
 export const IMAGE_EDITOR_ALERTS = {

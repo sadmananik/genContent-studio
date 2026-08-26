@@ -1,5 +1,6 @@
 const AIChat = require("../models/AIChat");
 const Project = require("../models/Project");
+const User = require("../models/User");
 const {
   AI_CONTENT_TYPES,
   AI_CONTENT_TYPE_VALUES,
@@ -10,6 +11,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const { findAccessibleProject, requireProjectEditAccess } = require("./projectController");
 const { normalizeString, requireTrimmedString } = require("../utils/validation");
+const { emitProjectEvent } = require("../services/collaborationServer");
 
 const createChat = asyncHandler(async (req, res) => {
   const { project, prompt, response, contentType = AI_CONTENT_TYPES.TEXT } = req.body;
@@ -37,6 +39,13 @@ const createChat = asyncHandler(async (req, res) => {
     response: normalizedResponse,
     contentType: normalizedContentType
   });
+
+  emitProjectEvent(
+    project,
+    "ai:response-created",
+    { projectId: String(project), chat },
+    { excludeUserId: req.user.id }
+  );
 
   res.status(201).json(chat);
 });
@@ -107,6 +116,7 @@ const updateChat = asyncHandler(async (req, res) => {
   });
 
   await chat.save();
+  emitProjectEvent(chat.project, "ai:response-updated", { projectId: String(chat.project), chat });
   res.json(chat);
 });
 
@@ -119,7 +129,20 @@ const deleteChat = asyncHandler(async (req, res) => {
 
   const accessibleProject = await findAccessibleProject(chat.project, req.user.id);
   requireProjectEditAccess(accessibleProject, req.user.id);
+  const actor = await User.findById(req.user.id).select("name email");
   await chat.deleteOne();
+
+  emitProjectEvent(
+    chat.project,
+    "ai:response-deleted",
+    {
+      chatId: String(chat._id),
+      projectId: String(chat.project),
+      prompt: chat.prompt,
+      user: actor ? { id: String(actor._id), name: actor.name, email: actor.email } : null
+    },
+    { excludeUserId: req.user.id }
+  );
 
   res.status(204).send();
 });

@@ -31,6 +31,7 @@ export default function FabricImageEditor({
       }
 
       fabricRef.current = fabric;
+      let isInitializing = true;
 
       const canvas = new fabric.Canvas(canvasElementRef.current, {
         backgroundColor: "#f8fafc",
@@ -76,9 +77,13 @@ export default function FabricImageEditor({
       canvas.setActiveObject(headline);
       canvas.calcOffset();
       canvas.requestRenderAll();
-      addDemoBackgroundImage(fabric, canvas, isMounted);
+      await addDemoBackgroundImage(fabric, canvas, isMounted);
 
-      const markDirty = () => onDirtyChange?.(true);
+      const markDirty = () => {
+        if (!isInitializing) {
+          onDirtyChange?.(true);
+        }
+      };
       const syncSelection = () => {
         const activeObject = canvas.getActiveObject();
         setActiveObjectType(activeObject?.type || "None");
@@ -98,6 +103,8 @@ export default function FabricImageEditor({
       canvas.on("selection:cleared", syncSelection);
 
       onReady?.(canvas);
+      isInitializing = false;
+      onDirtyChange?.(false);
     }
 
     setupCanvas();

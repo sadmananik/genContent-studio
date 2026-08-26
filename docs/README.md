@@ -9,6 +9,7 @@ Product and business logic notes for future maintenance and handover.
 - [AI text generation](./ai-text-generation.md)
 - [Templates Library](./templates-library.md)
 - [Favorites](./favorites.md)
+- [Realtime collaborative workspaces](./realtime-collaboration.md)
 
 ## Documentation rules
 

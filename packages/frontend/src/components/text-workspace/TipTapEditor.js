@@ -5,6 +5,10 @@ import Color from "@tiptap/extension-color";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import { FontSize, TextStyle } from "@tiptap/extension-text-style";
+import Collaboration from "@tiptap/extension-collaboration";
+import { Extension } from "@tiptap/core";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { useEffect, useRef } from "react";
 
 export default function TipTapEditor({
@@ -12,9 +16,12 @@ export default function TipTapEditor({
   editorKey,
   initialContent,
   onContentChange,
-  onEditorReady
+  onEditorReady,
+  collaborationProvider
 }) {
   const appliedEditorKeyRef = useRef(null);
+  const seededCollaborationRef = useRef(null);
+  const isHydratingCollaborationRef = useRef(Boolean(collaborationProvider && initialContent));
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -23,7 +30,13 @@ export default function TipTapEditor({
       FontSize,
       Placeholder.configure({
         placeholder: "Start writing your content here..."
-      })
+      }),
+      ...(collaborationProvider
+        ? [
+            Collaboration.configure({ document: collaborationProvider.doc }),
+            createCollaborationCursorExtension(collaborationProvider)
+          ]
+        : [])
     ],
     content: initialContent,
     editable,
@@ -34,7 +47,20 @@ export default function TipTapEditor({
       }
     },
     immediatelyRender: false,
+    onCreate: ({ editor: createdEditor }) => {
+      if (collaborationProvider && initialContent && !createdEditor.getText().trim()) {
+        createdEditor.commands.setContent(initialContent);
+      }
+    },
     onUpdate: ({ editor: updatedEditor }) => {
+      if (
+        collaborationProvider &&
+        isHydratingCollaborationRef.current &&
+        !updatedEditor.getText().trim()
+      ) {
+        return;
+      }
+
       onContentChange({
         html: updatedEditor.getHTML(),
         text: updatedEditor.getText()
@@ -53,15 +79,159 @@ export default function TipTapEditor({
   }, [editable, editor]);
 
   useEffect(() => {
+    if (
+      !editor ||
+      !collaborationProvider ||
+      !initialContent ||
+      seededCollaborationRef.current === editor
+    ) {
+      return;
+    }
+
+    const seedEditor = () => {
+      const fragment = collaborationProvider.doc.getXmlFragment("default");
+
+      if (!editor.getText().trim() && (fragment.length === 0 || initialContent)) {
+        editor.commands.setContent(initialContent);
+      }
+
+      isHydratingCollaborationRef.current = false;
+      seededCollaborationRef.current = editor;
+    };
+    const frameId = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(seedEditor);
+    });
+    const timeoutId = window.setTimeout(() => {
+      if (!editor.getText().trim()) {
+        editor.commands.setContent(initialContent);
+      }
+      isHydratingCollaborationRef.current = false;
+    }, 750);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [collaborationProvider, editor, initialContent]);
+
+  useEffect(() => {
     if (editor && editorKey && appliedEditorKeyRef.current !== editorKey) {
       appliedEditorKeyRef.current = editorKey;
-      editor.commands.setContent(initialContent, false);
+      if (initialContent && !editor.getText().trim()) {
+        editor.commands.setContent(initialContent, false);
+      }
     }
-  }, [editor, editorKey, initialContent]);
+  }, [collaborationProvider, editor, editorKey, initialContent]);
 
   return (
     <div className="bg-white [&_.ProseMirror:empty:before]:pointer-events-none [&_.ProseMirror:empty:before]:float-left [&_.ProseMirror:empty:before]:h-0 [&_.ProseMirror:empty:before]:text-slate-400 [&_.ProseMirror:empty:before]:content-[attr(data-placeholder)] [&_.ProseMirror_h1]:mb-4 [&_.ProseMirror_h1]:text-3xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h2]:mb-3 [&_.ProseMirror_h2]:text-2xl [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-6 [&_.ProseMirror_p]:mb-4 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-6">
       <EditorContent editor={editor} />
     </div>
   );
+}
+
+function createCollaborationCursorExtension(provider) {
+  return Extension.create({
+    name: "collaborationCursor",
+
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          key: new PluginKey("collaborationCursor"),
+          state: {
+            init: () => DecorationSet.empty,
+            apply: (transaction, decorations) => {
+              if (transaction.docChanged || transaction.getMeta("collaboration-awareness")) {
+                return createCursorDecorations(transaction.doc, provider.awareness);
+              }
+
+              return decorations.map(transaction.mapping, transaction.doc);
+            }
+          },
+          props: {
+            decorations: (state) => createCursorDecorations(state.doc, provider.awareness)
+          },
+          view: (view) => {
+            const handleAwarenessChange = () => {
+              view.dispatch(view.state.tr.setMeta("collaboration-awareness", true));
+            };
+
+            provider.awareness.on("change", handleAwarenessChange);
+            return {
+              destroy() {
+                provider.awareness.off("change", handleAwarenessChange);
+              },
+              update(updatedView, previousState) {
+                const { from, to } = updatedView.state.selection;
+                const currentCursor = provider.awareness.getLocalState()?.cursor;
+
+                if (currentCursor?.anchor !== from || currentCursor?.head !== to) {
+                  provider.awareness.setLocalStateField("cursor", { anchor: from, head: to });
+                }
+
+                if (!updatedView.state.doc.eq(previousState.doc)) {
+                  handleAwarenessChange();
+                }
+              }
+            };
+          }
+        })
+      ];
+    }
+  });
+}
+
+function createCursorDecorations(doc, awareness) {
+  const decorations = [];
+
+  awareness.getStates().forEach((state, clientId) => {
+    const cursor = state.cursor;
+    const user = state.user;
+
+    if (!cursor || !user || clientId === awareness.clientID) {
+      return;
+    }
+
+    const from = clampPosition(cursor.anchor, doc.content.size);
+    const to = clampPosition(cursor.head, doc.content.size);
+    const start = Math.min(from, to);
+    const end = Math.max(from, to);
+    const color = user.color || "#7c3aed";
+    const name = user.name || "Collaborator";
+
+    if (start !== end) {
+      decorations.push(
+        Decoration.inline(start, end, {
+          class: "collaboration-selection",
+          style: `background-color: ${color}33`
+        })
+      );
+    }
+
+    decorations.push(
+      Decoration.widget(
+        to,
+        () => {
+          const cursorElement = document.createElement("span");
+          cursorElement.className = "collaboration-cursor";
+          cursorElement.style.backgroundColor = color;
+          cursorElement.setAttribute("aria-label", `${name} cursor`);
+
+          const label = document.createElement("span");
+          label.className = "collaboration-cursor-label";
+          label.style.backgroundColor = color;
+          label.textContent = name;
+          cursorElement.appendChild(label);
+          return cursorElement;
+        },
+        { key: `collaboration-cursor-${clientId}` }
+      )
+    );
+  });
+
+  return DecorationSet.create(doc, decorations);
+}
+
+function clampPosition(position, maximum) {
+  return Math.max(1, Math.min(Number(position) || 1, maximum));
 }

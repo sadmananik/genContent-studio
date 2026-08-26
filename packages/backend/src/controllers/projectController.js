@@ -13,6 +13,7 @@ const {
   PROJECT_FIELD_LABELS,
   PROJECT_MESSAGES,
   PROJECT_ROLES,
+  PROJECT_TYPES,
   PROJECT_TYPE_VALUES
 } = require("../constants/projects");
 const {
@@ -24,6 +25,7 @@ const {
   sendExistingUserProjectInviteEmail,
   sendNewUserProjectInviteEmail
 } = require("../utils/email");
+const { emitProjectEvent } = require("../services/collaborationServer");
 
 const createProject = asyncHandler(async (req, res) => {
   const { title, type, category = "Other", description = "", collaborators = [] } = req.body;
@@ -84,7 +86,15 @@ const listSharedProjects = asyncHandler(async (req, res) => {
 
 const getProjectById = asyncHandler(async (req, res) => {
   const project = await findAccessibleProject(req.params.id, req.user.id);
-  res.json(serializeProjectForUser(project, req.user.id));
+  const serializedProject = serializeProjectForUser(project, req.user.id);
+
+  if (project.type === PROJECT_TYPES.TEXT) {
+    const textContent = await TextContent.findOne({ project: project._id }).select("content");
+    serializedProject.starterContent =
+      typeof textContent?.content === "string" ? textContent.content : "";
+  }
+
+  res.json(serializedProject);
 });
 
 const updateProject = asyncHandler(async (req, res) => {
@@ -97,6 +107,14 @@ const updateProject = asyncHandler(async (req, res) => {
   if (!project) {
     throw httpError(404, PROJECT_MESSAGES.PROJECT_UPDATE_OWNER_ONLY);
   }
+
+  const previousPermissions = new Map(
+    project.collaboratorPermissions.map((permission) => [
+      getObjectIdString(permission.user),
+      permission.accessLevel
+    ])
+  );
+  const previousCollaborators = new Set(project.collaborators.map(getObjectIdString));
 
   if (req.body.type !== undefined && !PROJECT_TYPE_VALUES.includes(req.body.type)) {
     throw httpError(400, PROJECT_MESSAGES.PROJECT_TYPE_INVALID);
@@ -147,6 +165,37 @@ const updateProject = asyncHandler(async (req, res) => {
   const updatedProject = await Project.findById(project._id)
     .populate("owner", "name email")
     .populate("collaborators", "name email");
+  const permissionChanges = [];
+
+  updatedProject.collaboratorPermissions.forEach((permission) => {
+    const userId = getObjectIdString(permission.user);
+
+    if (previousPermissions.get(userId) !== permission.accessLevel) {
+      permissionChanges.push({ accessLevel: permission.accessLevel, userId });
+    }
+  });
+
+  emitProjectEvent(project._id, "project:sharing-updated", {
+    projectId: String(project._id),
+    collaborators: updatedProject.collaborators,
+    collaboratorPermissions: updatedProject.collaboratorPermissions,
+    permissionChanges
+  });
+  permissionChanges.forEach(({ accessLevel, userId }) => {
+    emitProjectEvent(project._id, "project:permission-updated", {
+      accessLevel,
+      projectId: String(project._id),
+      userId
+    });
+  });
+  previousCollaborators.forEach((userId) => {
+    if (!updatedProject.collaborators.some((user) => getObjectIdString(user) === userId)) {
+      emitProjectEvent(project._id, "project:access-revoked", {
+        projectId: String(project._id),
+        userId
+      });
+    }
+  });
 
   res.json(serializeProjectForUser(updatedProject, req.user.id));
 });
@@ -240,6 +289,12 @@ const inviteProjectCollaborator = asyncHandler(async (req, res) => {
     .populate("owner", "name email")
     .populate("collaborators", "name email");
 
+  emitProjectEvent(project._id, "project:sharing-updated", {
+    projectId: String(project._id),
+    collaborators: updatedProject.collaborators,
+    collaboratorPermissions: updatedProject.collaboratorPermissions
+  });
+
   res.json(serializeProjectForUser(updatedProject, req.user.id));
 });
 
@@ -263,6 +318,16 @@ const leaveProject = asyncHandler(async (req, res) => {
 
   await project.save();
 
+  emitProjectEvent(
+    project._id,
+    "project:access-revoked",
+    {
+      projectId: String(project._id),
+      userId: String(req.user.id)
+    },
+    { userId: req.user.id }
+  );
+
   res.json({ message: PROJECT_MESSAGES.LEAVE_SHARED_SUCCESS });
 });
 
@@ -284,6 +349,10 @@ const deleteProject = asyncHandler(async (req, res) => {
     Template.updateMany({ sourceProject: project._id }, { $set: { sourceProject: null } })
   ]);
   await project.deleteOne();
+  emitProjectEvent(project._id, "project:access-revoked", {
+    projectId: String(project._id),
+    userId: "*"
+  });
   res.status(204).send();
 });
 

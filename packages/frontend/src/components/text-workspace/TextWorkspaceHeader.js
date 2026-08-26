@@ -33,6 +33,7 @@ import WorkspaceSharePopover from "./WorkspaceSharePopover";
 export default function TextWorkspaceHeader({
   canEdit = true,
   canManageSharing = true,
+  activeCollaborators = [],
   exportOptions,
   invitedUsers = [],
   onBackToProjects,
@@ -62,6 +63,11 @@ export default function TextWorkspaceHeader({
   const updateProject = useAppStore((state) => state.updateProject);
   const userState = useAppStore((state) => state.userState);
   const owner = project.owner || auth.user;
+  const activeUsers = activeCollaborators.length
+    ? activeCollaborators
+    : auth.user
+      ? [auth.user]
+      : [];
   const collaboratorAccess = buildCollaboratorAccessMap(project);
   const canPublishTemplate =
     project.currentUserRole === PROJECT_ROLES.OWNER && isRealProject(project);
@@ -225,10 +231,11 @@ export default function TextWorkspaceHeader({
       <div className="flex flex-wrap gap-2">
         <div className="flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2">
           <Users aria-hidden="true" className="mr-2 text-slate-500" size={17} />
-          <UserAvatarStack users={invitedUsers} />
+          <UserAvatarStack users={activeUsers} />
+          <span className="text-xs font-semibold text-slate-500">{activeUsers.length} active</span>
           {canManageSharing && (
             <button
-              className="rounded-md px-2 py-1 text-sm font-bold text-slate-600 hover:bg-white hover:text-violet-700"
+              className="rounded-md border border-transparent px-2 py-1 text-sm font-bold text-slate-600 transition-colors hover:border-violet-200 hover:bg-white hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200"
               onClick={openPermissionsModal}
               type="button"
             >

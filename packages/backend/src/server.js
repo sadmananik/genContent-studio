@@ -1,6 +1,7 @@
 const cors = require("cors");
 const dotenv = require("dotenv");
 const express = require("express");
+const http = require("http");
 const connectDatabase = require("./config/database");
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
@@ -11,10 +12,12 @@ const templateRoutes = require("./routes/templateRoutes");
 const userRoutes = require("./routes/userRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
+const { attachCollaborationServer } = require("./services/collaborationServer");
 
 dotenv.config();
 
 const app = express();
+const httpServer = http.createServer(app);
 const port = process.env.PORT || 4000;
 const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 
@@ -58,7 +61,8 @@ app.use(errorHandler);
 
 connectDatabase()
   .then(() => {
-    app.listen(port, () => {
+    attachCollaborationServer(httpServer, frontendOrigin);
+    httpServer.listen(port, () => {
       console.log(`Backend API running on http://localhost:${port}`);
     });
   })
