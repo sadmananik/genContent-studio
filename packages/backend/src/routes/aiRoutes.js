@@ -31,6 +31,16 @@ router.post(
       });
     }
 
+    if (process.env.NODE_ENV === "e2e" && process.env.OPENAI_TEST_MODE === "true") {
+      return res.json({
+        text: "This is a deterministic Cypress test AI response.",
+        model: "e2e-mock",
+        finishReason: "stop",
+        usage: null,
+        id: "e2e-mock-response"
+      });
+    }
+
     const result = await generateText({ prompt });
     res.json(result);
   })

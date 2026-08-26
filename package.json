@@ -14,10 +14,14 @@
     "format:check": "prettier --check .",
     "setup:hooks": "git config core.hooksPath .githooks",
     "start": "lerna run start --parallel",
-    "lint": "lerna run lint"
+    "lint": "lerna run lint",
+    "test:e2e": "cypress run",
+    "test:e2e:open": "cypress open",
+    "test:e2e:cleanup": "node packages/backend/scripts/cleanupE2EData.js"
   },
   "devDependencies": {
     "lerna": "^8.1.9",
-    "prettier": "^3.9.6"
+    "prettier": "^3.9.6",
+    "wait-on": "^9.1.0"
   }
 }

@@ -7,6 +7,7 @@ User documentation, feature scope, business logic, and developer handover notes.
 - [User Guide](./user-guide.md): task-based instructions for using the application.
 - [Feature List](./feature-list.md): complete feature inventory and implementation status.
 - [Developer Guide](./developer-guide.md): architecture, data flow, APIs, permissions, realtime collaboration, and extension guidance.
+- [Cypress E2E Testing](./e2e-testing.md): test database setup, fixtures, cleanup, local execution, and CI secrets.
 
 The User Guide and Feature List describe the product. The Developer Guide is the single technical handover reference and includes the previous authentication, project, AI, template, favourite, realtime, and audit notes.
 

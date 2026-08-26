@@ -340,6 +340,8 @@ DELETE /api/templates/:id
 
 ## Testing And Validation
 
+The complete Cypress E2E setup is documented in [Cypress E2E Testing](./e2e-testing.md). It uses `MONGODB_URI_TEST`, unique run IDs, an isolated test mailbox, deterministic AI interception, and run-scoped cleanup.
+
 Before opening a pull request:
 
 ```bash
