@@ -2,6 +2,7 @@ import { cn } from "../../lib/styles";
 
 export function UserAvatar({ className = "", user }) {
   const label = user?.name || user?.email || "User";
+  const tooltipLabel = user?.tooltipLabel || label;
   const imageUrl = user?.profile?.avatarUrl || user?.profile?.imageUrl || user?.avatarUrl || "";
 
   if (imageUrl) {
@@ -15,7 +16,7 @@ export function UserAvatar({ className = "", user }) {
           )}
           src={imageUrl}
         />
-        <AvatarTooltip label={label} />
+        <AvatarTooltip label={tooltipLabel} />
       </span>
     );
   }
@@ -31,7 +32,7 @@ export function UserAvatar({ className = "", user }) {
       >
         {getInitials(user?.name || user?.email)}
       </span>
-      <AvatarTooltip label={label} />
+      <AvatarTooltip label={tooltipLabel} />
     </span>
   );
 }

@@ -54,6 +54,12 @@ export function createCollaborationProvider({ projectId, token, user, onEvent })
     connect() {
       socket.connect();
     },
+    emitCanvasUpdate(canvasState) {
+      socket.emit("canvas:update", { canvasState, projectId });
+    },
+    emitCanvasPointer(pointer) {
+      socket.emit("canvas:pointer", { pointer, projectId });
+    },
     destroy() {
       awareness.setLocalState(null);
       socket.emit("project:leave");
