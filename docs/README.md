@@ -1,18 +1,13 @@
 # GenContent Studio Documentation
 
-Product and business logic notes for future maintenance and handover.
+User documentation, feature scope, business logic, and developer handover notes.
 
-## Business logic
+## Start Here
 
-- [Authentication and account lifecycle](./authentication.md)
-- [Projects, workspaces, and collaboration](./projects-and-collaboration.md)
-- [AI text generation](./ai-text-generation.md)
-- [Templates Library](./templates-library.md)
-- [Favorites](./favorites.md)
-- [Realtime collaborative workspaces](./realtime-collaboration.md)
+- [User Guide](./user-guide.md): task-based instructions for using the application.
+- [Feature List](./feature-list.md): complete feature inventory and implementation status.
+- [Developer Guide](./developer-guide.md): architecture, data flow, APIs, permissions, realtime collaboration, and extension guidance.
 
-## Documentation rules
+The User Guide and Feature List describe the product. The Developer Guide is the single technical handover reference and includes the previous authentication, project, AI, template, favourite, realtime, and audit notes.
 
-- Keep frontend and backend responsibilities separate.
-- Record route names, API endpoints, and state transitions.
-- Update these notes when user-facing workflows change.
+Update the relevant guide whenever a user-facing workflow, API, data model, permission rule, or realtime event changes.

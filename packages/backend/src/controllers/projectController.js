@@ -466,6 +466,7 @@ module.exports = {
   createProject,
   deleteProject,
   findAccessibleProject,
+  findProjectOwnedByUser,
   getProjectById,
   inviteProjectCollaborator,
   leaveProject,
@@ -474,3 +475,13 @@ module.exports = {
   requireProjectEditAccess,
   updateProject
 };
+
+async function findProjectOwnedByUser(projectId, userId) {
+  const project = await Project.findOne({ _id: projectId, owner: userId });
+
+  if (!project) {
+    throw httpError(404, PROJECT_MESSAGES.PROJECT_NOT_FOUND);
+  }
+
+  return project;
+}

@@ -7,11 +7,13 @@ const {
   PROJECT_FIELD_LABELS,
   PROJECT_MESSAGES
 } = require("../constants/projects");
+const { AUDIT_ACTION_TYPES, AUDIT_WORKSPACES } = require("../constants/projects");
 const asyncHandler = require("../middleware/asyncHandler");
 const httpError = require("../utils/httpError");
 const { findAccessibleProject, requireProjectEditAccess } = require("./projectController");
 const { normalizeString, requireTrimmedString } = require("../utils/validation");
 const { emitProjectEvent } = require("../services/collaborationServer");
+const { preview, recordAuditEvent } = require("../services/auditService");
 
 const createChat = asyncHandler(async (req, res) => {
   const { project, prompt, response, contentType = AI_CONTENT_TYPES.TEXT } = req.body;
@@ -38,6 +40,33 @@ const createChat = asyncHandler(async (req, res) => {
     prompt: normalizedPrompt,
     response: normalizedResponse,
     contentType: normalizedContentType
+  });
+
+  const workspace =
+    normalizedContentType === AI_CONTENT_TYPES.IMAGE
+      ? AUDIT_WORKSPACES.IMAGE
+      : AUDIT_WORKSPACES.TEXT;
+  await recordAuditEvent({
+    actionType: AUDIT_ACTION_TYPES.AI_PROMPT_SUBMITTED,
+    actor: req.user.id,
+    metadata: {
+      aiChatId: String(chat._id),
+      prompt: normalizedPrompt,
+      contentType: normalizedContentType
+    },
+    project,
+    workspace
+  });
+  await recordAuditEvent({
+    actionType: AUDIT_ACTION_TYPES.AI_RESPONSE_GENERATED,
+    actor: req.user.id,
+    metadata: {
+      aiChatId: String(chat._id),
+      prompt: normalizedPrompt,
+      contentType: normalizedContentType
+    },
+    project,
+    workspace
   });
 
   emitProjectEvent(
@@ -105,6 +134,8 @@ const updateChat = asyncHandler(async (req, res) => {
 
   const accessibleProject = await findAccessibleProject(chat.project, req.user.id);
   requireProjectEditAccess(accessibleProject, req.user.id);
+  const previousPrompt = chat.prompt;
+  const previousResponse = chat.response;
 
   ["prompt", "response"].forEach((field) => {
     if (req.body[field] !== undefined) {
@@ -116,6 +147,39 @@ const updateChat = asyncHandler(async (req, res) => {
   });
 
   await chat.save();
+  const workspace =
+    chat.contentType === AI_CONTENT_TYPES.IMAGE ? AUDIT_WORKSPACES.IMAGE : AUDIT_WORKSPACES.TEXT;
+
+  if (chat.prompt !== previousPrompt) {
+    await recordAuditEvent({
+      actionType: AUDIT_ACTION_TYPES.AI_PROMPT_UPDATED,
+      actor: req.user.id,
+      metadata: {
+        aiChatId: String(chat._id),
+        contentType: chat.contentType,
+        newPrompt: chat.prompt,
+        previousPrompt
+      },
+      project: chat.project,
+      workspace
+    });
+  }
+
+  if (chat.response !== previousResponse) {
+    await recordAuditEvent({
+      actionType: AUDIT_ACTION_TYPES.AI_RESPONSE_UPDATED,
+      actor: req.user.id,
+      metadata: {
+        aiChatId: String(chat._id),
+        contentType: chat.contentType,
+        newResponsePreview: preview(chat.response),
+        previousResponsePreview: preview(previousResponse),
+        prompt: chat.prompt
+      },
+      project: chat.project,
+      workspace
+    });
+  }
   emitProjectEvent(chat.project, "ai:response-updated", { projectId: String(chat.project), chat });
   res.json(chat);
 });
@@ -130,6 +194,30 @@ const deleteChat = asyncHandler(async (req, res) => {
   const accessibleProject = await findAccessibleProject(chat.project, req.user.id);
   requireProjectEditAccess(accessibleProject, req.user.id);
   const actor = await User.findById(req.user.id).select("name email");
+  const workspace =
+    chat.contentType === AI_CONTENT_TYPES.IMAGE ? AUDIT_WORKSPACES.IMAGE : AUDIT_WORKSPACES.TEXT;
+  const auditMetadata = {
+    aiChatId: String(chat._id),
+    contentType: chat.contentType,
+    deletedPrompt: chat.prompt,
+    deletedResponsePreview: preview(chat.response),
+    prompt: chat.prompt
+  };
+
+  await recordAuditEvent({
+    actionType: AUDIT_ACTION_TYPES.AI_PROMPT_DELETED,
+    actor: req.user.id,
+    metadata: auditMetadata,
+    project: chat.project,
+    workspace
+  });
+  await recordAuditEvent({
+    actionType: AUDIT_ACTION_TYPES.AI_RESPONSE_DELETED,
+    actor: req.user.id,
+    metadata: auditMetadata,
+    project: chat.project,
+    workspace
+  });
   await chat.deleteOne();
 
   emitProjectEvent(

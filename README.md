@@ -11,6 +11,13 @@ genContent-studio/
     backend/    Node.js Express API
 ```
 
+## Documentation
+
+- [User Guide](docs/user-guide.md)
+- [Feature List](docs/feature-list.md)
+- [Developer Guide](docs/developer-guide.md)
+- [Documentation index](docs/README.md)
+
 ## Getting Started
 
 Use Node.js LTS with NVM:

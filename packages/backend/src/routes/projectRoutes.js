@@ -10,6 +10,10 @@ const {
   updateProject
 } = require("../controllers/projectController");
 const { listProjectChats } = require("../controllers/chatController");
+const {
+  createProjectAuditEvent,
+  listProjectAuditHistory
+} = require("../controllers/auditController");
 const requireUser = require("../middleware/auth");
 const validateObjectId = require("../middleware/validateObjectId");
 
@@ -25,5 +29,7 @@ router.patch("/:id/invite", validateObjectId("id"), inviteProjectCollaborator);
 router.delete("/:id/collaborators/me", validateObjectId("id"), leaveProject);
 router.delete("/:id", validateObjectId("id"), deleteProject);
 router.get("/:projectId/chats", validateObjectId("projectId"), listProjectChats);
+router.get("/:projectId/audit-history", validateObjectId("projectId"), listProjectAuditHistory);
+router.post("/:projectId/audit-history", validateObjectId("projectId"), createProjectAuditEvent);
 
 module.exports = router;
