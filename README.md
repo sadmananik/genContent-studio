@@ -2,6 +2,14 @@
 
 AI-driven content creation platform for the COIT20273 capstone project.
 
+## Copyright
+
+Copyright (c) 2026 Sadman Anik, Sravya Matta, and Akramul Ratul. All rights reserved.
+
+This repository is publicly visible for project collaboration and assessment, but it is not open source. Copying, modifying, redistributing, sublicensing, selling, or using this code requires prior written permission from all three copyright holders. See [LICENSE](LICENSE).
+
+GitHub public repositories can still be viewed and forked by platform users. The copyright notice and proprietary license state that unauthorised reuse is not permitted; they do not technically prevent GitHub access or copying.
+
 ## Project Structure
 
 ```text
