@@ -33,14 +33,25 @@ jobs:
         run: test -n "$MONGODB_URI_TEST" && test -n "$E2E_TEST_SECRET" && test -n "$AUTH_TOKEN_SECRET_TEST"
       - name: Generate E2E run ID
         run: echo "E2E_RUN_ID=e2e_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+      - name: Verify test database connection
+        run: |
+          node -e "const mongoose = require('mongoose'); mongoose.connect(process.env.MONGODB_URI_TEST).then(() => mongoose.disconnect()).then(() => console.log('Test MongoDB connection verified.'))"
+          echo "E2E_DB_READY=true" >> "$GITHUB_ENV"
       - name: Start backend
         run: yarn workspace @gencontent/backend start > /tmp/gencontent-backend.log 2>&1 &
       - name: Start frontend
         run: yarn workspace @gencontent/frontend dev > /tmp/gencontent-frontend.log 2>&1 &
       - name: Wait for services
-        run: npx wait-on http://localhost:4000/health http://localhost:3000
+        run: |
+          npx wait-on --timeout 120000 http://localhost:4000/health http://localhost:3000 || {
+            echo "Backend log:"
+            cat /tmp/gencontent-backend.log || true
+            echo "Frontend log:"
+            cat /tmp/gencontent-frontend.log || true
+            exit 1
+          }
       - name: Run Cypress
         run: yarn test:e2e
       - name: Cleanup E2E data
-        if: always()
+        if: always() && env.E2E_DB_READY == 'true'
         run: node packages/backend/scripts/cleanupE2EData.js "$E2E_RUN_ID"
