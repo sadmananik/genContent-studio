@@ -6,8 +6,10 @@ import Button from "../common/Button";
 import StatusText from "../common/StatusText";
 
 const canvasSize = { height: 680, width: 1080 };
+const CANVAS_EMIT_THROTTLE_MS = 40;
 
 export default function FabricImageEditor({
+  activeResponseId,
   clearCanvasRequest,
   collaborationProvider,
   editable = true,
@@ -16,6 +18,7 @@ export default function FabricImageEditor({
   onReady,
   remoteCanvasPointers = [],
   remoteCanvasState,
+  remoteCanvasTransform,
   statusLabel,
   statusTone = "success"
 }) {
@@ -23,12 +26,16 @@ export default function FabricImageEditor({
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
   const applyingRemoteStateRef = useRef(false);
+  const remoteApplyStateRef = useRef({ isApplying: false, pendingState: null });
+  const lastCanvasEmitRef = useRef(0);
   const historyRef = useRef({ future: [], past: [] });
   const restoringHistoryRef = useRef(false);
   const collaborationProviderRef = useRef(collaborationProvider);
   const editableRef = useRef(editable);
+  const activeResponseIdRef = useRef(activeResponseId);
   collaborationProviderRef.current = collaborationProvider;
   editableRef.current = editable;
+  activeResponseIdRef.current = activeResponseId;
   const [activeObjectType, setActiveObjectType] = useState("None");
   const [canRedo, setCanRedo] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
@@ -104,15 +111,72 @@ export default function FabricImageEditor({
         if (!isInitializing && !applyingRemoteStateRef.current) {
           recordHistory(canvas);
           onDirtyChange?.(true);
-          collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
+
+          try {
+            collaborationProviderRef.current?.emitCanvasUpdate(
+              canvas.toJSON(),
+              activeResponseIdRef.current
+            );
+          } catch (error) {
+            console.error("[canvas] failed to emit canvas update", error);
+          }
+        }
+      };
+      const markDirtyThrottled = (event) => {
+        if (isInitializing || applyingRemoteStateRef.current) {
+          return;
+        }
+
+        recordHistory(canvas);
+        onDirtyChange?.(true);
+
+        const now = Date.now();
+        if (now - lastCanvasEmitRef.current < CANVAS_EMIT_THROTTLE_MS) {
+          return;
+        }
+
+        lastCanvasEmitRef.current = now;
+
+        try {
+          const target = event?.target;
+          const objectIndex = target ? canvas.getObjects().indexOf(target) : -1;
+
+          if (objectIndex === -1) {
+            return;
+          }
+
+          collaborationProviderRef.current?.emitCanvasTransform(
+            objectIndex,
+            {
+              angle: target.angle,
+              flipX: target.flipX,
+              flipY: target.flipY,
+              left: target.left,
+              scaleX: target.scaleX,
+              scaleY: target.scaleY,
+              skewX: target.skewX,
+              skewY: target.skewY,
+              top: target.top
+            },
+            activeResponseIdRef.current
+          );
+        } catch (error) {
+          console.error("[canvas] failed to emit canvas transform", error);
         }
       };
       const emitPointer = (event) => {
-        const pointer = getCanvasPointer(event.e, canvas);
-        collaborationProviderRef.current?.emitCanvasPointer({
-          x: Math.round(pointer.x),
-          y: Math.round(pointer.y)
-        });
+        try {
+          const pointer = getCanvasPointer(event.e, canvas);
+          collaborationProviderRef.current?.emitCanvasPointer(
+            {
+              x: Math.round(pointer.x),
+              y: Math.round(pointer.y)
+            },
+            activeResponseIdRef.current
+          );
+        } catch (error) {
+          console.error("[canvas] failed to emit pointer", error);
+        }
       };
       const syncSelection = () => {
         const activeObject = canvas.getActiveObject();
@@ -126,9 +190,9 @@ export default function FabricImageEditor({
       };
 
       canvas.on("object:modified", markDirty);
-      canvas.on("object:moving", markDirty);
-      canvas.on("object:scaling", markDirty);
-      canvas.on("object:rotating", markDirty);
+      canvas.on("object:moving", markDirtyThrottled);
+      canvas.on("object:scaling", markDirtyThrottled);
+      canvas.on("object:rotating", markDirtyThrottled);
       canvas.on("object:added", markDirty);
       canvas.on("object:removed", markDirty);
       canvas.on("mouse:move", emitPointer);
@@ -150,25 +214,70 @@ export default function FabricImageEditor({
     };
   }, [onDirtyChange, onReady, recordHistory, resetHistory]);
 
+  const applyRemoteCanvasState = useCallback(
+    (canvas, state) => {
+      const applyState = remoteApplyStateRef.current;
+
+      if (applyState.isApplying) {
+        applyState.pendingState = state;
+        return;
+      }
+
+      applyState.isApplying = true;
+      applyingRemoteStateRef.current = true;
+      // Keep the canvas white while objects reload asynchronously to avoid a black flash.
+      canvas.backgroundColor = state.background || "#ffffff";
+      canvas.requestRenderAll();
+      canvas
+        .loadFromJSON(state)
+        .then(() => {
+          canvas.requestRenderAll();
+          resetHistory(canvas);
+          onDirtyChange?.(false);
+        })
+        .catch(() => {})
+        .finally(() => {
+          applyingRemoteStateRef.current = false;
+          applyState.isApplying = false;
+
+          const pendingState = applyState.pendingState;
+          applyState.pendingState = null;
+
+          if (pendingState) {
+            applyRemoteCanvasState(canvas, pendingState);
+          }
+        });
+    },
+    [onDirtyChange, resetHistory]
+  );
+
   useEffect(() => {
     const canvas = canvasRef.current;
 
-    if (!canvas || !remoteCanvasState?.objects?.length) {
+    if (!canvas || !Array.isArray(remoteCanvasState?.objects)) {
       return;
     }
 
-    applyingRemoteStateRef.current = true;
-    canvas
-      .loadFromJSON(remoteCanvasState)
-      .then(() => {
-        canvas.requestRenderAll();
-        resetHistory(canvas);
-        onDirtyChange?.(false);
-      })
-      .finally(() => {
-        applyingRemoteStateRef.current = false;
-      });
-  }, [onDirtyChange, remoteCanvasState, resetHistory]);
+    applyRemoteCanvasState(canvas, remoteCanvasState);
+  }, [applyRemoteCanvasState, remoteCanvasState]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas || !remoteCanvasTransform || applyingRemoteStateRef.current) {
+      return;
+    }
+
+    const target = canvas.getObjects()[remoteCanvasTransform.objectIndex];
+
+    if (!target) {
+      return;
+    }
+
+    target.set(remoteCanvasTransform.transform);
+    target.setCoords();
+    canvas.requestRenderAll();
+  }, [remoteCanvasTransform]);
 
   const notifyCanvasChange = useCallback(() => {
     const canvas = canvasRef.current;
@@ -178,11 +287,14 @@ export default function FabricImageEditor({
     }
 
     onDirtyChange?.(true);
-    collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
+    collaborationProviderRef.current?.emitCanvasUpdate(
+      canvas.toJSON(),
+      activeResponseIdRef.current
+    );
   }, [onDirtyChange]);
 
   const addGeneratedImage = useCallback(
-    async (imageUrl, requestId) => {
+    async ({ imageUrl, requestId, syncCanvas = true }) => {
       const fabric = fabricRef.current;
       const canvas = canvasRef.current;
 
@@ -190,19 +302,30 @@ export default function FabricImageEditor({
         return;
       }
 
-      canvas.discardActiveObject();
-      canvas.remove(...canvas.getObjects());
+      applyingRemoteStateRef.current = true;
+      try {
+        canvas.discardActiveObject();
+        canvas.remove(...canvas.getObjects());
 
-      const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
-      const accentColor = colors[requestId % colors.length];
-      const generatedImage = await createGeneratedImageObject(fabric, imageUrl, accentColor);
+        const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
+        const accentColor = colors[requestId % colors.length];
+        const generatedImage = await createGeneratedImageObject(fabric, imageUrl, accentColor);
 
-      canvas.add(generatedImage);
-      canvas.setActiveObject(generatedImage);
-      canvas.requestRenderAll();
-      notifyCanvasChange();
+        canvas.add(generatedImage);
+        canvas.setActiveObject(generatedImage);
+        canvas.requestRenderAll();
+      } finally {
+        applyingRemoteStateRef.current = false;
+      }
+
+      if (syncCanvas) {
+        notifyCanvasChange();
+      } else {
+        resetHistory(canvas);
+        onDirtyChange?.(false);
+      }
     },
-    [notifyCanvasChange]
+    [notifyCanvasChange, onDirtyChange, resetHistory]
   );
 
   useEffect(() => {
@@ -210,7 +333,11 @@ export default function FabricImageEditor({
       return;
     }
 
-    addGeneratedImage(generationRequest.imageUrl, generationRequest.id);
+    addGeneratedImage({
+      imageUrl: generationRequest.imageUrl,
+      requestId: generationRequest.id,
+      syncCanvas: generationRequest.syncCanvas
+    });
   }, [addGeneratedImage, generationRequest]);
 
   useEffect(() => {
@@ -220,12 +347,23 @@ export default function FabricImageEditor({
       return;
     }
 
-    canvas.discardActiveObject();
-    canvas.remove(...canvas.getObjects());
-    canvas.backgroundColor = "#ffffff";
-    canvas.requestRenderAll();
-    notifyCanvasChange();
-  }, [clearCanvasRequest, notifyCanvasChange]);
+    applyingRemoteStateRef.current = true;
+    try {
+      canvas.discardActiveObject();
+      canvas.remove(...canvas.getObjects());
+      canvas.backgroundColor = "#ffffff";
+      canvas.requestRenderAll();
+    } finally {
+      applyingRemoteStateRef.current = false;
+    }
+
+    if (clearCanvasRequest.syncCanvas) {
+      notifyCanvasChange();
+    } else {
+      resetHistory(canvas);
+      onDirtyChange?.(false);
+    }
+  }, [clearCanvasRequest, notifyCanvasChange, onDirtyChange, resetHistory]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -493,7 +631,12 @@ export default function FabricImageEditor({
           <Type aria-hidden="true" size={17} />
           Text
         </Button>
-        <Button disabled={!editable} type="button" variant="secondary">
+        <Button
+          disabled={!editable}
+          onClick={() => addShape("rect")}
+          type="button"
+          variant="secondary"
+        >
           <Square aria-hidden="true" size={17} />
           Rect
         </Button>

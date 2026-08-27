@@ -136,6 +136,7 @@ function TextEditorScreen() {
   const selectedHistoryIdRef = useRef(selectedHistoryId);
   const editorContentRef = useRef(editorContent);
   const lastPermissionNotificationRef = useRef(null);
+  const pendingLeaveTimersRef = useRef(new Map());
   projectRef.current = project;
   editorRef.current = editor;
   responsesRef.current = responses;
@@ -325,24 +326,45 @@ function TextEditorScreen() {
       }
 
       if (event === "project:user-joined" && payload?.projectId === projectId) {
-        showNotification(
-          COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_TITLE,
-          COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_MESSAGE(
-            payload.user?.name || payload.user?.email || "A collaborator"
-          ),
-          TOAST_TYPES.INFO,
-          4000
-        );
+        const userId = getIdString(payload.user?.id || payload.user?._id);
+        const pendingLeaveTimer = pendingLeaveTimersRef.current.get(userId);
+
+        if (pendingLeaveTimer) {
+          window.clearTimeout(pendingLeaveTimer);
+          pendingLeaveTimersRef.current.delete(userId);
+        } else {
+          showNotification(
+            COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_TITLE,
+            COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_MESSAGE(
+              payload.user?.name || payload.user?.email || "A collaborator"
+            ),
+            TOAST_TYPES.INFO,
+            4000
+          );
+        }
       }
 
       if (event === "project:user-left" && payload?.projectId === projectId) {
-        showNotification(
-          COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_TITLE,
-          COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_MESSAGE(
-            payload.user?.name || payload.user?.email || "A collaborator"
-          ),
-          TOAST_TYPES.INFO,
-          4000
+        const userId = getIdString(payload.userId || payload.user?.id || payload.user?._id);
+        const pendingLeaveTimer = pendingLeaveTimersRef.current.get(userId);
+
+        if (pendingLeaveTimer) {
+          window.clearTimeout(pendingLeaveTimer);
+        }
+
+        pendingLeaveTimersRef.current.set(
+          userId,
+          window.setTimeout(() => {
+            pendingLeaveTimersRef.current.delete(userId);
+            showNotification(
+              COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_TITLE,
+              COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_MESSAGE(
+                payload.user?.name || payload.user?.email || "A collaborator"
+              ),
+              TOAST_TYPES.INFO,
+              4000
+            );
+          }, 3000)
         );
       }
 
@@ -400,6 +422,7 @@ function TextEditorScreen() {
     setCollaborationProvider(provider);
     provider.socket.on("connect", () => setSocketConnected(true));
     provider.connect();
+    const pendingLeaveTimers = pendingLeaveTimersRef.current;
 
     return () => {
       provider.destroy();
@@ -407,6 +430,8 @@ function TextEditorScreen() {
       setCollaborationReady(false);
       setActiveCollaborators([]);
       setSocketConnected(false);
+      pendingLeaveTimers.forEach((timer) => window.clearTimeout(timer));
+      pendingLeaveTimers.clear();
     };
   }, [
     handleCollaborationEvent,

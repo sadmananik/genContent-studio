@@ -14,7 +14,8 @@ let collaborationIo = null;
 
 function attachCollaborationServer(httpServer, frontendOrigin) {
   const io = new Server(httpServer, {
-    cors: { origin: frontendOrigin }
+    cors: { origin: frontendOrigin },
+    maxHttpBufferSize: 10 * 1024 * 1024
   });
   collaborationIo = io;
 
@@ -150,7 +151,7 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
       }
     });
 
-    socket.on("canvas:update", ({ projectId, canvasState } = {}) => {
+    socket.on("canvas:update", ({ projectId, canvasState, responseId } = {}) => {
       if (
         !isCurrentProject(socket, projectId) ||
         socket.data.accessLevel !== ACCESS_LEVELS.EDITOR ||
@@ -162,11 +163,12 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
       projectCanvasStates.set(String(projectId), canvasState);
       socket.to(getProjectRoom(projectId)).emit("canvas:update", {
         canvasState,
-        projectId: String(projectId)
+        projectId: String(projectId),
+        responseId
       });
     });
 
-    socket.on("canvas:pointer", ({ projectId, pointer } = {}) => {
+    socket.on("canvas:pointer", ({ projectId, pointer, responseId } = {}) => {
       if (!isCurrentProject(socket, projectId) || !pointer) {
         return;
       }
@@ -174,7 +176,26 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
       socket.to(getProjectRoom(projectId)).emit("canvas:pointer", {
         pointer,
         projectId: String(projectId),
+        responseId,
         user: serializeUser(socket.user)
+      });
+    });
+
+    socket.on("canvas:transform", ({ projectId, objectIndex, transform, responseId } = {}) => {
+      if (
+        !isCurrentProject(socket, projectId) ||
+        socket.data.accessLevel !== ACCESS_LEVELS.EDITOR ||
+        !transform ||
+        typeof objectIndex !== "number"
+      ) {
+        return;
+      }
+
+      socket.to(getProjectRoom(projectId)).emit("canvas:transform", {
+        objectIndex,
+        projectId: String(projectId),
+        responseId,
+        transform
       });
     });
 
