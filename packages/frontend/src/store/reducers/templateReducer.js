@@ -28,6 +28,7 @@ export function createTemplateReducer(set) {
         if (filters.category && filters.category !== "all") {
           query.set("category", filters.category);
         }
+        if (filters.sort && filters.sort !== "newest") query.set("sort", filters.sort);
 
         const templates = await apiRequest(`/api/templates${query.size ? `?${query}` : ""}`);
         set((state) => ({
@@ -225,6 +226,25 @@ export function createTemplateReducer(set) {
           }
         };
       });
+    },
+
+    voteTemplate: async (templateId, voteType) => {
+      const vote = await apiRequest(`/api/templates/${templateId}/vote`, {
+        method: "POST",
+        body: JSON.stringify({ voteType })
+      });
+      set((state) => {
+        const template = findTemplate(state.templateState, templateId);
+        if (!template) return {};
+
+        return {
+          templateState: replaceTemplateEverywhere(state.templateState, {
+            ...template,
+            ...vote
+          })
+        };
+      });
+      return vote;
     },
 
     setSelectedTemplate: (selectedTemplate) => {

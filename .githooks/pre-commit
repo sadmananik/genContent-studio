@@ -8,6 +8,18 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+echo "Running ESLint on staged frontend files..."
+frontend_files=$(git diff --cached --name-only --diff-filter=ACMR -- 'packages/frontend/**/*.js' 'packages/frontend/**/*.jsx')
+
+if [ -n "$frontend_files" ]; then
+  yarn eslint $frontend_files --max-warnings=0
+fi
+
+if [ $? -ne 0 ]; then
+  echo "ESLint failed. Fix lint errors before committing."
+  exit 1
+fi
+
 echo "Building frontend..."
 yarn workspace @gencontent/frontend build
 

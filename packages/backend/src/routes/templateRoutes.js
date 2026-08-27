@@ -12,7 +12,8 @@ const {
   unfavoriteTemplate,
   updateTemplate,
   updateTemplateVisibility,
-  useTemplate
+  useTemplate,
+  voteTemplate
 } = require("../controllers/templateController");
 const requireUser = require("../middleware/auth");
 const validateObjectId = require("../middleware/validateObjectId");
@@ -32,6 +33,7 @@ router.patch("/:id/visibility", validateObjectId("id"), updateTemplateVisibility
 router.post("/:id/use", validateObjectId("id"), useTemplate);
 router.put("/:id/favorite", validateObjectId("id"), favoriteTemplate);
 router.delete("/:id/favorite", validateObjectId("id"), unfavoriteTemplate);
+router.post("/:id/vote", validateObjectId("id"), voteTemplate);
 router.delete("/:id", validateObjectId("id"), deleteTemplate);
 
 module.exports = router;

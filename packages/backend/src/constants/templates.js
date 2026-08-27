@@ -22,6 +22,8 @@ const TEMPLATE_MESSAGES = {
   DELETE_FORBIDDEN: "Template not found or only its creator can delete it",
   DELETE_SUCCESS: "Template deleted successfully.",
   FAVORITE_SUCCESS: "Template added to favorites.",
+  VOTE_INVALID: "Template vote must be up or down",
+  VOTE_FAILED: "Template vote could not be updated",
   NOT_FOUND: "Template not found",
   PRIVATE_FORBIDDEN: "This template is private",
   PROJECT_OWNER_ONLY: "Project not found or only its owner can publish it as a template",
