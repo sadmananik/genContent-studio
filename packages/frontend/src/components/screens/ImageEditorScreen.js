@@ -7,8 +7,8 @@ import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
+import AIResponseCard from "../text-workspace/AIResponseCard";
 import FabricImageEditor from "../image-workspace/FabricImageEditor";
-import ImageResponseCard from "../image-workspace/ImageResponseCard";
 import { mockImageProject } from "../image-workspace/mockImageWorkspaceData";
 import { textPromptActions } from "../text-workspace/promptActions";
 import {
@@ -763,41 +763,6 @@ export default function ImageEditorScreen() {
     );
   }
 
-  function handleInsertResponse(response) {
-    if (!canEditProject) {
-      showNotification(
-        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
-        PERMISSION_MESSAGES.CANVAS_EDIT_DISABLED,
-        TOAST_TYPES.INFO
-      );
-      return;
-    }
-
-    if (queueUnsavedCanvasAction(() => insertResponseIntoCanvas(response))) {
-      return;
-    }
-
-    insertResponseIntoCanvas(response);
-  }
-
-  function insertResponseIntoCanvas(response) {
-    if (
-      !loadImageResponseIntoCanvas(response, {
-        message: IMAGE_EDITOR_ALERTS.INSERTED_MESSAGE,
-        title: IMAGE_EDITOR_ALERTS.INSERTED_TITLE,
-        type: TOAST_TYPES.SUCCESS
-      })
-    ) {
-      return;
-    }
-
-    recordWorkspaceAudit("ai_content_inserted", {
-      aiChatId: response.sourceId,
-      contentType: AI_CONTENT_TYPES.IMAGE,
-      prompt: response.prompt
-    });
-  }
-
   function loadImageResponseIntoCanvas(response, notificationOptions) {
     setPrompt(response.prompt);
 
@@ -1027,6 +992,7 @@ export default function ImageEditorScreen() {
             onReady={handleCanvasReady}
             remoteCanvasPointers={remoteCanvasPointers}
             remoteCanvasState={remoteCanvasState}
+            statusLabel={statusLabel}
           />
 
           <aside className="grid min-w-0 content-start gap-5">
@@ -1048,16 +1014,16 @@ export default function ImageEditorScreen() {
                 </p>
               </div>
               {selectedResponse ? (
-                <ImageResponseCard
+                <AIResponseCard
                   canEdit={canEditProject}
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}
                   onDelete={requestDeleteResponse}
                   onFavourite={handleFavouriteResponse}
-                  onInsert={handleInsertResponse}
                   onUpdate={handleUpdateResponse}
                   response={selectedResponse}
+                  responseLabel="Image Response"
                   selected
                 />
               ) : (

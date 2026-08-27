@@ -14,7 +14,8 @@ export default function FabricImageEditor({
   onDirtyChange,
   onReady,
   remoteCanvasPointers = [],
-  remoteCanvasState
+  remoteCanvasState,
+  statusLabel
 }) {
   const canvasElementRef = useRef(null);
   const canvasRef = useRef(null);
@@ -546,9 +547,10 @@ export default function FabricImageEditor({
           Back
         </Button>
         <div className="hidden flex-1 md:block" />
-        <span className="text-xs font-bold uppercase text-slate-500">
-          Selected: {activeObjectType}
-        </span>
+        <div className="flex items-center gap-3 text-xs font-bold uppercase text-slate-500">
+          {statusLabel && <span>{statusLabel}</span>}
+          <span>Selected: {activeObjectType}</span>
+        </div>
       </div>
 
       <div className="overflow-auto bg-white p-3">
