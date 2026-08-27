@@ -31,9 +31,7 @@ import { TEMPLATE_CATEGORIES, TEMPLATE_TEXT, TEMPLATE_VISIBILITY } from "../../c
 import { useAppStore } from "../../store";
 import WorkspaceExportMenu from "./WorkspaceExportMenu";
 import WorkspaceSharePopover from "./WorkspaceSharePopover";
-import QuickReactionButton from "../collaboration/QuickReactionButton";
-import ReactionLayer from "../collaboration/ReactionLayer";
-import { QUICK_REACTION_COOLDOWN } from "../../constants/quickReactions";
+import QuickReactions from "../collaboration/QuickReactions";
 
 export default function TextWorkspaceHeader({
   canEdit = true,
@@ -63,9 +61,6 @@ export default function TextWorkspaceHeader({
   const [permissionDrafts, setPermissionDrafts] = useState({});
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
-  const [isReactionOpen, setIsReactionOpen] = useState(false);
-  const [latestReaction, setLatestReaction] = useState(null);
-  const [reactionCooldown, setReactionCooldown] = useState(false);
   const auth = useAppStore((state) => state.auth);
   const listUsers = useAppStore((state) => state.listUsers);
   const projectState = useAppStore((state) => state.projectState);
@@ -94,28 +89,6 @@ export default function TextWorkspaceHeader({
   });
   const canPublishTemplate =
     project.currentUserRole === PROJECT_ROLES.OWNER && isRealProject(project);
-
-  useEffect(() => {
-    const socket = collaborationProvider?.socket;
-    if (!socket) return undefined;
-    const handleReaction = (reaction) => setLatestReaction(reaction);
-    const handleReactionError = (error) =>
-      onNotify?.("Reaction not sent", error.message, TOAST_TYPES.ERROR);
-    socket.on("project:quick-reaction", handleReaction);
-    socket.on("project:quick-reaction-error", handleReactionError);
-    return () => {
-      socket.off("project:quick-reaction", handleReaction);
-      socket.off("project:quick-reaction-error", handleReactionError);
-    };
-  }, [collaborationProvider, onNotify]);
-
-  function sendQuickReaction(reactionId) {
-    if (!collaborationProvider || reactionCooldown) return;
-    collaborationProvider.sendQuickReaction(reactionId);
-    setIsReactionOpen(false);
-    setReactionCooldown(true);
-    window.setTimeout(() => setReactionCooldown(false), QUICK_REACTION_COOLDOWN);
-  }
 
   useEffect(() => {
     if (isShareOpen && userState.users.length === 0 && !userState.loading) {
@@ -284,12 +257,7 @@ export default function TextWorkspaceHeader({
           <Users aria-hidden="true" className="mr-2 text-slate-500" size={17} />
           <UserAvatarStack users={activeUsers} />
           <span className="text-xs font-semibold text-slate-500">{activeUsers.length} active</span>
-          <QuickReactionButton
-            disabled={!collaborationProvider || reactionCooldown}
-            isOpen={isReactionOpen}
-            onSelect={sendQuickReaction}
-            onToggle={() => setIsReactionOpen((current) => !current)}
-          />
+          <QuickReactions collaborationProvider={collaborationProvider} onNotify={onNotify} />
           {canManageSharing && (
             <button
               className="rounded-md border border-transparent px-2 py-1 text-sm font-bold text-slate-600 transition-colors hover:border-violet-200 hover:bg-white hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200"
@@ -380,7 +348,6 @@ export default function TextWorkspaceHeader({
           onSubmit={handlePublishTemplate}
         />
       )}
-      <ReactionLayer reaction={latestReaction} />
       {isPermissionsOpen && (
         <AppModal
           action={SHARE_POPOVER_TEXT.SAVE_PERMISSIONS}

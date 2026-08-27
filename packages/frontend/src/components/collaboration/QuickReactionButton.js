@@ -7,9 +7,10 @@ export default function QuickReactionButton({ disabled, isOpen, onSelect, onTogg
       <button
         aria-expanded={isOpen}
         aria-label="Send quick reaction"
-        className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-50"
+        className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 transition-transform duration-150 hover:scale-110 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-50"
         disabled={disabled}
         onClick={onToggle}
+        title="Send quick reaction"
         type="button"
       >
         <Smile aria-hidden="true" size={18} />

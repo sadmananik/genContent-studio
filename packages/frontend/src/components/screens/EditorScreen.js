@@ -498,8 +498,8 @@ function TextEditorScreen() {
         }
         lastPersistedContentHtmlRef.current = normalizeEditorHtml(html);
 
-        if (editor) {
-          editor.commands.setContent(html, false);
+        if (editorRef.current) {
+          editorRef.current.commands.setContent(html, false);
         }
 
         setEditorContent({
@@ -519,8 +519,8 @@ function TextEditorScreen() {
           setEditorContent({ html: "", text: "" });
           setHasUnsavedChanges(false);
 
-          if (editor) {
-            editor.commands.clearContent(false);
+          if (editorRef.current) {
+            editorRef.current.commands.clearContent(false);
           }
           return;
         }
@@ -560,7 +560,7 @@ function TextEditorScreen() {
     return () => {
       isActive = false;
     };
-  }, [clearAiError, editor, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
+  }, [clearAiError, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
 
   useEffect(() => {
     if (!isRealProject) {
