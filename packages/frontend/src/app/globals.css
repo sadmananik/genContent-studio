@@ -130,7 +130,7 @@ body {
   color: #f8fafc;
 }
 
-:root[data-active-theme="dark"] .ProseMirror:empty:before {
+:root[data-active-theme="dark"] .ProseMirror p.is-editor-empty:first-child:before {
   color: #94a3b8;
 }
 
