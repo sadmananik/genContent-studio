@@ -22,6 +22,10 @@ const aiChatSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    imageUrl: {
+      type: String,
+      trim: true
+    },
     contentType: {
       type: String,
       enum: AI_CONTENT_TYPE_VALUES,

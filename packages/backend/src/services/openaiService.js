@@ -2,6 +2,7 @@ const OpenAI = require("openai");
 const httpError = require("../utils/httpError");
 
 const DEFAULT_TEXT_MODEL = "gpt-4o-mini";
+const DEFAULT_IMAGE_MODEL = "gpt-image-1";
 const DEFAULT_SYSTEM_PROMPT =
   "You are a helpful content writing assistant for GenContent Studio. Write clear, useful content the user can edit.";
 const MAX_PROMPT_LENGTH = 4000;
@@ -11,6 +12,10 @@ let openAiClient;
 
 function getTextModel() {
   return String(process.env.OPENAI_TEXT_MODEL || DEFAULT_TEXT_MODEL).trim();
+}
+
+function getImageModel() {
+  return String(process.env.OPENAI_IMAGE_MODEL || DEFAULT_IMAGE_MODEL).trim();
 }
 
 function requireApiKey() {
@@ -91,7 +96,48 @@ async function generateText({
   }
 }
 
+async function generateImage({ prompt, model = getImageModel() } = {}) {
+  const trimmedPrompt = String(prompt || "").trim();
+
+  if (!trimmedPrompt) {
+    throw httpError(400, "prompt is required.");
+  }
+
+  if (trimmedPrompt.length > MAX_PROMPT_LENGTH) {
+    throw httpError(400, `prompt must be ${MAX_PROMPT_LENGTH} characters or fewer.`);
+  }
+
+  try {
+    const response = await createClient().images.generate({
+      model,
+      prompt: trimmedPrompt,
+      size: "1024x1024"
+    });
+    const image = response.data?.[0];
+    const imageUrl = image?.b64_json ? `data:image/png;base64,${image.b64_json}` : image?.url || "";
+
+    if (!imageUrl) {
+      throw httpError(502, "OpenAI returned no image data.");
+    }
+
+    return {
+      created: response.created || null,
+      imageUrl,
+      model: response.model || model,
+      revisedPrompt: image.revised_prompt || null
+    };
+  } catch (error) {
+    if (error.statusCode) {
+      throw error;
+    }
+
+    throw mapOpenAiError(error);
+  }
+}
+
 module.exports = {
+  generateImage,
   generateText,
+  getImageModel,
   getTextModel
 };

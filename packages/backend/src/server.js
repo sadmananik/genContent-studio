@@ -20,9 +20,10 @@ const app = express();
 const httpServer = http.createServer(app);
 const port = process.env.PORT || 4000;
 const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+const jsonBodyLimit = process.env.JSON_BODY_LIMIT || "15mb";
 
 app.use(cors({ origin: frontendOrigin }));
-app.use(express.json());
+app.use(express.json({ limit: jsonBodyLimit }));
 
 app.get("/health", (req, res) => {
   res.json({
@@ -43,6 +44,7 @@ app.get("/api", (req, res) => {
       "/api/text-content",
       "/api/image-content",
       "/api/templates",
+      "/api/ai/generate-image",
       "/api/ai/generate-text"
     ]
   });
