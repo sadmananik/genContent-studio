@@ -118,6 +118,7 @@ export default function ImageEditorScreen() {
     : lastSavedAt
       ? `Saved ${formatTime(lastSavedAt)}`
       : project.lastUpdated;
+  const canvasStatusTone = hasUnsavedChanges || isSaving ? "warning" : "success";
   const canEditProject = project.canEdit !== false;
   const canManageSharing =
     project.canManageSharing !== false && project.currentUserRole !== PROJECT_ROLES.COLLABORATOR;
@@ -993,6 +994,7 @@ export default function ImageEditorScreen() {
             remoteCanvasPointers={remoteCanvasPointers}
             remoteCanvasState={remoteCanvasState}
             statusLabel={statusLabel}
+            statusTone={canvasStatusTone}
           />
 
           <aside className="grid min-w-0 content-start gap-5">
@@ -1103,7 +1105,7 @@ function normalizeImageChat(chat) {
     imageUrl: chat.imageUrl,
     prompt: chat.prompt,
     response: chat.response,
-    timestamp: chat.createdAt ? formatRelativeTime(new Date(chat.createdAt)) : "Just now",
+    timestamp: chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "Just now",
     favourite: Boolean(chat.isFavourite)
   };
 }
@@ -1183,27 +1185,6 @@ function buildDemoImageResponse(prompt) {
   const cleanPrompt = prompt.trim() || "Create a polished social media image.";
 
   return `Demo image concept for "${cleanPrompt}" with an editable generated image layer, headline card, caption block, and accent shapes ready for Fabric.js editing.`;
-}
-
-function formatRelativeTime(value) {
-  const diffMs = Date.now() - value.getTime();
-  const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
-
-  if (diffMinutes < 1) {
-    return "Just now";
-  }
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes} minutes ago`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `${diffHours} hours ago`;
-  }
-
-  return value.toLocaleDateString();
 }
 
 function getImageWorkspaceDraftKey(projectId) {

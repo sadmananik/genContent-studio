@@ -15,7 +15,8 @@ export default function FabricImageEditor({
   onReady,
   remoteCanvasPointers = [],
   remoteCanvasState,
-  statusLabel
+  statusLabel,
+  statusTone = "success"
 }) {
   const canvasElementRef = useRef(null);
   const canvasRef = useRef(null);
@@ -547,11 +548,20 @@ export default function FabricImageEditor({
           Back
         </Button>
         <div className="hidden flex-1 md:block" />
-        <div className="flex items-center gap-3 text-xs font-bold uppercase text-slate-500">
-          {statusLabel && <span>{statusLabel}</span>}
-          <span>Selected: {activeObjectType}</span>
-        </div>
+        <span className="text-xs font-bold uppercase text-slate-500">
+          Selected: {activeObjectType}
+        </span>
       </div>
+
+      {statusLabel && (
+        <div
+          className={`border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide ${
+            statusTone === "warning" ? "text-amber-700" : "text-emerald-700"
+          }`}
+        >
+          {statusLabel}
+        </div>
+      )}
 
       <div className="overflow-auto bg-white p-3">
         <div
