@@ -549,14 +549,13 @@ export default function FabricImageEditor({
           Back
         </Button>
         <div className="hidden flex-1 md:block" />
+        <StatusText tone={statusTone} variant="compact">
+          {statusLabel}
+        </StatusText>
         <span className="text-xs font-bold uppercase text-slate-500">
           Selected: {activeObjectType}
         </span>
       </div>
-
-      <StatusText tone={statusTone} variant="bar">
-        {statusLabel}
-      </StatusText>
 
       <div className="overflow-auto bg-white p-3">
         <div
