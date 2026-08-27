@@ -114,6 +114,23 @@ Open the same project in two browser sessions to collaborate.
 
 The server validates access. Frontend controls improve the user experience but are not the security boundary.
 
+### Quick reactions
+
+While working in a shared Text or Image Workspace, select the smile button beside the active collaborators to open the **Quick reactions** menu. Select a preset reaction to send it immediately to everyone currently connected to that project:
+
+- Hi.
+- You still there?
+- Yes or No.
+- Looks good.
+- Perfect.
+- Working on it.
+- Wait or Done.
+- Great, Nice work, or Awesome.
+
+The reaction appears briefly with the sender's name, emoji, and message. Your own reaction is shown in the same way as reactions received from other collaborators. Viewers can send and receive reactions because reactions do not change project content.
+
+Quick reactions are temporary. They are only delivered to active collaborators in the current project room and are not shown to users who join later. They do not modify the text editor, image canvas, save state, AI history, or audit history. The reaction menu is unavailable while the realtime connection is unavailable, and rapid repeated sends are limited.
+
 ## Sharing Projects
 
 Only the owner can manage sharing.
@@ -210,5 +227,6 @@ Exports use the current workspace state. Save first when the latest changes must
 - **Cannot edit:** check whether the project is Viewer-only or whether the owner changed your permission.
 - **Content disappeared after reload:** save the workspace before leaving and confirm the project is the correct type.
 - **No collaborators visible:** refresh the project after checking the connection and access state.
+- **Quick reaction not sent:** check that the project is still open and the realtime connection is active, then try again after the short cooldown.
 - **No audit history:** only the project owner can open it, and a new project may not have recorded activity yet.
 - **No favourites visible:** confirm you are signed in to the account that saved the response or template, then refresh the Favorites page or Templates Favorites tab.
