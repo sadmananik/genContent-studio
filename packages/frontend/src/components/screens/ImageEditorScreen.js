@@ -892,6 +892,7 @@ export default function ImageEditorScreen() {
         activeCollaborators={collaborationState.activeCollaborators}
         canEdit={canEditProject}
         canManageSharing={canManageSharing}
+        collaborationProvider={collaborationProvider}
         exportOptions={[
           { label: "PNG image", value: "png" },
           { label: "Canvas JSON", value: "json" }

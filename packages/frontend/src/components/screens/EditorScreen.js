@@ -71,15 +71,20 @@ const quickActionPromptBuilders = {
 };
 
 export default function EditorScreen() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const workspaceType = searchParams.get("type");
-  const requestedAccess = searchParams.get("access");
 
   if (workspaceType === API_PROJECT_TYPES.IMAGE) {
     return <ImageEditorScreen />;
   }
 
+  return <TextEditorScreen />;
+}
+
+function TextEditorScreen() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedAccess = searchParams.get("access");
   const projectId = searchParams.get("projectId") || defaultTextProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const aiState = useAppStore((state) => state.aiState);
@@ -497,7 +502,10 @@ export default function EditorScreen() {
           editor.commands.setContent(html, false);
         }
 
-        setEditorContent({ html, text: editor ? editor.getText() : stripHtml(html) });
+        setEditorContent({
+          html,
+          text: editorRef.current ? editorRef.current.getText() : stripHtml(html)
+        });
         setHasUnsavedChanges(false);
         setLastSavedAt(textContent.updatedAt ? new Date(textContent.updatedAt) : null);
       })
@@ -552,7 +560,7 @@ export default function EditorScreen() {
     return () => {
       isActive = false;
     };
-  }, [clearAiError, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
+  }, [clearAiError, editor, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
 
   useEffect(() => {
     if (!isRealProject) {
@@ -575,6 +583,7 @@ export default function EditorScreen() {
       restoredHistoryResponseRef.current = latestResponse.id;
       replaceEditorWithResponse(latestResponse);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiState.chatHistory, editorContent.text, isLoadingContent, isRealProject]);
 
   async function handleGenerate(promptOverride) {
@@ -1127,7 +1136,7 @@ export default function EditorScreen() {
     editorRef.current.commands.focus("end");
     const nextHtml = editorRef.current.getHTML();
 
-    setEditorContent({ html: nextHtml, text: editor.getText() });
+    setEditorContent({ html: nextHtml, text: editorRef.current.getText() });
     setHasUnsavedChanges(hasEditorContentChanged(nextHtml, lastPersistedContentHtmlRef.current));
     setSaveError(null);
   }
@@ -1172,6 +1181,7 @@ export default function EditorScreen() {
         activeCollaborators={collaborationState.activeCollaborators}
         canEdit={canEditProject}
         canManageSharing={canManageSharing}
+        collaborationProvider={collaborationProvider}
         invitedUsers={invitedUsers}
         isSaving={isSaving}
         onBackToProjects={handleBackToProjects}

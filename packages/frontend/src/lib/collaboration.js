@@ -60,6 +60,9 @@ export function createCollaborationProvider({ projectId, token, user, onEvent })
     emitCanvasPointer(pointer) {
       socket.emit("canvas:pointer", { pointer, projectId });
     },
+    sendQuickReaction(reactionId) {
+      socket.emit("project:quick-reaction", { projectId, reactionId });
+    },
     destroy() {
       awareness.setLocalState(null);
       socket.emit("project:leave");
