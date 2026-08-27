@@ -63,7 +63,7 @@ export default function ToastNotification({
   return (
     <div
       className={cn(
-        "fixed bottom-5 left-1/2 z-50 flex w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 items-start gap-3 rounded-lg border p-4 shadow-[0_18px_42px_rgba(15,23,42,0.16)]",
+        "toast-notification fixed bottom-5 left-1/2 z-50 flex w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 items-start gap-3 rounded-lg border p-4 shadow-[0_18px_42px_rgba(15,23,42,0.16)]",
         style.wrapper
       )}
       role={type === TOAST_TYPES.ERROR || type === TOAST_TYPES.WARNING ? "alert" : "status"}

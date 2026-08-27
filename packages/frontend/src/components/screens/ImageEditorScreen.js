@@ -38,6 +38,7 @@ export default function ImageEditorScreen() {
   const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
   const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
   const fetchProjectById = useAppStore((state) => state.fetchProjectById);
+  const generateImageFromPrompt = useAppStore((state) => state.generateImageFromPrompt);
   const inviteProjectCollaborator = useAppStore((state) => state.inviteProjectCollaborator);
   const saveAiResponse = useAppStore((state) => state.saveAiResponse);
   const sendImageGenerationRequest = useAppStore((state) => state.sendImageGenerationRequest);
@@ -53,6 +54,7 @@ export default function ImageEditorScreen() {
   const [remoteCanvasState, setRemoteCanvasState] = useState(null);
   const [isProjectLoaded, setIsProjectLoaded] = useState(!isRealProject);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
+  const [clearCanvasRequest, setClearCanvasRequest] = useState(0);
   const [generationRequest, setGenerationRequest] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -334,7 +336,7 @@ export default function ImageEditorScreen() {
           setPrompt(imageContent.generationPrompt);
         }
 
-        if (!imageContent.canvasState) {
+        if (!imageContent.canvasState?.objects?.length) {
           return null;
         }
 
@@ -344,6 +346,10 @@ export default function ImageEditorScreen() {
         });
       })
       .catch((error) => {
+        if (error.status === 404 || error.message === "Image content not found") {
+          return;
+        }
+
         showNotification(
           IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_TITLE,
           error.message || IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_MESSAGE,
@@ -363,8 +369,13 @@ export default function ImageEditorScreen() {
       return;
     }
 
+    const parsedCanvas = safeParseJson(savedCanvas);
+    if (!parsedCanvas.objects?.length) {
+      return;
+    }
+
     canvas
-      .loadFromJSON(savedCanvas)
+      .loadFromJSON(parsedCanvas)
       .then(() => {
         canvas.requestRenderAll();
         setHasUnsavedChanges(false);
@@ -382,7 +393,7 @@ export default function ImageEditorScreen() {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
 
-  function handleGenerate() {
+  async function handleGenerate() {
     if (!canEditProject) {
       showNotification(
         PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
@@ -393,48 +404,60 @@ export default function ImageEditorScreen() {
     }
 
     setIsGenerating(true);
-    window.setTimeout(async () => {
-      const responseText = buildDemoImageResponse(prompt);
+    showNotification(
+      "Generating image",
+      "OpenAI is creating your image. This may take a moment.",
+      TOAST_TYPES.INFO,
+      120000
+    );
+
+    try {
+      const result = await generateImageFromPrompt({
+        ...(isRealProject ? { project: projectId } : {}),
+        prompt
+      });
+      const responseText = result.revisedPrompt || `Generated image for "${prompt.trim()}".`;
       const nextResponse = {
         id: `image-response-${Date.now()}`,
+        imageUrl: result.imageUrl,
         prompt,
         response: responseText,
         timestamp: "Just now",
         favourite: false
       };
-
-      try {
-        const savedResponse = isRealProject
-          ? normalizeImageChat(
+      const savedResponse = isRealProject
+        ? {
+            ...normalizeImageChat(
               await saveAiResponse({
                 contentType: AI_CONTENT_TYPES.IMAGE,
                 project: projectId,
                 prompt,
                 response: responseText
               })
-            )
-          : nextResponse;
+            ),
+            imageUrl: result.imageUrl
+          }
+        : nextResponse;
 
-        setResponses((currentResponses) => [savedResponse, ...currentResponses]);
-        setSelectedResponseId(savedResponse.id);
-        setGenerationRequest({ id: Date.now(), prompt });
-        showNotification(
-          IMAGE_EDITOR_ALERTS.GENERATED_TITLE,
-          isRealProject
-            ? IMAGE_EDITOR_ALERTS.GENERATED_SAVED_MESSAGE
-            : IMAGE_EDITOR_ALERTS.GENERATED_LOCAL_MESSAGE,
-          TOAST_TYPES.SUCCESS
-        );
-      } catch (error) {
-        showNotification(
-          IMAGE_EDITOR_ALERTS.GENERATE_FAILED_TITLE,
-          error.message || IMAGE_EDITOR_ALERTS.GENERATE_FAILED_MESSAGE,
-          TOAST_TYPES.ERROR
-        );
-      } finally {
-        setIsGenerating(false);
-      }
-    }, 800);
+      setResponses((currentResponses) => [savedResponse, ...currentResponses]);
+      setSelectedResponseId(savedResponse.id);
+      setGenerationRequest({ id: Date.now(), imageUrl: result.imageUrl, prompt });
+      showNotification(
+        IMAGE_EDITOR_ALERTS.GENERATED_TITLE,
+        isRealProject
+          ? IMAGE_EDITOR_ALERTS.GENERATED_SAVED_MESSAGE
+          : IMAGE_EDITOR_ALERTS.GENERATED_LOCAL_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
+    } catch (error) {
+      showNotification(
+        IMAGE_EDITOR_ALERTS.GENERATE_FAILED_TITLE,
+        error.message || IMAGE_EDITOR_ALERTS.GENERATE_FAILED_MESSAGE,
+        TOAST_TYPES.ERROR
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   function handleQuickAction(action) {
@@ -686,11 +709,15 @@ export default function ImageEditorScreen() {
     }
 
     const nextResponses = responses.filter((item) => item.id !== responseId);
+    const isDeletingSelectedResponse = selectedResponseId === responseId;
 
     setResponses(nextResponses);
     setSelectedResponseId((currentSelectedId) =>
       currentSelectedId === responseId ? nextResponses[0]?.id || null : currentSelectedId
     );
+    if (isDeletingSelectedResponse) {
+      setClearCanvasRequest((currentRequest) => currentRequest + 1);
+    }
     setPendingResponseDelete(null);
     showNotification(
       TEXT_EDITOR_ALERTS.DELETED_TITLE,
@@ -719,7 +746,7 @@ export default function ImageEditorScreen() {
 
   function insertResponseIntoCanvas(response) {
     setPrompt(response.prompt);
-    setGenerationRequest({ id: Date.now(), prompt: response.prompt });
+    setGenerationRequest({ id: Date.now(), imageUrl: response.imageUrl, prompt: response.prompt });
     recordWorkspaceAudit("ai_content_inserted", {
       aiChatId: response.sourceId,
       contentType: AI_CONTENT_TYPES.IMAGE,
@@ -928,6 +955,7 @@ export default function ImageEditorScreen() {
         <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
           <FabricImageEditor
             collaborationProvider={collaborationProvider}
+            clearCanvasRequest={clearCanvasRequest}
             editable={canEditProject}
             generationRequest={generationRequest}
             onDirtyChange={setHasUnsavedChanges}
@@ -951,7 +979,7 @@ export default function ImageEditorScreen() {
               <div>
                 <h2 className="text-base font-bold text-slate-950">Selected Image Response</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Generate a demo image, then copy, edit, favourite, or insert it into the canvas.
+                  Generate an image, then copy, edit, favourite, or insert it into the canvas.
                 </p>
               </div>
               {selectedResponse ? (
@@ -1041,6 +1069,7 @@ function normalizeImageChat(chat) {
   return {
     id: chat._id || chat.id,
     sourceId: chat._id || chat.id,
+    imageUrl: chat.imageUrl,
     prompt: chat.prompt,
     response: chat.response,
     timestamp: chat.createdAt ? formatRelativeTime(new Date(chat.createdAt)) : "Just now",
