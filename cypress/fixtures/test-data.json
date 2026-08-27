@@ -1,0 +1,28 @@
+{
+  "owner": {
+    "name": "E2E Owner",
+    "password": "E2E-password-123"
+  },
+  "editor": {
+    "name": "E2E Editor",
+    "password": "E2E-password-123"
+  },
+  "viewer": {
+    "name": "E2E Viewer",
+    "password": "E2E-password-123"
+  },
+  "textProject": {
+    "title": "Text Project",
+    "category": "Blog Post",
+    "description": "Cypress text project"
+  },
+  "imageProject": {
+    "title": "Image Project",
+    "category": "Marketing Content",
+    "description": "Cypress image project"
+  },
+  "ai": {
+    "prompt": "Write a deterministic Cypress test response.",
+    "response": "This is a deterministic Cypress test AI response."
+  }
+}
