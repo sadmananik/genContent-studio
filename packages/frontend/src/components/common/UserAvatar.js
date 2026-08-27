@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "../../lib/styles";
 
 export function UserAvatar({ className = "", user }) {
@@ -8,13 +9,16 @@ export function UserAvatar({ className = "", user }) {
   if (imageUrl) {
     return (
       <span className="group/avatar relative inline-flex hover:z-20">
-        <img
+        <Image
           alt={label}
           className={cn(
             "grid h-8 w-8 place-items-center rounded-full bg-violet-100 object-cover text-xs font-extrabold text-violet-700 transition hover:z-10 hover:ring-2 hover:ring-violet-300",
             className
           )}
+          height={32}
           src={imageUrl}
+          unoptimized
+          width={32}
         />
         <AvatarTooltip label={tooltipLabel} />
       </span>

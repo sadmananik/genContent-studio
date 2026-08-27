@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
-import { ArrowRight, FileText, FolderKanban, Image, Users } from "lucide-react";
+import { ArrowRight, FileText, FolderKanban, Image as ImageIcon, Users } from "lucide-react";
 import {
   CategorySummary,
   EmptyState,
@@ -151,7 +151,7 @@ function buildSummaryCards(projects) {
       tone: "mint"
     },
     {
-      icon: <Image aria-hidden="true" size={19} strokeWidth={2.25} />,
+      icon: <ImageIcon aria-hidden="true" size={19} strokeWidth={2.25} />,
       value: String(imageCount),
       label: SUMMARY_CARD_LABELS.IMAGE,
       tone: "lavender"
