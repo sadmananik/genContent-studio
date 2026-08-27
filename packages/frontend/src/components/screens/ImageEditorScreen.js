@@ -117,7 +117,7 @@ export default function ImageEditorScreen() {
     ? TEXT_EDITOR_ALERTS.UNSAVED_CHANGES_STATUS
     : lastSavedAt
       ? `Saved ${formatTime(lastSavedAt)}`
-      : project.lastUpdated;
+      : project.lastUpdated || mockImageProject.lastUpdated;
   const canvasStatusTone = hasUnsavedChanges || isSaving ? "warning" : "success";
   const canEditProject = project.canEdit !== false;
   const canManageSharing =
@@ -293,6 +293,7 @@ export default function ImageEditorScreen() {
     fetchProjectById(projectId)
       .then((loadedProject) => {
         setProject(normalizeProject(loadedProject));
+        setLastSavedAt(loadedProject.updatedAt ? new Date(loadedProject.updatedAt) : null);
         setIsProjectLoaded(true);
         if (loadedProject.starterPrompt) {
           setPrompt(loadedProject.starterPrompt);
@@ -1090,9 +1091,7 @@ function normalizeProject(project) {
     canManageSharing: project.canManageSharing !== false,
     currentUserRole: project.currentUserRole || PROJECT_ROLES.OWNER,
     owner: project.owner,
-    lastUpdated: project.updatedAt
-      ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
-      : mockImageProject.lastUpdated,
+    lastUpdated: mockImageProject.lastUpdated,
     collaborators: project.collaborators || [],
     collaboratorPermissions: project.collaboratorPermissions || []
   };
