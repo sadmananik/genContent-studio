@@ -72,7 +72,11 @@ export default function ImageEditorScreen() {
   const selectedResponse = responses.find((response) => response.id === selectedResponseId);
   const canvasRef = useRef(null);
   const projectRef = useRef(project);
+  const responsesRef = useRef(responses);
+  const selectedResponseIdRef = useRef(selectedResponseId);
   projectRef.current = project;
+  responsesRef.current = responses;
+  selectedResponseIdRef.current = selectedResponseId;
   const handleCanvasReady = useCallback((readyCanvas) => {
     canvasRef.current = readyCanvas;
     setCanvas(readyCanvas);
@@ -229,6 +233,44 @@ export default function ImageEditorScreen() {
           TOAST_TYPES.SUCCESS,
           5000
         );
+      }
+
+      if (
+        event === "ai:response-created" &&
+        String(payload?.projectId) === String(projectId) &&
+        payload.chat?.contentType === AI_CONTENT_TYPES.IMAGE
+      ) {
+        const response = normalizeImageChat(payload.chat);
+        setResponses((currentResponses) => [
+          response,
+          ...currentResponses.filter((item) => item.sourceId !== response.sourceId)
+        ]);
+      }
+
+      if (
+        event === "ai:response-updated" &&
+        String(payload?.projectId) === String(projectId) &&
+        payload.chat?.contentType === AI_CONTENT_TYPES.IMAGE
+      ) {
+        const response = normalizeImageChat(payload.chat);
+        setResponses((currentResponses) =>
+          currentResponses.map((item) => (item.sourceId === response.sourceId ? response : item))
+        );
+      }
+
+      if (event === "ai:response-deleted" && String(payload?.projectId) === String(projectId)) {
+        setResponses((currentResponses) =>
+          currentResponses.filter((item) => item.sourceId !== payload.chatId)
+        );
+        setSelectedResponseId((currentSelectedId) =>
+          currentSelectedId === payload.chatId
+            ? responsesRef.current.find((item) => item.sourceId !== payload.chatId)?.id || null
+            : currentSelectedId
+        );
+
+        if (selectedResponseIdRef.current === payload.chatId) {
+          setClearCanvasRequest((currentRequest) => currentRequest + 1);
+        }
       }
     },
     [projectId, router, setActiveCollaborators, setCollaborationError, setSocketConnected]
@@ -532,10 +574,6 @@ export default function ImageEditorScreen() {
   }
 
   function handleSelectHistory(responseId) {
-    if (selectedResponseId === responseId) {
-      return;
-    }
-
     if (queueUnsavedCanvasAction(() => selectHistoryResponse(responseId))) {
       return;
     }
@@ -548,26 +586,11 @@ export default function ImageEditorScreen() {
     const response = responses.find((item) => item.id === responseId);
 
     if (response) {
-      setPrompt(response.prompt);
-      if (!response.imageUrl) {
-        showNotification(
-          IMAGE_EDITOR_ALERTS.HISTORY_IMAGE_MISSING_TITLE,
-          IMAGE_EDITOR_ALERTS.HISTORY_IMAGE_MISSING_MESSAGE,
-          TOAST_TYPES.WARNING
-        );
-        return;
-      }
-      setGenerationRequest({
-        id: Date.now(),
-        imageUrl: response.imageUrl,
-        prompt: response.prompt
+      loadImageResponseIntoCanvas(response, {
+        message: IMAGE_EDITOR_ALERTS.HISTORY_LOADED_MESSAGE,
+        title: IMAGE_EDITOR_ALERTS.HISTORY_LOADED_TITLE,
+        type: TOAST_TYPES.INFO
       });
-      showNotification(
-        IMAGE_EDITOR_ALERTS.HISTORY_LOADED_TITLE,
-        IMAGE_EDITOR_ALERTS.HISTORY_LOADED_MESSAGE,
-        TOAST_TYPES.INFO,
-        3000
-      );
     }
   }
 
@@ -758,18 +781,47 @@ export default function ImageEditorScreen() {
   }
 
   function insertResponseIntoCanvas(response) {
-    setPrompt(response.prompt);
-    setGenerationRequest({ id: Date.now(), imageUrl: response.imageUrl, prompt: response.prompt });
+    if (
+      !loadImageResponseIntoCanvas(response, {
+        message: IMAGE_EDITOR_ALERTS.INSERTED_MESSAGE,
+        title: IMAGE_EDITOR_ALERTS.INSERTED_TITLE,
+        type: TOAST_TYPES.SUCCESS
+      })
+    ) {
+      return;
+    }
+
     recordWorkspaceAudit("ai_content_inserted", {
       aiChatId: response.sourceId,
       contentType: AI_CONTENT_TYPES.IMAGE,
       prompt: response.prompt
     });
+  }
+
+  function loadImageResponseIntoCanvas(response, notificationOptions) {
+    setPrompt(response.prompt);
+
+    if (!response.imageUrl) {
+      showNotification(
+        IMAGE_EDITOR_ALERTS.HISTORY_IMAGE_MISSING_TITLE,
+        IMAGE_EDITOR_ALERTS.HISTORY_IMAGE_MISSING_MESSAGE,
+        TOAST_TYPES.WARNING
+      );
+      return false;
+    }
+
+    setGenerationRequest({
+      id: Date.now(),
+      imageUrl: response.imageUrl,
+      prompt: response.prompt
+    });
     showNotification(
-      IMAGE_EDITOR_ALERTS.INSERTED_TITLE,
-      IMAGE_EDITOR_ALERTS.INSERTED_MESSAGE,
-      TOAST_TYPES.SUCCESS
+      notificationOptions.title,
+      notificationOptions.message,
+      notificationOptions.type,
+      3000
     );
+    return true;
   }
 
   async function handleSaveCanvas(payload, { notify = true } = {}) {

@@ -114,7 +114,9 @@ async function generateImage({ prompt, model = getImageModel() } = {}) {
       size: "1024x1024"
     });
     const image = response.data?.[0];
-    const imageUrl = image?.b64_json ? `data:image/png;base64,${image.b64_json}` : image?.url || "";
+    const imageUrl = image?.b64_json
+      ? `data:image/png;base64,${image.b64_json}`
+      : await fetchImageDataUrl(image?.url);
 
     if (!imageUrl) {
       throw httpError(502, "OpenAI returned no image data.");
@@ -133,6 +135,26 @@ async function generateImage({ prompt, model = getImageModel() } = {}) {
 
     throw mapOpenAiError(error);
   }
+}
+
+async function fetchImageDataUrl(imageUrl) {
+  if (!imageUrl) {
+    return "";
+  }
+
+  if (imageUrl.startsWith("data:")) {
+    return imageUrl;
+  }
+
+  const response = await fetch(imageUrl);
+
+  if (!response.ok) {
+    throw httpError(502, "Generated image could not be downloaded.");
+  }
+
+  const contentType = response.headers.get("content-type") || "image/png";
+  const imageBuffer = Buffer.from(await response.arrayBuffer());
+  return `data:${contentType};base64,${imageBuffer.toString("base64")}`;
 }
 
 module.exports = {
