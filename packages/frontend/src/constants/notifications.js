@@ -174,6 +174,9 @@ export const IMAGE_EDITOR_ALERTS = {
   GENERATED_TITLE: "Image generated",
   HISTORY_LOADED_MESSAGE: "Image response selected.",
   HISTORY_LOADED_TITLE: "History loaded",
+  HISTORY_IMAGE_MISSING_MESSAGE:
+    "This older history item does not have a saved image. Generate it again to store a separate image response.",
+  HISTORY_IMAGE_MISSING_TITLE: "Image not available",
   HISTORY_UNAVAILABLE_MESSAGE: "Image history could not be loaded.",
   HISTORY_UNAVAILABLE_TITLE: "History unavailable",
   IMAGE_PNG_EXPORTED_MESSAGE: "Image PNG exported.",

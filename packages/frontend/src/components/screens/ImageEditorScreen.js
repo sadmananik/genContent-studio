@@ -430,12 +430,12 @@ export default function ImageEditorScreen() {
             ...normalizeImageChat(
               await saveAiResponse({
                 contentType: AI_CONTENT_TYPES.IMAGE,
+                imageUrl: result.imageUrl,
                 project: projectId,
                 prompt,
                 response: responseText
               })
-            ),
-            imageUrl: result.imageUrl
+            )
           }
         : nextResponse;
 
@@ -549,6 +549,19 @@ export default function ImageEditorScreen() {
 
     if (response) {
       setPrompt(response.prompt);
+      if (!response.imageUrl) {
+        showNotification(
+          IMAGE_EDITOR_ALERTS.HISTORY_IMAGE_MISSING_TITLE,
+          IMAGE_EDITOR_ALERTS.HISTORY_IMAGE_MISSING_MESSAGE,
+          TOAST_TYPES.WARNING
+        );
+        return;
+      }
+      setGenerationRequest({
+        id: Date.now(),
+        imageUrl: response.imageUrl,
+        prompt: response.prompt
+      });
       showNotification(
         IMAGE_EDITOR_ALERTS.HISTORY_LOADED_TITLE,
         IMAGE_EDITOR_ALERTS.HISTORY_LOADED_MESSAGE,
