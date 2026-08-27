@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, Star, Trash2 } from "lucide-react";
+import StatusText from "../common/StatusText";
 import EmptyAIHistory from "./EmptyAIHistory";
 import { AI_HISTORY_TEXT } from "../../constants/notifications";
 
@@ -86,9 +87,9 @@ export default function AIHistorySidebar({
                     <span className="line-clamp-2 block break-words text-sm font-bold text-slate-800 transition group-hover:text-violet-700 group-hover:underline group-hover:decoration-violet-300 group-hover:underline-offset-4">
                       {item.prompt}
                     </span>
-                    <span className="mt-1 block text-xs text-slate-500 transition group-hover:text-slate-600">
+                    <StatusText className="transition group-hover:text-slate-600">
                       {item.timestamp}
-                    </span>
+                    </StatusText>
                   </button>
                 </div>
                 <div className="mt-2 flex justify-end">

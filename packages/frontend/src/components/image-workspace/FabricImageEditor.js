@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BringToFront, Circle, ImagePlus, Redo2, Square, Trash2, Type, Undo2 } from "lucide-react";
 import Button from "../common/Button";
+import StatusText from "../common/StatusText";
 
 const canvasSize = { height: 680, width: 1080 };
 
@@ -553,15 +554,9 @@ export default function FabricImageEditor({
         </span>
       </div>
 
-      {statusLabel && (
-        <div
-          className={`border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide ${
-            statusTone === "warning" ? "text-amber-700" : "text-emerald-700"
-          }`}
-        >
-          {statusLabel}
-        </div>
-      )}
+      <StatusText tone={statusTone} variant="bar">
+        {statusLabel}
+      </StatusText>
 
       <div className="overflow-auto bg-white p-3">
         <div
