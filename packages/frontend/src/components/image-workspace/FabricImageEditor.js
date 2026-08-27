@@ -1,32 +1,75 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BringToFront, Circle, ImagePlus, Square, Trash2, Type } from "lucide-react";
+import { BringToFront, Circle, ImagePlus, Redo2, Square, Trash2, Type, Undo2 } from "lucide-react";
 import Button from "../common/Button";
-import { demoImageSvg } from "./mockImageWorkspaceData";
+import StatusText from "../common/StatusText";
 
 const canvasSize = { height: 680, width: 1080 };
 
 export default function FabricImageEditor({
+  clearCanvasRequest,
   collaborationProvider,
   editable = true,
   generationRequest,
   onDirtyChange,
   onReady,
   remoteCanvasPointers = [],
-  remoteCanvasState
+  remoteCanvasState,
+  statusLabel,
+  statusTone = "success"
 }) {
   const canvasElementRef = useRef(null);
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
   const applyingRemoteStateRef = useRef(false);
+  const historyRef = useRef({ future: [], past: [] });
+  const restoringHistoryRef = useRef(false);
   const collaborationProviderRef = useRef(collaborationProvider);
   const editableRef = useRef(editable);
   collaborationProviderRef.current = collaborationProvider;
   editableRef.current = editable;
   const [activeObjectType, setActiveObjectType] = useState("None");
+  const [canRedo, setCanRedo] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
   const [fillColor, setFillColor] = useState("#8b5cf6");
   const [opacity, setOpacity] = useState(100);
+
+  const updateHistoryControls = useCallback(() => {
+    setCanUndo(historyRef.current.past.length > 1);
+    setCanRedo(historyRef.current.future.length > 0);
+  }, []);
+
+  const resetHistory = useCallback(
+    (canvas) => {
+      historyRef.current = { future: [], past: [canvas.toJSON()] };
+      updateHistoryControls();
+    },
+    [updateHistoryControls]
+  );
+
+  const recordHistory = useCallback(
+    (canvas) => {
+      if (applyingRemoteStateRef.current || restoringHistoryRef.current) {
+        return;
+      }
+
+      const snapshot = canvas.toJSON();
+      const past = historyRef.current.past;
+      const previousSnapshot = past[past.length - 1];
+
+      if (JSON.stringify(previousSnapshot) === JSON.stringify(snapshot)) {
+        return;
+      }
+
+      historyRef.current = {
+        future: [],
+        past: [...past.slice(-49), snapshot]
+      };
+      updateHistoryControls();
+    },
+    [updateHistoryControls]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -42,7 +85,7 @@ export default function FabricImageEditor({
       let isInitializing = true;
 
       const canvas = new fabric.Canvas(canvasElementRef.current, {
-        backgroundColor: "#f8fafc",
+        backgroundColor: "#ffffff",
         height: canvasSize.height,
         preserveObjectStacking: true,
         renderOnAddRemove: true,
@@ -53,42 +96,13 @@ export default function FabricImageEditor({
       canvasRef.current = canvas;
       canvas.setDimensions(canvasSize);
 
-      const headline = new fabric.Textbox("Launch Campaign", {
-        fill: "#111827",
-        fontFamily: "Arial",
-        fontSize: 56,
-        fontWeight: 800,
-        left: 118,
-        top: 312,
-        width: 420
-      });
-      const badge = new fabric.Rect({
-        fill: "#8b5cf6",
-        height: 74,
-        left: 568,
-        rx: 18,
-        ry: 18,
-        top: 360,
-        width: 210
-      });
-      const badgeText = new fabric.Textbox("AI READY", {
-        fill: "#ffffff",
-        fontFamily: "Arial",
-        fontSize: 28,
-        fontWeight: 800,
-        left: 602,
-        top: 382,
-        width: 150
-      });
-
-      canvas.add(headline, badge, badgeText);
-      canvas.setActiveObject(headline);
       canvas.calcOffset();
       canvas.requestRenderAll();
-      await addDemoBackgroundImage(fabric, canvas, isMounted);
+      resetHistory(canvas);
 
       const markDirty = () => {
         if (!isInitializing && !applyingRemoteStateRef.current) {
+          recordHistory(canvas);
           onDirtyChange?.(true);
           collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
         }
@@ -134,12 +148,12 @@ export default function FabricImageEditor({
       canvasRef.current?.dispose();
       canvasRef.current = null;
     };
-  }, [onDirtyChange, onReady]);
+  }, [onDirtyChange, onReady, recordHistory, resetHistory]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
 
-    if (!canvas || !remoteCanvasState) {
+    if (!canvas || !remoteCanvasState?.objects?.length) {
       return;
     }
 
@@ -148,12 +162,13 @@ export default function FabricImageEditor({
       .loadFromJSON(remoteCanvasState)
       .then(() => {
         canvas.requestRenderAll();
+        resetHistory(canvas);
         onDirtyChange?.(false);
       })
       .finally(() => {
         applyingRemoteStateRef.current = false;
       });
-  }, [onDirtyChange, remoteCanvasState]);
+  }, [onDirtyChange, remoteCanvasState, resetHistory]);
 
   const notifyCanvasChange = useCallback(() => {
     const canvas = canvasRef.current;
@@ -166,8 +181,8 @@ export default function FabricImageEditor({
     collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
   }, [onDirtyChange]);
 
-  const addGeneratedDemoImage = useCallback(
-    async (prompt, requestId) => {
+  const addGeneratedImage = useCallback(
+    async (imageUrl, requestId) => {
       const fabric = fabricRef.current;
       const canvas = canvasRef.current;
 
@@ -175,39 +190,14 @@ export default function FabricImageEditor({
         return;
       }
 
+      canvas.discardActiveObject();
+      canvas.remove(...canvas.getObjects());
+
       const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
       const accentColor = colors[requestId % colors.length];
-      const generatedImage = await createGeneratedImageObject(fabric, accentColor);
-      const card = new fabric.Rect({
-        fill: "#ffffff",
-        height: 86,
-        left: 510,
-        opacity: 0.94,
-        rx: 24,
-        ry: 24,
-        top: 358,
-        width: 276
-      });
-      const title = new fabric.Textbox("Generated Demo", {
-        fill: "#111827",
-        fontFamily: "Arial",
-        fontSize: 26,
-        fontWeight: 800,
-        left: 534,
-        top: 372,
-        width: 230
-      });
-      const caption = new fabric.Textbox(prompt || "AI image concept", {
-        fill: "#475569",
-        fontFamily: "Arial",
-        fontSize: 15,
-        fontWeight: 600,
-        left: 535,
-        top: 406,
-        width: 220
-      });
+      const generatedImage = await createGeneratedImageObject(fabric, imageUrl, accentColor);
 
-      canvas.add(generatedImage, card, title, caption);
+      canvas.add(generatedImage);
       canvas.setActiveObject(generatedImage);
       canvas.requestRenderAll();
       notifyCanvasChange();
@@ -220,8 +210,22 @@ export default function FabricImageEditor({
       return;
     }
 
-    addGeneratedDemoImage(generationRequest.prompt, generationRequest.id);
-  }, [addGeneratedDemoImage, generationRequest]);
+    addGeneratedImage(generationRequest.imageUrl, generationRequest.id);
+  }, [addGeneratedImage, generationRequest]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas || !clearCanvasRequest) {
+      return;
+    }
+
+    canvas.discardActiveObject();
+    canvas.remove(...canvas.getObjects());
+    canvas.backgroundColor = "#ffffff";
+    canvas.requestRenderAll();
+    notifyCanvasChange();
+  }, [clearCanvasRequest, notifyCanvasChange]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -325,7 +329,7 @@ export default function FabricImageEditor({
     notifyCanvasChange();
   }
 
-  function deleteSelected() {
+  const deleteSelected = useCallback(() => {
     const canvas = canvasRef.current;
     const activeObjects = canvas?.getActiveObjects() || [];
 
@@ -336,7 +340,100 @@ export default function FabricImageEditor({
     activeObjects.forEach((object) => canvas.remove(object));
     canvas?.requestRenderAll();
     notifyCanvasChange();
-  }
+  }, [editable, notifyCanvasChange]);
+
+  const restoreHistorySnapshot = useCallback(
+    async (snapshot) => {
+      const canvas = canvasRef.current;
+
+      if (!canvas || !snapshot) {
+        return;
+      }
+
+      restoringHistoryRef.current = true;
+      try {
+        await canvas.loadFromJSON(snapshot);
+        canvas.discardActiveObject();
+        canvas.requestRenderAll();
+        onDirtyChange?.(true);
+        collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
+      } finally {
+        restoringHistoryRef.current = false;
+      }
+    },
+    [onDirtyChange]
+  );
+
+  const undo = useCallback(() => {
+    if (!editable || historyRef.current.past.length <= 1) {
+      return;
+    }
+
+    const currentSnapshot = historyRef.current.past.pop();
+    const previousSnapshot = historyRef.current.past[historyRef.current.past.length - 1];
+    historyRef.current.future.unshift(currentSnapshot);
+    updateHistoryControls();
+    restoreHistorySnapshot(previousSnapshot);
+  }, [editable, restoreHistorySnapshot, updateHistoryControls]);
+
+  const redo = useCallback(() => {
+    if (!editable || historyRef.current.future.length === 0) {
+      return;
+    }
+
+    const nextSnapshot = historyRef.current.future.shift();
+    historyRef.current.past.push(nextSnapshot);
+    updateHistoryControls();
+    restoreHistorySnapshot(nextSnapshot);
+  }, [editable, restoreHistorySnapshot, updateHistoryControls]);
+
+  useEffect(() => {
+    function handleCanvasKeyDown(event) {
+      const target = event.target;
+      const isTyping =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target.isContentEditable;
+
+      if (isTyping) {
+        return;
+      }
+
+      const modifier = event.metaKey || event.ctrlKey;
+      const key = event.key.toLowerCase();
+
+      if (modifier && key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        return;
+      }
+
+      if (modifier && key === "y") {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
+      if (event.key !== "Delete" && event.key !== "Backspace") {
+        return;
+      }
+
+      const canvas = canvasRef.current;
+      if (!editableRef.current || !canvas?.getActiveObjects().length) {
+        return;
+      }
+
+      event.preventDefault();
+      deleteSelected();
+    }
+
+    document.addEventListener("keydown", handleCanvasKeyDown);
+    return () => document.removeEventListener("keydown", handleCanvasKeyDown);
+  }, [deleteSelected, redo, undo]);
 
   function moveLayer(direction) {
     const canvas = canvasRef.current;
@@ -359,6 +456,39 @@ export default function FabricImageEditor({
   return (
     <section className="grid min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-3">
+        <Button
+          aria-label="Undo canvas change"
+          disabled={!editable || !canUndo}
+          onClick={undo}
+          title="Undo"
+          type="button"
+          variant="secondary"
+        >
+          <Undo2 aria-hidden="true" size={17} />
+          Undo
+        </Button>
+        <Button
+          aria-label="Redo canvas change"
+          disabled={!editable || !canRedo}
+          onClick={redo}
+          title="Redo"
+          type="button"
+          variant="secondary"
+        >
+          <Redo2 aria-hidden="true" size={17} />
+          Redo
+        </Button>
+        <Button
+          aria-label="Remove selected canvas object"
+          disabled={!editable}
+          onClick={deleteSelected}
+          title="Remove selected object"
+          type="button"
+          variant="secondary"
+        >
+          <Trash2 aria-hidden="true" size={17} />
+          Remove
+        </Button>
         <Button disabled={!editable} onClick={addText} type="button" variant="secondary">
           <Type aria-hidden="true" size={17} />
           Text
@@ -418,11 +548,10 @@ export default function FabricImageEditor({
           <ImagePlus aria-hidden="true" size={17} />
           Back
         </Button>
-        <Button disabled={!editable} onClick={deleteSelected} type="button" variant="ghost">
-          <Trash2 aria-hidden="true" size={17} />
-          Delete
-        </Button>
         <div className="hidden flex-1 md:block" />
+        <StatusText tone={statusTone} variant="compact">
+          {statusLabel}
+        </StatusText>
         <span className="text-xs font-bold uppercase text-slate-500">
           Selected: {activeObjectType}
         </span>
@@ -462,35 +591,14 @@ export default function FabricImageEditor({
   );
 }
 
-async function addDemoBackgroundImage(fabric, canvas, isMounted) {
+async function createGeneratedImageObject(fabric, imageUrl, accentColor) {
   try {
-    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(demoImageSvg)}`;
-    const image = await fabric.FabricImage.fromURL(dataUrl);
-
-    if (!isMounted || canvas.disposed || canvas.destroyed) {
-      return;
-    }
-
-    image.set({
-      evented: false,
-      left: 0,
-      selectable: false,
-      top: 0
+    const imageDataUrl =
+      imageUrl ||
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(buildGeneratedDemoSvg(accentColor))}`;
+    const generatedImage = await fabric.FabricImage.fromURL(imageDataUrl, {
+      crossOrigin: imageUrl?.startsWith("http") ? "anonymous" : undefined
     });
-    image.scaleToWidth(canvasSize.width);
-    canvas.insertAt(0, image);
-    canvas.renderAll();
-  } catch (error) {
-    canvas.renderAll();
-  }
-}
-
-async function createGeneratedImageObject(fabric, accentColor) {
-  try {
-    const imageDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-      buildGeneratedDemoSvg(accentColor)
-    )}`;
-    const generatedImage = await fabric.FabricImage.fromURL(imageDataUrl);
 
     generatedImage.set({
       left: 488,

@@ -7,8 +7,8 @@ import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import AIPromptPanel from "../text-workspace/AIPromptPanel";
 import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
+import AIResponseCard from "../text-workspace/AIResponseCard";
 import FabricImageEditor from "../image-workspace/FabricImageEditor";
-import ImageResponseCard from "../image-workspace/ImageResponseCard";
 import { mockImageProject } from "../image-workspace/mockImageWorkspaceData";
 import { textPromptActions } from "../text-workspace/promptActions";
 import {
@@ -38,6 +38,7 @@ export default function ImageEditorScreen() {
   const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
   const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
   const fetchProjectById = useAppStore((state) => state.fetchProjectById);
+  const generateImageFromPrompt = useAppStore((state) => state.generateImageFromPrompt);
   const inviteProjectCollaborator = useAppStore((state) => state.inviteProjectCollaborator);
   const saveAiResponse = useAppStore((state) => state.saveAiResponse);
   const sendImageGenerationRequest = useAppStore((state) => state.sendImageGenerationRequest);
@@ -53,6 +54,7 @@ export default function ImageEditorScreen() {
   const [remoteCanvasState, setRemoteCanvasState] = useState(null);
   const [isProjectLoaded, setIsProjectLoaded] = useState(!isRealProject);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
+  const [clearCanvasRequest, setClearCanvasRequest] = useState(0);
   const [generationRequest, setGenerationRequest] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -70,7 +72,11 @@ export default function ImageEditorScreen() {
   const selectedResponse = responses.find((response) => response.id === selectedResponseId);
   const canvasRef = useRef(null);
   const projectRef = useRef(project);
+  const responsesRef = useRef(responses);
+  const selectedResponseIdRef = useRef(selectedResponseId);
   projectRef.current = project;
+  responsesRef.current = responses;
+  selectedResponseIdRef.current = selectedResponseId;
   const handleCanvasReady = useCallback((readyCanvas) => {
     canvasRef.current = readyCanvas;
     setCanvas(readyCanvas);
@@ -111,7 +117,8 @@ export default function ImageEditorScreen() {
     ? TEXT_EDITOR_ALERTS.UNSAVED_CHANGES_STATUS
     : lastSavedAt
       ? `Saved ${formatTime(lastSavedAt)}`
-      : project.lastUpdated;
+      : project.lastUpdated || mockImageProject.lastUpdated;
+  const canvasStatusTone = hasUnsavedChanges || isSaving ? "warning" : "success";
   const canEditProject = project.canEdit !== false;
   const canManageSharing =
     project.canManageSharing !== false && project.currentUserRole !== PROJECT_ROLES.COLLABORATOR;
@@ -228,6 +235,44 @@ export default function ImageEditorScreen() {
           5000
         );
       }
+
+      if (
+        event === "ai:response-created" &&
+        String(payload?.projectId) === String(projectId) &&
+        payload.chat?.contentType === AI_CONTENT_TYPES.IMAGE
+      ) {
+        const response = normalizeImageChat(payload.chat);
+        setResponses((currentResponses) => [
+          response,
+          ...currentResponses.filter((item) => item.sourceId !== response.sourceId)
+        ]);
+      }
+
+      if (
+        event === "ai:response-updated" &&
+        String(payload?.projectId) === String(projectId) &&
+        payload.chat?.contentType === AI_CONTENT_TYPES.IMAGE
+      ) {
+        const response = normalizeImageChat(payload.chat);
+        setResponses((currentResponses) =>
+          currentResponses.map((item) => (item.sourceId === response.sourceId ? response : item))
+        );
+      }
+
+      if (event === "ai:response-deleted" && String(payload?.projectId) === String(projectId)) {
+        setResponses((currentResponses) =>
+          currentResponses.filter((item) => item.sourceId !== payload.chatId)
+        );
+        setSelectedResponseId((currentSelectedId) =>
+          currentSelectedId === payload.chatId
+            ? responsesRef.current.find((item) => item.sourceId !== payload.chatId)?.id || null
+            : currentSelectedId
+        );
+
+        if (selectedResponseIdRef.current === payload.chatId) {
+          setClearCanvasRequest((currentRequest) => currentRequest + 1);
+        }
+      }
     },
     [projectId, router, setActiveCollaborators, setCollaborationError, setSocketConnected]
   );
@@ -248,6 +293,7 @@ export default function ImageEditorScreen() {
     fetchProjectById(projectId)
       .then((loadedProject) => {
         setProject(normalizeProject(loadedProject));
+        setLastSavedAt(loadedProject.updatedAt ? new Date(loadedProject.updatedAt) : null);
         setIsProjectLoaded(true);
         if (loadedProject.starterPrompt) {
           setPrompt(loadedProject.starterPrompt);
@@ -334,7 +380,7 @@ export default function ImageEditorScreen() {
           setPrompt(imageContent.generationPrompt);
         }
 
-        if (!imageContent.canvasState) {
+        if (!imageContent.canvasState?.objects?.length) {
           return null;
         }
 
@@ -344,6 +390,10 @@ export default function ImageEditorScreen() {
         });
       })
       .catch((error) => {
+        if (error.status === 404 || error.message === "Image content not found") {
+          return;
+        }
+
         showNotification(
           IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_TITLE,
           error.message || IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_MESSAGE,
@@ -363,8 +413,13 @@ export default function ImageEditorScreen() {
       return;
     }
 
+    const parsedCanvas = safeParseJson(savedCanvas);
+    if (!parsedCanvas.objects?.length) {
+      return;
+    }
+
     canvas
-      .loadFromJSON(savedCanvas)
+      .loadFromJSON(parsedCanvas)
       .then(() => {
         canvas.requestRenderAll();
         setHasUnsavedChanges(false);
@@ -382,7 +437,7 @@ export default function ImageEditorScreen() {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
 
-  function handleGenerate() {
+  async function handleGenerate() {
     if (!canEditProject) {
       showNotification(
         PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
@@ -393,48 +448,60 @@ export default function ImageEditorScreen() {
     }
 
     setIsGenerating(true);
-    window.setTimeout(async () => {
-      const responseText = buildDemoImageResponse(prompt);
+    showNotification(
+      "Generating image",
+      "OpenAI is creating your image. This may take a moment.",
+      TOAST_TYPES.INFO,
+      120000
+    );
+
+    try {
+      const result = await generateImageFromPrompt({
+        ...(isRealProject ? { project: projectId } : {}),
+        prompt
+      });
+      const responseText = result.revisedPrompt || `Generated image for "${prompt.trim()}".`;
       const nextResponse = {
         id: `image-response-${Date.now()}`,
+        imageUrl: result.imageUrl,
         prompt,
         response: responseText,
         timestamp: "Just now",
         favourite: false
       };
-
-      try {
-        const savedResponse = isRealProject
-          ? normalizeImageChat(
+      const savedResponse = isRealProject
+        ? {
+            ...normalizeImageChat(
               await saveAiResponse({
                 contentType: AI_CONTENT_TYPES.IMAGE,
+                imageUrl: result.imageUrl,
                 project: projectId,
                 prompt,
                 response: responseText
               })
             )
-          : nextResponse;
+          }
+        : nextResponse;
 
-        setResponses((currentResponses) => [savedResponse, ...currentResponses]);
-        setSelectedResponseId(savedResponse.id);
-        setGenerationRequest({ id: Date.now(), prompt });
-        showNotification(
-          IMAGE_EDITOR_ALERTS.GENERATED_TITLE,
-          isRealProject
-            ? IMAGE_EDITOR_ALERTS.GENERATED_SAVED_MESSAGE
-            : IMAGE_EDITOR_ALERTS.GENERATED_LOCAL_MESSAGE,
-          TOAST_TYPES.SUCCESS
-        );
-      } catch (error) {
-        showNotification(
-          IMAGE_EDITOR_ALERTS.GENERATE_FAILED_TITLE,
-          error.message || IMAGE_EDITOR_ALERTS.GENERATE_FAILED_MESSAGE,
-          TOAST_TYPES.ERROR
-        );
-      } finally {
-        setIsGenerating(false);
-      }
-    }, 800);
+      setResponses((currentResponses) => [savedResponse, ...currentResponses]);
+      setSelectedResponseId(savedResponse.id);
+      setGenerationRequest({ id: Date.now(), imageUrl: result.imageUrl, prompt });
+      showNotification(
+        IMAGE_EDITOR_ALERTS.GENERATED_TITLE,
+        isRealProject
+          ? IMAGE_EDITOR_ALERTS.GENERATED_SAVED_MESSAGE
+          : IMAGE_EDITOR_ALERTS.GENERATED_LOCAL_MESSAGE,
+        TOAST_TYPES.SUCCESS
+      );
+    } catch (error) {
+      showNotification(
+        IMAGE_EDITOR_ALERTS.GENERATE_FAILED_TITLE,
+        error.message || IMAGE_EDITOR_ALERTS.GENERATE_FAILED_MESSAGE,
+        TOAST_TYPES.ERROR
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   function handleQuickAction(action) {
@@ -509,10 +576,6 @@ export default function ImageEditorScreen() {
   }
 
   function handleSelectHistory(responseId) {
-    if (selectedResponseId === responseId) {
-      return;
-    }
-
     if (queueUnsavedCanvasAction(() => selectHistoryResponse(responseId))) {
       return;
     }
@@ -525,13 +588,11 @@ export default function ImageEditorScreen() {
     const response = responses.find((item) => item.id === responseId);
 
     if (response) {
-      setPrompt(response.prompt);
-      showNotification(
-        IMAGE_EDITOR_ALERTS.HISTORY_LOADED_TITLE,
-        IMAGE_EDITOR_ALERTS.HISTORY_LOADED_MESSAGE,
-        TOAST_TYPES.INFO,
-        3000
-      );
+      loadImageResponseIntoCanvas(response, {
+        message: IMAGE_EDITOR_ALERTS.HISTORY_LOADED_MESSAGE,
+        title: IMAGE_EDITOR_ALERTS.HISTORY_LOADED_TITLE,
+        type: TOAST_TYPES.INFO
+      });
     }
   }
 
@@ -686,11 +747,15 @@ export default function ImageEditorScreen() {
     }
 
     const nextResponses = responses.filter((item) => item.id !== responseId);
+    const isDeletingSelectedResponse = selectedResponseId === responseId;
 
     setResponses(nextResponses);
     setSelectedResponseId((currentSelectedId) =>
       currentSelectedId === responseId ? nextResponses[0]?.id || null : currentSelectedId
     );
+    if (isDeletingSelectedResponse) {
+      setClearCanvasRequest((currentRequest) => currentRequest + 1);
+    }
     setPendingResponseDelete(null);
     showNotification(
       TEXT_EDITOR_ALERTS.DELETED_TITLE,
@@ -700,36 +765,30 @@ export default function ImageEditorScreen() {
     );
   }
 
-  function handleInsertResponse(response) {
-    if (!canEditProject) {
-      showNotification(
-        PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
-        PERMISSION_MESSAGES.CANVAS_EDIT_DISABLED,
-        TOAST_TYPES.INFO
-      );
-      return;
-    }
-
-    if (queueUnsavedCanvasAction(() => insertResponseIntoCanvas(response))) {
-      return;
-    }
-
-    insertResponseIntoCanvas(response);
-  }
-
-  function insertResponseIntoCanvas(response) {
+  function loadImageResponseIntoCanvas(response, notificationOptions) {
     setPrompt(response.prompt);
-    setGenerationRequest({ id: Date.now(), prompt: response.prompt });
-    recordWorkspaceAudit("ai_content_inserted", {
-      aiChatId: response.sourceId,
-      contentType: AI_CONTENT_TYPES.IMAGE,
+
+    if (!response.imageUrl) {
+      showNotification(
+        IMAGE_EDITOR_ALERTS.HISTORY_IMAGE_MISSING_TITLE,
+        IMAGE_EDITOR_ALERTS.HISTORY_IMAGE_MISSING_MESSAGE,
+        TOAST_TYPES.WARNING
+      );
+      return false;
+    }
+
+    setGenerationRequest({
+      id: Date.now(),
+      imageUrl: response.imageUrl,
       prompt: response.prompt
     });
     showNotification(
-      IMAGE_EDITOR_ALERTS.INSERTED_TITLE,
-      IMAGE_EDITOR_ALERTS.INSERTED_MESSAGE,
-      TOAST_TYPES.SUCCESS
+      notificationOptions.title,
+      notificationOptions.message,
+      notificationOptions.type,
+      3000
     );
+    return true;
   }
 
   async function handleSaveCanvas(payload, { notify = true } = {}) {
@@ -928,12 +987,15 @@ export default function ImageEditorScreen() {
         <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
           <FabricImageEditor
             collaborationProvider={collaborationProvider}
+            clearCanvasRequest={clearCanvasRequest}
             editable={canEditProject}
             generationRequest={generationRequest}
             onDirtyChange={setHasUnsavedChanges}
             onReady={handleCanvasReady}
             remoteCanvasPointers={remoteCanvasPointers}
             remoteCanvasState={remoteCanvasState}
+            statusLabel={statusLabel}
+            statusTone={canvasStatusTone}
           />
 
           <aside className="grid min-w-0 content-start gap-5">
@@ -951,20 +1013,20 @@ export default function ImageEditorScreen() {
               <div>
                 <h2 className="text-base font-bold text-slate-950">Selected Image Response</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Generate a demo image, then copy, edit, favourite, or insert it into the canvas.
+                  Generate an image, then copy, edit, favourite, or insert it into the canvas.
                 </p>
               </div>
               {selectedResponse ? (
-                <ImageResponseCard
+                <AIResponseCard
                   canEdit={canEditProject}
                   copied={copiedResponseId === selectedResponse.id}
                   key={selectedResponse.id}
                   onCopy={handleCopyResponse}
                   onDelete={requestDeleteResponse}
                   onFavourite={handleFavouriteResponse}
-                  onInsert={handleInsertResponse}
                   onUpdate={handleUpdateResponse}
                   response={selectedResponse}
+                  responseLabel="Image Response"
                   selected
                 />
               ) : (
@@ -1029,9 +1091,7 @@ function normalizeProject(project) {
     canManageSharing: project.canManageSharing !== false,
     currentUserRole: project.currentUserRole || PROJECT_ROLES.OWNER,
     owner: project.owner,
-    lastUpdated: project.updatedAt
-      ? `Updated ${new Date(project.updatedAt).toLocaleString()}`
-      : mockImageProject.lastUpdated,
+    lastUpdated: mockImageProject.lastUpdated,
     collaborators: project.collaborators || [],
     collaboratorPermissions: project.collaboratorPermissions || []
   };
@@ -1041,9 +1101,10 @@ function normalizeImageChat(chat) {
   return {
     id: chat._id || chat.id,
     sourceId: chat._id || chat.id,
+    imageUrl: chat.imageUrl,
     prompt: chat.prompt,
     response: chat.response,
-    timestamp: chat.createdAt ? formatRelativeTime(new Date(chat.createdAt)) : "Just now",
+    timestamp: chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "Just now",
     favourite: Boolean(chat.isFavourite)
   };
 }
@@ -1123,27 +1184,6 @@ function buildDemoImageResponse(prompt) {
   const cleanPrompt = prompt.trim() || "Create a polished social media image.";
 
   return `Demo image concept for "${cleanPrompt}" with an editable generated image layer, headline card, caption block, and accent shapes ready for Fabric.js editing.`;
-}
-
-function formatRelativeTime(value) {
-  const diffMs = Date.now() - value.getTime();
-  const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
-
-  if (diffMinutes < 1) {
-    return "Just now";
-  }
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes} minutes ago`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `${diffHours} hours ago`;
-  }
-
-  return value.toLocaleDateString();
 }
 
 function getImageWorkspaceDraftKey(projectId) {

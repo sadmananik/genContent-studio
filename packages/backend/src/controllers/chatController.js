@@ -20,7 +20,7 @@ const {
 } = require("../services/auditService");
 
 const createChat = asyncHandler(async (req, res) => {
-  const { project, prompt, response, contentType = AI_CONTENT_TYPES.TEXT } = req.body;
+  const { project, prompt, response, imageUrl, contentType = AI_CONTENT_TYPES.TEXT } = req.body;
 
   if (!project) {
     throw httpError(400, PROJECT_MESSAGES.PROJECT_REQUIRED);
@@ -43,6 +43,7 @@ const createChat = asyncHandler(async (req, res) => {
     user: req.user.id,
     prompt: normalizedPrompt,
     response: normalizedResponse,
+    ...(normalizedContentType === AI_CONTENT_TYPES.IMAGE && imageUrl ? { imageUrl } : {}),
     contentType: normalizedContentType
   });
 

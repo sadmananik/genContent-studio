@@ -10,6 +10,7 @@ export default function AIResponseCard({
   onFavourite,
   onUpdate,
   response,
+  responseLabel = "AI Response",
   selected
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -39,7 +40,7 @@ export default function AIResponseCard({
       </div>
 
       <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50 p-3">
-        <p className="text-xs font-bold uppercase text-slate-500">AI Response</p>
+        <p className="text-xs font-bold uppercase text-slate-500">{responseLabel}</p>
         {isEditing ? (
           <textarea
             className="mt-2 min-h-32 w-full resize-y rounded-md border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"

@@ -53,6 +53,65 @@
   }
 }
 
+@property --ai-border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes ai-generate-border {
+  to {
+    --ai-border-angle: 360deg;
+  }
+}
+
+@keyframes ai-generate-loader {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.16);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.ai-generate-button {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(135deg, #7654f7, #4f46e5) padding-box,
+    conic-gradient(from var(--ai-border-angle), #22d3ee, #a78bfa, #f0abfc, #22d3ee) border-box;
+  animation: ai-generate-border 2.2s linear infinite;
+}
+
+.ai-generate-icon {
+  animation: ai-generate-loader 1s ease-in-out infinite;
+}
+
+.toast-notification {
+  animation: toast-enter 220ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-generate-button,
+  .ai-generate-icon,
+  .toast-notification {
+    animation: none;
+  }
+}
+
 body {
   margin: 0;
   background: radial-gradient(circle at 30% 5%, #ffffff 0, #f8f7ff 30%, var(--bg) 68%);

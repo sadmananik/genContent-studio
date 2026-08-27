@@ -6,9 +6,10 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://loca
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
 
 export async function apiRequest(path, options = {}) {
+  const { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS, ...requestOptions } = options;
   const session = getAuthSession();
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   const headers = {
     "Content-Type": "application/json",
     ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
@@ -17,7 +18,7 @@ export async function apiRequest(path, options = {}) {
 
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
+      ...requestOptions,
       headers,
       signal: controller.signal
     });
@@ -29,7 +30,9 @@ export async function apiRequest(path, options = {}) {
         clearAuthSession();
       }
 
-      throw new Error(data?.message || "API request failed");
+      const requestError = new Error(data?.message || "API request failed");
+      requestError.status = response.status;
+      throw requestError;
     }
 
     return data;

@@ -1,5 +1,5 @@
-import { Loader2, Sparkles } from "lucide-react";
-import Button from "../common/Button";
+import { Sparkles } from "lucide-react";
+import GenerateButton from "../common/GenerateButton";
 
 export default function AIPromptPanel({
   actions,
@@ -52,14 +52,12 @@ export default function AIPromptPanel({
             </button>
           ))}
         </div>
-        <Button
-          disabled={isGenerating || disabled || !String(prompt || "").trim()}
+        <GenerateButton
+          disabled={disabled || !String(prompt || "").trim()}
+          isGenerating={isGenerating}
           onClick={() => onGenerate()}
           type="button"
-        >
-          {isGenerating && <Loader2 aria-hidden="true" className="animate-spin" size={16} />}
-          {isGenerating ? "Generating..." : "Generate"}
-        </Button>
+        />
       </div>
     </section>
   );

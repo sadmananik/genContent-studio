@@ -45,6 +45,18 @@ export function createAiReducer(set) {
       );
     },
 
+    generateImageFromPrompt: async (payload) => {
+      return runAiRequest(
+        () =>
+          apiRequest("/api/ai/generate-image", {
+            method: "POST",
+            body: JSON.stringify(payload),
+            timeoutMs: 120000
+          }),
+        (aiState, response) => ({ imageResponse: response })
+      );
+    },
+
     sendTextGenerationRequest: async (payload) => {
       return runAiRequest(
         () =>
