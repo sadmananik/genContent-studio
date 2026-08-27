@@ -5,6 +5,7 @@ const Project = require("../models/Project");
 const User = require("../models/User");
 const { verifyAuthToken } = require("../utils/token");
 const { ACCESS_LEVELS } = require("../constants/projects");
+const { QUICK_REACTION_BY_ID } = require("../constants/quickReactions");
 
 const projectDocuments = new Map();
 const projectCanvasStates = new Map();
@@ -39,6 +40,7 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
   io.on("connection", (socket) => {
     socket.data.projectId = null;
     socket.data.accessLevel = null;
+    socket.data.lastQuickReactionAt = 0;
 
     socket.on("project:join", async ({ projectId } = {}) => {
       try {
@@ -99,6 +101,28 @@ function attachCollaborationServer(httpServer, frontendOrigin) {
     });
 
     socket.on("project:leave", () => leaveProjectRoom(io, socket, "left-project"));
+
+    socket.on("project:quick-reaction", ({ projectId, reactionId } = {}) => {
+      if (!isCurrentProject(socket, projectId) || !QUICK_REACTION_BY_ID.has(reactionId)) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - socket.data.lastQuickReactionAt < 1000) {
+        socket.emit("project:quick-reaction-error", {
+          message: "Please wait before sending another reaction."
+        });
+        return;
+      }
+
+      socket.data.lastQuickReactionAt = now;
+      io.to(getProjectRoom(projectId)).emit("project:quick-reaction", {
+        projectId: String(projectId),
+        reaction: QUICK_REACTION_BY_ID.get(reactionId),
+        sender: serializeUser(socket.user),
+        sentAt: new Date(now).toISOString()
+      });
+    });
 
     socket.on("yjs:update", ({ projectId, update } = {}) => {
       if (
