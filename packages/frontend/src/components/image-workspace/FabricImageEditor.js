@@ -700,9 +700,9 @@ export default function FabricImageEditor({
         </span>
       </div>
 
-      <div className="overflow-auto bg-white p-3">
+      <div className="fabric-canvas-surface overflow-auto bg-white p-3">
         <div
-          className="relative mx-auto rounded-md bg-white"
+          className="fabric-canvas-surface relative mx-auto rounded-md bg-white"
           style={{ height: canvasSize.height, width: canvasSize.width }}
         >
           <canvas height={canvasSize.height} ref={canvasElementRef} width={canvasSize.width} />

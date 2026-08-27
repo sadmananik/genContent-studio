@@ -198,6 +198,11 @@ a {
   background-color: #09090b;
 }
 
+/* Keep the image editor's canvas surface white in dark mode to avoid a black flash while it reloads. */
+:root[data-active-theme="dark"] .fabric-canvas-surface {
+  background-color: #ffffff;
+}
+
 :root[data-active-theme="dark"] [class*="bg-slate-50"] {
   background-color: #111827;
 }
