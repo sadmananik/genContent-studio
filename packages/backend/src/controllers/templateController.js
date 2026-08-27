@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const Template = require("../models/Template");
 const TemplatePreference = require("../models/TemplatePreference");
+const TemplateVote = require("../models/TemplateVote");
 const TextContent = require("../models/TextContent");
 const {
   AI_CONTENT_TYPES,
@@ -61,13 +62,23 @@ const listTemplates = asyncHandler(async (req, res) => {
     ];
   }
 
+  const sort = normalizeString(req.query.sort).toLowerCase() || "newest";
+  if (!["newest", "most-used", "most-upvoted"].includes(sort)) {
+    throw httpError(400, "Template sort option is invalid");
+  }
+
   const [templates, preference] = await Promise.all([
-    Template.find(query).populate("creator", "name").sort({ isSystem: -1, updatedAt: -1 }),
+    Template.find(query).populate("creator", "name"),
     TemplatePreference.findOne({ user: req.user.id }).select("favorites")
   ]);
   const favoriteIds = new Set((preference?.favorites || []).map(String));
+  const voteData = await getVoteData(templates, req.user.id);
 
-  res.json(templates.map((template) => serializeTemplate(template, favoriteIds, req.user.id)));
+  res.json(
+    sortTemplates(templates, voteData, sort).map((template) =>
+      serializeTemplate(template, favoriteIds, req.user.id, voteData.get(String(template._id)))
+    )
+  );
 });
 
 const listMyTemplates = asyncHandler(async (req, res) => {
@@ -77,7 +88,7 @@ const listMyTemplates = asyncHandler(async (req, res) => {
   ]);
   const favoriteIds = new Set((preference?.favorites || []).map(String));
 
-  res.json(templates.map((template) => serializeTemplate(template, favoriteIds, req.user.id)));
+  res.json(await serializeTemplates(templates, favoriteIds, req.user.id));
 });
 
 const listFavoriteTemplates = asyncHandler(async (req, res) => {
@@ -92,10 +103,11 @@ const listFavoriteTemplates = asyncHandler(async (req, res) => {
   const templatesById = new Map(templates.map((template) => [String(template._id), template]));
 
   res.json(
-    favoriteIds
-      .map((templateId) => templatesById.get(templateId))
-      .filter(Boolean)
-      .map((template) => serializeTemplate(template, new Set(favoriteIds), req.user.id))
+    await serializeTemplates(
+      favoriteIds.map((templateId) => templatesById.get(templateId)).filter(Boolean),
+      new Set(favoriteIds),
+      req.user.id
+    )
   );
 });
 
@@ -113,12 +125,16 @@ const listRecentTemplates = asyncHandler(async (req, res) => {
             String(req.user.id))
     )
     .slice(0, RECENT_TEMPLATE_LIMIT)
-    .map((entry) => ({
-      ...serializeTemplate(entry.template, favoriteIds, req.user.id),
-      lastUsedAt: entry.usedAt
-    }));
+    .map((entry) => ({ template: entry.template, lastUsedAt: entry.usedAt }));
 
-  res.json(templates);
+  const serialized = await serializeTemplates(
+    templates.map((entry) => entry.template),
+    favoriteIds,
+    req.user.id
+  );
+  res.json(
+    serialized.map((template, index) => ({ ...template, lastUsedAt: templates[index].lastUsedAt }))
+  );
 });
 
 const listTemplateTags = asyncHandler(async (req, res) => {
@@ -151,7 +167,7 @@ const getTemplateById = asyncHandler(async (req, res) => {
   ]);
   const favoriteIds = new Set((preference?.favorites || []).map(String));
 
-  res.json(serializeTemplate(template, favoriteIds, req.user.id));
+  res.json((await serializeTemplates([template], favoriteIds, req.user.id))[0]);
 });
 
 const publishProjectTemplate = asyncHandler(async (req, res) => {
@@ -184,7 +200,7 @@ const publishProjectTemplate = asyncHandler(async (req, res) => {
   });
   await template.populate("creator", "name");
 
-  res.status(201).json(serializeTemplate(template, new Set(), req.user.id));
+  res.status(201).json((await serializeTemplates([template], new Set(), req.user.id))[0]);
 });
 
 const updateTemplate = asyncHandler(async (req, res) => {
@@ -206,7 +222,7 @@ const updateTemplate = asyncHandler(async (req, res) => {
   await template.save();
   await template.populate("creator", "name");
 
-  res.json(serializeTemplate(template, new Set(), req.user.id));
+  res.json((await serializeTemplates([template], new Set(), req.user.id))[0]);
 });
 
 const updateTemplateVisibility = asyncHandler(async (req, res) => {
@@ -221,7 +237,7 @@ const updateTemplateVisibility = asyncHandler(async (req, res) => {
   await template.save();
   await template.populate("creator", "name");
 
-  res.json(serializeTemplate(template, new Set(), req.user.id));
+  res.json((await serializeTemplates([template], new Set(), req.user.id))[0]);
 });
 
 const deleteTemplate = asyncHandler(async (req, res) => {
@@ -237,6 +253,7 @@ const deleteTemplate = asyncHandler(async (req, res) => {
     }
   );
   await Project.updateMany({ sourceTemplate: template._id }, { $set: { sourceTemplate: null } });
+  await TemplateVote.deleteMany({ template: template._id });
   await template.deleteOne();
 
   res.json({ message: TEMPLATE_MESSAGES.DELETE_SUCCESS });
@@ -344,6 +361,34 @@ const unfavoriteTemplate = asyncHandler(async (req, res) => {
   res.json({ isFavorite: false, message: TEMPLATE_MESSAGES.UNFAVORITE_SUCCESS });
 });
 
+const voteTemplate = asyncHandler(async (req, res) => {
+  const voteType = normalizeString(req.body.voteType).toLowerCase();
+  if (!["up", "down"].includes(voteType)) {
+    throw httpError(400, TEMPLATE_MESSAGES.VOTE_INVALID);
+  }
+
+  const template = await Template.findOne({
+    _id: req.params.id,
+    visibility: TEMPLATE_VISIBILITY.PUBLIC
+  });
+  if (!template) {
+    throw httpError(404, TEMPLATE_MESSAGES.NOT_FOUND);
+  }
+
+  const existingVote = await TemplateVote.findOne({ template: template._id, user: req.user.id });
+  if (existingVote?.voteType === voteType) {
+    await existingVote.deleteOne();
+  } else if (existingVote) {
+    existingVote.voteType = voteType;
+    await existingVote.save();
+  } else {
+    await TemplateVote.create({ template: template._id, user: req.user.id, voteType });
+  }
+
+  const voteData = (await getVoteData([template], req.user.id)).get(String(template._id));
+  res.json(voteData);
+});
+
 async function findAccessibleTemplate(templateId, userId) {
   const template = await Template.findOne({
     _id: templateId,
@@ -394,6 +439,56 @@ async function recordRecentTemplate(userId, templateId) {
     ...preference.recentlyUsed.filter((entry) => String(entry.template) !== String(templateId))
   ].slice(0, RECENT_TEMPLATE_LIMIT);
   await preference.save();
+}
+
+async function getVoteData(templates, userId) {
+  const templateIds = templates.map((template) => template._id);
+  if (!templateIds.length) return new Map();
+
+  const [counts, currentVotes] = await Promise.all([
+    TemplateVote.aggregate([
+      { $match: { template: { $in: templateIds } } },
+      { $group: { _id: { template: "$template", voteType: "$voteType" }, count: { $sum: 1 } } }
+    ]),
+    TemplateVote.find({ template: { $in: templateIds }, user: userId }).select("template voteType")
+  ]);
+  const data = new Map(
+    templateIds.map((templateId) => [
+      String(templateId),
+      { upvoteCount: 0, downvoteCount: 0, currentUserVote: null }
+    ])
+  );
+  counts.forEach(({ _id, count }) => {
+    const entry = data.get(String(_id.template));
+    if (entry) entry[_id.voteType === "up" ? "upvoteCount" : "downvoteCount"] = count;
+  });
+  currentVotes.forEach((vote) => {
+    const entry = data.get(String(vote.template));
+    if (entry) entry.currentUserVote = vote.voteType;
+  });
+  return data;
+}
+
+async function serializeTemplates(templates, favoriteIds, userId) {
+  const voteData = await getVoteData(templates, userId);
+  return templates.map((template) =>
+    serializeTemplate(template, favoriteIds, userId, voteData.get(String(template._id)))
+  );
+}
+
+function sortTemplates(templates, voteData, sort) {
+  return [...templates].sort((left, right) => {
+    if (sort === "most-upvoted") {
+      return (
+        (voteData.get(String(right._id))?.upvoteCount || 0) -
+          (voteData.get(String(left._id))?.upvoteCount || 0) || right.createdAt - left.createdAt
+      );
+    }
+    if (sort === "most-used") {
+      return (right.useCount || 0) - (left.useCount || 0) || right.updatedAt - left.updatedAt;
+    }
+    return Number(right.isSystem) - Number(left.isSystem) || right.updatedAt - left.updatedAt;
+  });
 }
 
 function normalizeTemplatePayload(payload, { requireTitle = false } = {}) {
@@ -450,7 +545,7 @@ function normalizeTags(value) {
   );
 }
 
-function serializeTemplate(template, favoriteIds, userId) {
+function serializeTemplate(template, favoriteIds, userId, voteData = {}) {
   const value = template.toObject ? template.toObject() : template;
   const { sourceProject, systemKey, ...publicValue } = value;
 
@@ -463,6 +558,9 @@ function serializeTemplate(template, favoriteIds, userId) {
         ? { id: String(value.creator._id || value.creator), name: value.creator.name || "Creator" }
         : null,
     isFavorite: favoriteIds.has(String(value._id)),
+    upvoteCount: voteData.upvoteCount || 0,
+    downvoteCount: voteData.downvoteCount || 0,
+    currentUserVote: voteData.currentUserVote || null,
     canManage:
       !value.isSystem && String(value.creator?._id || value.creator || "") === String(userId)
   };
@@ -483,6 +581,7 @@ module.exports = {
   listTemplates,
   publishProjectTemplate,
   unfavoriteTemplate,
+  voteTemplate,
   updateTemplate,
   updateTemplateVisibility,
   useTemplate

@@ -27,7 +27,8 @@ export const TEMPLATE_CATEGORIES = [
 
 export const TEMPLATE_FILTER_OPTIONS = {
   CATEGORIES: ["all", ...TEMPLATE_CATEGORIES],
-  TYPES: [TEMPLATE_TYPES.ALL, TEMPLATE_TYPES.TEXT, TEMPLATE_TYPES.IMAGE]
+  TYPES: [TEMPLATE_TYPES.ALL, TEMPLATE_TYPES.TEXT, TEMPLATE_TYPES.IMAGE],
+  SORTS: ["newest", "most-used", "most-upvoted"]
 };
 
 export const TEMPLATE_TEXT = {
@@ -89,8 +90,11 @@ export const TEMPLATE_TEXT = {
   SEARCH_LABEL: "Search templates",
   SEARCH_PLACEHOLDER: "Search templates...",
   SEARCH_TAG_SUGGESTIONS: "Matching tags",
+  SORT_LABEL: "Sort By",
   TAG_SUGGESTIONS: "Suggested tags",
   TYPE_FILTER_LABEL: "Type",
+  VOTE_FAILED_MESSAGE: "Unable to update your vote. Please try again.",
+  VOTE_FAILED_TITLE: "Vote not saved",
   UNFAVORITED_MESSAGE: "Template removed from favorites.",
   UNFAVORITED_TITLE: "Favorite removed",
   UPDATE_FAILED_MESSAGE: "Template changes could not be saved.",

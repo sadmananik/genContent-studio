@@ -33,19 +33,22 @@ export default function TemplatesScreen() {
   const fetchTemplateTagSuggestions = useAppStore((state) => state.fetchTemplateTagSuggestions);
   const fetchTemplates = useAppStore((state) => state.fetchTemplates);
   const toggleTemplateFavorite = useAppStore((state) => state.toggleTemplateFavorite);
+  const voteTemplate = useAppStore((state) => state.voteTemplate);
   const updateTemplate = useAppStore((state) => state.updateTemplate);
   const updateTemplateVisibility = useAppStore((state) => state.updateTemplateVisibility);
-  const useTemplate = useAppStore((state) => state.useTemplate);
+  const createProjectFromTemplate = useAppStore((state) => state.useTemplate);
   const [activeTab, setActiveTab] = useState(TEMPLATE_TABS.BROWSE);
   const [category, setCategory] = useState("all");
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [favoritePendingId, setFavoritePendingId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [votePendingId, setVotePendingId] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [search, setSearch] = useState("");
   const [searchTagSuggestions, setSearchTagSuggestions] = useState([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [sort, setSort] = useState("newest");
   const [type, setType] = useState(TEMPLATE_TYPES.ALL);
   const [usingTemplateId, setUsingTemplateId] = useState(null);
   const [notification, setNotification] = useState(null);
@@ -54,11 +57,11 @@ export default function TemplatesScreen() {
     if (!auth.token || activeTab !== TEMPLATE_TABS.BROWSE) return undefined;
 
     const timeout = window.setTimeout(() => {
-      fetchTemplates({ category, search: search.trim(), type }).catch(() => {});
+      fetchTemplates({ category, search: search.trim(), sort, type }).catch(() => {});
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [activeTab, auth.token, category, fetchTemplates, search, type]);
+  }, [activeTab, auth.token, category, fetchTemplates, search, sort, type]);
 
   useEffect(() => {
     if (!auth.token) return;
@@ -93,7 +96,8 @@ export default function TemplatesScreen() {
     return () => window.clearTimeout(timeout);
   }, [activeTab, auth.token, fetchTemplateTagSuggestions, isSearchFocused, search]);
 
-  const isFiltered = Boolean(search.trim()) || type !== "all" || category !== "all";
+  const isFiltered =
+    Boolean(search.trim()) || type !== "all" || category !== "all" || sort !== "newest";
   const visibleTemplates =
     activeTab === TEMPLATE_TABS.BROWSE
       ? templateState.templates
@@ -128,11 +132,28 @@ export default function TemplatesScreen() {
     }
   }
 
+  async function handleVote(template, voteType) {
+    if (votePendingId === template.id) return;
+    setVotePendingId(template.id);
+
+    try {
+      await voteTemplate(template.id, voteType);
+    } catch (error) {
+      showNotification(
+        TEMPLATE_TEXT.VOTE_FAILED_TITLE,
+        error.message || TEMPLATE_TEXT.VOTE_FAILED_MESSAGE,
+        TOAST_TYPES.ERROR
+      );
+    } finally {
+      setVotePendingId(null);
+    }
+  }
+
   async function handleUse(template) {
     setUsingTemplateId(template.id);
 
     try {
-      const result = await useTemplate(template.id);
+      const result = await createProjectFromTemplate(template.id);
       window.sessionStorage.setItem(
         "gencontent-pending-toast",
         JSON.stringify({
@@ -242,6 +263,7 @@ export default function TemplatesScreen() {
     setSearch("");
     setType("all");
     setCategory("all");
+    setSort("newest");
   }
 
   function showNotification(title, message, notificationType, duration = 5000) {
@@ -278,7 +300,7 @@ export default function TemplatesScreen() {
 
       {activeTab === TEMPLATE_TABS.BROWSE && (
         <>
-          <section className="mb-7 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[minmax(14rem,1fr)_11rem_12rem_auto] md:items-end">
+          <section className="mb-7 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[minmax(14rem,1fr)_11rem_12rem_11rem_auto] md:items-end">
             <label className="grid min-w-0 gap-2 text-xs font-bold uppercase text-slate-500">
               {TEMPLATE_TEXT.SEARCH_LABEL}
               <span className="relative block">
@@ -316,6 +338,12 @@ export default function TemplatesScreen() {
               options={TEMPLATE_FILTER_OPTIONS.CATEGORIES}
               value={category}
             />
+            <FilterSelect
+              label={TEMPLATE_TEXT.SORT_LABEL}
+              onChange={setSort}
+              options={TEMPLATE_FILTER_OPTIONS.SORTS}
+              value={sort}
+            />
             <Button disabled={!isFiltered} onClick={clearFilters} type="button" variant="secondary">
               {TEMPLATE_TEXT.CLEAR_FILTERS}
             </Button>
@@ -324,10 +352,12 @@ export default function TemplatesScreen() {
           {!isFiltered && templateState.recentTemplates.length > 0 && (
             <TemplateSection
               favoritePendingId={favoritePendingId}
+              isVotePendingId={votePendingId}
               isUsingId={usingTemplateId}
               onFavorite={handleFavorite}
               onPreview={setPreviewTemplate}
               onUse={handleUse}
+              onVote={handleVote}
               templates={templateState.recentTemplates}
               title={TEMPLATE_TEXT.RECENT_SECTION_TITLE}
             />
@@ -354,7 +384,7 @@ export default function TemplatesScreen() {
             <Button
               onClick={() =>
                 activeTab === TEMPLATE_TABS.BROWSE
-                  ? fetchTemplates({ category, search, type })
+                  ? fetchTemplates({ category, search, sort, type })
                   : activeTab === TEMPLATE_TABS.FAVORITES
                     ? fetchFavoriteTemplates()
                     : fetchMyTemplates()
@@ -399,15 +429,19 @@ export default function TemplatesScreen() {
       ) : activeTab === TEMPLATE_TABS.BROWSE || activeTab === TEMPLATE_TABS.FAVORITES ? (
         <TemplateGrid
           favoritePendingId={favoritePendingId}
+          isVotePendingId={votePendingId}
           isUsingId={usingTemplateId}
           onFavorite={handleFavorite}
           onPreview={setPreviewTemplate}
           onUse={handleUse}
+          onVote={handleVote}
           templates={visibleTemplates}
         />
       ) : (
         <TemplateGrid
+          isVotePendingId={votePendingId}
           isUsingId={usingTemplateId}
+          onVote={handleVote}
           onPreview={setPreviewTemplate}
           onUse={handleUse}
           renderActions={(template) => (
@@ -502,10 +536,12 @@ function getTemplateTabLabel(tab) {
 
 function TemplateGrid({
   favoritePendingId,
+  isVotePendingId,
   isUsingId,
   onFavorite,
   onPreview,
   onUse,
+  onVote,
   renderActions,
   showFavorite = true,
   showManagementMeta = false,
@@ -517,11 +553,13 @@ function TemplateGrid({
         <TemplateCard
           actions={renderActions?.(template)}
           isFavoritePending={favoritePendingId === template.id}
+          isVotePending={isVotePendingId === template.id}
           isUsing={isUsingId === template.id}
           key={template.id}
           onFavorite={onFavorite}
           onPreview={onPreview}
           onUse={onUse}
+          onVote={onVote}
           showFavorite={showFavorite}
           showManagementMeta={showManagementMeta}
           template={template}
@@ -597,7 +635,7 @@ function FilterSelect({ label, onChange, options, value }) {
           <option key={option} value={option}>
             {option === "all"
               ? `All${label === TEMPLATE_TEXT.CATEGORY_FILTER_LABEL ? " Categories" : ""}`
-              : option}
+              : option.replaceAll("-", " ")}
           </option>
         ))}
       </select>

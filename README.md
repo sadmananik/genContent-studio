@@ -55,7 +55,7 @@ Install dependencies from the repository root:
 yarn install
 ```
 
-Enable the project Git hooks so Prettier runs before each commit:
+Enable the project Git hooks so Prettier, ESLint, and the frontend build run before each commit:
 
 ```bash
 yarn setup:hooks

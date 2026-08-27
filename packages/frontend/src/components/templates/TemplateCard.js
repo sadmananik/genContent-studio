@@ -1,4 +1,4 @@
-import { Eye, FileText, Image as ImageIcon, Star } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, FileText, Image as ImageIcon, Star } from "lucide-react";
 import Button from "../common/Button";
 import { cn } from "../../lib/styles";
 import { TEMPLATE_TEXT } from "../../constants/templates";
@@ -6,10 +6,12 @@ import { TEMPLATE_TEXT } from "../../constants/templates";
 export default function TemplateCard({
   actions,
   isFavoritePending = false,
+  isVotePending = false,
   isUsing = false,
   onFavorite,
   onPreview,
   onUse,
+  onVote,
   showFavorite = true,
   showManagementMeta = false,
   template
@@ -77,6 +79,33 @@ export default function TemplateCard({
       </div>
 
       <div className="mt-auto pt-5">
+        <div className="mb-4 flex min-h-8 items-center gap-2 border-t border-slate-100 pt-4">
+          {template.visibility === "public" && (
+            <>
+              <VoteButton
+                count={template.upvoteCount || 0}
+                disabled={isVotePending}
+                isSelected={template.currentUserVote === "up"}
+                label={`Upvote ${template.title}`}
+                onClick={() => onVote?.(template, "up")}
+                type="up"
+              />
+              <VoteButton
+                count={template.downvoteCount || 0}
+                disabled={isVotePending}
+                isSelected={template.currentUserVote === "down"}
+                label={`Downvote ${template.title}`}
+                onClick={() => onVote?.(template, "down")}
+                type="down"
+              />
+            </>
+          )}
+          {template.visibility !== "public" && (
+            <span className="text-xs font-bold text-slate-500">
+              Up {template.upvoteCount || 0} / Down {template.downvoteCount || 0}
+            </span>
+          )}
+        </div>
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
           <span
             className={cn(
@@ -110,6 +139,34 @@ export default function TemplateCard({
         )}
       </div>
     </article>
+  );
+}
+
+function VoteButton({ count, disabled, isSelected, label, onClick, type }) {
+  const isUpvote = type === "up";
+  return (
+    <button
+      aria-label={label}
+      aria-pressed={isSelected}
+      className={cn(
+        "inline-flex min-h-8 items-center gap-1 rounded-md border px-2.5 text-xs font-bold transition focus:outline-none focus:ring-2",
+        isSelected
+          ? isUpvote
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700 focus:ring-emerald-100"
+            : "border-rose-200 bg-rose-50 text-rose-700 focus:ring-rose-100"
+          : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700 focus:ring-slate-100"
+      )}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      {isUpvote ? (
+        <ArrowUp aria-hidden="true" size={15} />
+      ) : (
+        <ArrowDown aria-hidden="true" size={15} />
+      )}
+      {count}
+    </button>
   );
 }
 
