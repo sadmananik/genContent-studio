@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BringToFront, Circle, ImagePlus, Square, Trash2, Type } from "lucide-react";
 import Button from "../common/Button";
 import { demoImageSvg } from "./mockImageWorkspaceData";
@@ -21,7 +21,9 @@ export default function FabricImageEditor({
   const fabricRef = useRef(null);
   const applyingRemoteStateRef = useRef(false);
   const collaborationProviderRef = useRef(collaborationProvider);
+  const editableRef = useRef(editable);
   collaborationProviderRef.current = collaborationProvider;
+  editableRef.current = editable;
   const [activeObjectType, setActiveObjectType] = useState("None");
   const [fillColor, setFillColor] = useState("#8b5cf6");
   const [opacity, setOpacity] = useState(100);
@@ -44,7 +46,7 @@ export default function FabricImageEditor({
         height: canvasSize.height,
         preserveObjectStacking: true,
         renderOnAddRemove: true,
-        selection: editable,
+        selection: editableRef.current,
         width: canvasSize.width
       });
 
@@ -153,13 +155,73 @@ export default function FabricImageEditor({
       });
   }, [onDirtyChange, remoteCanvasState]);
 
+  const notifyCanvasChange = useCallback(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas || applyingRemoteStateRef.current) {
+      return;
+    }
+
+    onDirtyChange?.(true);
+    collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
+  }, [onDirtyChange]);
+
+  const addGeneratedDemoImage = useCallback(
+    async (prompt, requestId) => {
+      const fabric = fabricRef.current;
+      const canvas = canvasRef.current;
+
+      if (!fabric || !canvas || !editableRef.current) {
+        return;
+      }
+
+      const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
+      const accentColor = colors[requestId % colors.length];
+      const generatedImage = await createGeneratedImageObject(fabric, accentColor);
+      const card = new fabric.Rect({
+        fill: "#ffffff",
+        height: 86,
+        left: 510,
+        opacity: 0.94,
+        rx: 24,
+        ry: 24,
+        top: 358,
+        width: 276
+      });
+      const title = new fabric.Textbox("Generated Demo", {
+        fill: "#111827",
+        fontFamily: "Arial",
+        fontSize: 26,
+        fontWeight: 800,
+        left: 534,
+        top: 372,
+        width: 230
+      });
+      const caption = new fabric.Textbox(prompt || "AI image concept", {
+        fill: "#475569",
+        fontFamily: "Arial",
+        fontSize: 15,
+        fontWeight: 600,
+        left: 535,
+        top: 406,
+        width: 220
+      });
+
+      canvas.add(generatedImage, card, title, caption);
+      canvas.setActiveObject(generatedImage);
+      canvas.requestRenderAll();
+      notifyCanvasChange();
+    },
+    [notifyCanvasChange]
+  );
+
   useEffect(() => {
     if (!generationRequest || !canvasRef.current || !fabricRef.current) {
       return;
     }
 
-    addGeneratedDemoImage(generationRequest.prompt);
-  }, [generationRequest]);
+    addGeneratedDemoImage(generationRequest.prompt, generationRequest.id);
+  }, [addGeneratedDemoImage, generationRequest]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -235,52 +297,6 @@ export default function FabricImageEditor({
     canvas.requestRenderAll();
   }
 
-  async function addGeneratedDemoImage(prompt) {
-    const fabric = fabricRef.current;
-    const canvas = canvasRef.current;
-
-    if (!fabric || !canvas || !editable) {
-      return;
-    }
-
-    const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
-    const accentColor = colors[generationRequest.id % colors.length];
-    const generatedImage = await createGeneratedImageObject(fabric, accentColor);
-    const card = new fabric.Rect({
-      fill: "#ffffff",
-      height: 86,
-      left: 510,
-      opacity: 0.94,
-      rx: 24,
-      ry: 24,
-      top: 358,
-      width: 276
-    });
-    const title = new fabric.Textbox("Generated Demo", {
-      fill: "#111827",
-      fontFamily: "Arial",
-      fontSize: 26,
-      fontWeight: 800,
-      left: 534,
-      top: 372,
-      width: 230
-    });
-    const caption = new fabric.Textbox(prompt || "AI image concept", {
-      fill: "#475569",
-      fontFamily: "Arial",
-      fontSize: 15,
-      fontWeight: 600,
-      left: 535,
-      top: 406,
-      width: 220
-    });
-
-    canvas.add(generatedImage, card, title, caption);
-    canvas.setActiveObject(generatedImage);
-    canvas.requestRenderAll();
-    notifyCanvasChange();
-  }
-
   function applyFillColor(nextColor) {
     const canvas = canvasRef.current;
     const activeObject = canvas?.getActiveObject();
@@ -338,17 +354,6 @@ export default function FabricImageEditor({
 
     canvas.requestRenderAll();
     notifyCanvasChange();
-  }
-
-  function notifyCanvasChange() {
-    const canvas = canvasRef.current;
-
-    if (!canvas || applyingRemoteStateRef.current) {
-      return;
-    }
-
-    onDirtyChange?.(true);
-    collaborationProviderRef.current?.emitCanvasUpdate(canvas.toJSON());
   }
 
   return (

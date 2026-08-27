@@ -31,10 +31,12 @@ import { TEMPLATE_CATEGORIES, TEMPLATE_TEXT, TEMPLATE_VISIBILITY } from "../../c
 import { useAppStore } from "../../store";
 import WorkspaceExportMenu from "./WorkspaceExportMenu";
 import WorkspaceSharePopover from "./WorkspaceSharePopover";
+import QuickReactions from "../collaboration/QuickReactions";
 
 export default function TextWorkspaceHeader({
   canEdit = true,
   canManageSharing = true,
+  collaborationProvider = null,
   activeCollaborators = [],
   exportOptions,
   invitedUsers = [],
@@ -255,6 +257,7 @@ export default function TextWorkspaceHeader({
           <Users aria-hidden="true" className="mr-2 text-slate-500" size={17} />
           <UserAvatarStack users={activeUsers} />
           <span className="text-xs font-semibold text-slate-500">{activeUsers.length} active</span>
+          <QuickReactions collaborationProvider={collaborationProvider} onNotify={onNotify} />
           {canManageSharing && (
             <button
               className="rounded-md border border-transparent px-2 py-1 text-sm font-bold text-slate-600 transition-colors hover:border-violet-200 hover:bg-white hover:text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppModal from "../common/AppModal";
 import Button from "../common/Button";
 import TagSuggestionDropdown from "./TagSuggestionDropdown";
@@ -29,6 +29,8 @@ export default function TemplateFormModal({
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [isTagInputFocused, setIsTagInputFocused] = useState(false);
   const initialValuesKey = getInitialValuesKey(initialValues);
+  const initialValuesRef = useRef(initialValues);
+  initialValuesRef.current = initialValues;
   const isEditing = mode === "edit";
   const hasHistoryOptions = historyOptions.length > 0;
   const selectedHistory = hasHistoryOptions
@@ -67,7 +69,7 @@ export default function TemplateFormModal({
   }, [hasHistoryOptions, historyOptions, values.selectedHistoryId]);
 
   useEffect(() => {
-    setValues(getInitialValues(initialValues));
+    setValues(getInitialValues(initialValuesRef.current));
     setTagSuggestions([]);
     setIsTagInputFocused(false);
   }, [initialValuesKey, hasHistoryOptions]);

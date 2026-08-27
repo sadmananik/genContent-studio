@@ -227,6 +227,22 @@ The in-memory image and Yjs states are not durable across a backend restart. Mon
 
 Awareness carries user name, ID, and colour. Project events include join, leave, presence, permission update, access revoke, and AI activity notifications. The backend broadcasts only approved event names through `isProjectEvent`.
 
+### Quick reactions
+
+Quick reactions are ephemeral Socket.IO messages shared by the Text and Image workspaces. The preset definitions live in `packages/frontend/src/constants/quickReactions.js`; the backend keeps an equivalent ID whitelist in `packages/backend/src/constants/quickReactions.js`. There is no MongoDB model, REST endpoint, audit record, or project-content mutation for reactions.
+
+The workspace header mounts `QuickReactionButton`, `QuickReactionPopover`, and `ReactionLayer`. `TextWorkspaceHeader` listens for `project:quick-reaction` and uses the collaboration provider's `sendQuickReaction(reactionId)` method. The same header is used by `EditorScreen` and `ImageEditorScreen`, so the reaction layer is outside TipTap and Fabric state.
+
+The client sends only the current project ID and preset reaction ID:
+
+```js
+socket.emit("project:quick-reaction", { projectId, reactionId });
+```
+
+The server accepts the event only when the socket is authenticated, currently joined to the requested project room, and the reaction ID is on the approved whitelist. The sender is derived from `socket.user`; client-supplied sender names, messages, emojis, and permissions are ignored. A one-second per-socket cooldown prevents basic spam. Valid events are broadcast to the whole project room with the approved reaction definition, sender identity, project ID, and timestamp, including the sender's own socket.
+
+The frontend keeps at most five visible reactions and removes each after three seconds. Socket listeners are removed when the shared header unmounts. Reactions are not replayed after reconnecting or joining a room later. Access revocation continues to use the existing project event and workspace redirect flow.
+
 When adding a new event:
 
 1. Define its payload shape.
@@ -338,6 +354,14 @@ DELETE /api/templates/:id/favorite
 DELETE /api/templates/:id
 ```
 
+Realtime quick reactions use Socket.IO rather than the REST API:
+
+```text
+project:quick-reaction       client request with projectId and reactionId
+project:quick-reaction       server broadcast with approved reaction and sender
+project:quick-reaction-error server response when the cooldown is active
+```
+
 ## Testing And Validation
 
 Before opening a pull request:
@@ -359,7 +383,7 @@ For backend syntax and route changes:
 npm run build --workspace @gencontent/backend
 ```
 
-Manual collaboration checks should cover two browser sessions, reconnects, Editor/Viewer transitions, remote text edits, remote image edits, presence, and access revocation. Audit checks should cover owner access, collaborator denial, long prompt previews, update snapshots, and deletion after the AIChat row is gone.
+Manual collaboration checks should cover two browser sessions, reconnects, Editor/Viewer transitions, remote text edits, remote image edits, presence, quick reactions in both workspaces, sender display, multiple simultaneous reactions, reaction expiry, invalid reaction IDs, cooldown behavior, no persistence after refresh, and access revocation. Audit checks should cover owner access, collaborator denial, long prompt previews, update snapshots, and deletion after the AIChat row is gone.
 
 ## Extension Guidance
 

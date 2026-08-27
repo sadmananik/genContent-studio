@@ -34,6 +34,25 @@
   box-sizing: border-box;
 }
 
+@keyframes reaction-float {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  78% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
 body {
   margin: 0;
   background: radial-gradient(circle at 30% 5%, #ffffff 0, #f8f7ff 30%, var(--bg) 68%);

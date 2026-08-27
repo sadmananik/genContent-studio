@@ -37,6 +37,10 @@ This list describes the current product scope. Features marked **Implemented** a
 | Change Viewer/Editor permissions                | Implemented |
 | Remove collaborator access                      | Implemented |
 | Server-side edit permission enforcement         | Implemented |
+| Quick reactions in shared workspaces            | Implemented |
+| Temporary floating reaction notifications       | Implemented |
+| Viewer quick reaction support                   | Implemented |
+| Server-validated reaction rate limiting         | Implemented |
 
 ## AI Features
 
@@ -84,5 +88,6 @@ This list describes the current product scope. Features marked **Implemented** a
 - Templates, visibility, tags, publishing, and cloning.
 - Owner-only audit history and editor-created audit events.
 - Socket.IO/Yjs realtime collaboration and presence.
+- Ephemeral preset quick reactions for active project collaborators.
 
 See [user-guide.md](./user-guide.md) for workflows and [developer-guide.md](./developer-guide.md) for implementation details.
