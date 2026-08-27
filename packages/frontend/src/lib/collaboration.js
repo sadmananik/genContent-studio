@@ -54,11 +54,14 @@ export function createCollaborationProvider({ projectId, token, user, onEvent })
     connect() {
       socket.connect();
     },
-    emitCanvasUpdate(canvasState) {
-      socket.emit("canvas:update", { canvasState, projectId });
+    emitCanvasUpdate(canvasState, responseId) {
+      socket.emit("canvas:update", { canvasState, projectId, responseId });
     },
-    emitCanvasPointer(pointer) {
-      socket.emit("canvas:pointer", { pointer, projectId });
+    emitCanvasTransform(objectIndex, transform, responseId) {
+      socket.emit("canvas:transform", { objectIndex, projectId, responseId, transform });
+    },
+    emitCanvasPointer(pointer, responseId) {
+      socket.emit("canvas:pointer", { pointer, projectId, responseId });
     },
     sendQuickReaction(reactionId) {
       socket.emit("project:quick-reaction", { projectId, reactionId });

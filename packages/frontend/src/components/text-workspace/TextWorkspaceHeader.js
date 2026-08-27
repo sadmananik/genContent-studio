@@ -77,7 +77,7 @@ export default function TextWorkspaceHeader({
   const activeUsers = baseActiveUsers.map((user) => {
     const accessLevel = getUserProjectAccessLevel(project, user, collaboratorAccess);
     const permissionLabel =
-      project.currentUserRole === PROJECT_ROLES.OWNER && getUserId(user) === getUserId(owner)
+      getUserId(user) === getUserId(owner)
         ? SHARE_POPOVER_TEXT.OWNER_ROLE
         : ACCESS_LEVEL_LABELS[accessLevel] || SHARE_POPOVER_TEXT.PROJECT_ROLE_EDITOR;
     const label = user?.name || user?.email || "User";

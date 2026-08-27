@@ -52,11 +52,13 @@ export default function ImageEditorScreen() {
   const [collaborationProvider, setCollaborationProvider] = useState(null);
   const [remoteCanvasPointers, setRemoteCanvasPointers] = useState([]);
   const [remoteCanvasState, setRemoteCanvasState] = useState(null);
+  const [remoteCanvasTransform, setRemoteCanvasTransform] = useState(null);
   const [isProjectLoaded, setIsProjectLoaded] = useState(!isRealProject);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [clearCanvasRequest, setClearCanvasRequest] = useState(0);
   const [generationRequest, setGenerationRequest] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isCanvasSnapshotResolved, setIsCanvasSnapshotResolved] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -74,6 +76,8 @@ export default function ImageEditorScreen() {
   const projectRef = useRef(project);
   const responsesRef = useRef(responses);
   const selectedResponseIdRef = useRef(selectedResponseId);
+  const pendingLeaveTimersRef = useRef(new Map());
+  const hasAutoLoadedResponseRef = useRef(false);
   projectRef.current = project;
   responsesRef.current = responses;
   selectedResponseIdRef.current = selectedResponseId;
@@ -113,6 +117,13 @@ export default function ImageEditorScreen() {
 
     return [...usersByEmail.values()];
   }, [project]);
+  const visibleRemoteCanvasPointers = useMemo(
+    () =>
+      remoteCanvasPointers.filter(
+        (cursor) => cursor.responseId === getIdString(selectedResponseId)
+      ),
+    [remoteCanvasPointers, selectedResponseId]
+  );
   const statusLabel = hasUnsavedChanges
     ? TEXT_EDITOR_ALERTS.UNSAVED_CHANGES_STATUS
     : lastSavedAt
@@ -129,12 +140,28 @@ export default function ImageEditorScreen() {
         setActiveCollaborators(payload?.collaborators || []);
       }
 
-      if (event === "project:joined" && payload?.canvasState) {
+      if (event === "project:joined" && payload?.canvasState?.objects?.length) {
         setRemoteCanvasState(payload.canvasState);
       }
 
-      if (event === "canvas:update" && String(payload?.projectId) === String(projectId)) {
+      if (
+        event === "canvas:update" &&
+        String(payload?.projectId) === String(projectId) &&
+        isSameResponseScope(payload?.responseId, selectedResponseIdRef.current)
+      ) {
         setRemoteCanvasState(payload.canvasState);
+      }
+
+      if (
+        event === "canvas:transform" &&
+        String(payload?.projectId) === String(projectId) &&
+        isSameResponseScope(payload?.responseId, selectedResponseIdRef.current)
+      ) {
+        setRemoteCanvasTransform({
+          objectIndex: payload.objectIndex,
+          receivedAt: Date.now(),
+          transform: payload.transform
+        });
       }
 
       if (event === "canvas:pointer" && String(payload?.projectId) === String(projectId)) {
@@ -189,27 +216,49 @@ export default function ImageEditorScreen() {
       }
 
       if (event === "project:user-joined" && String(payload?.projectId) === String(projectId)) {
-        showNotification(
-          COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_TITLE,
-          COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_MESSAGE(
-            payload.user?.name || payload.user?.email || "A collaborator"
-          ),
-          TOAST_TYPES.INFO,
-          4000
-        );
+        const userId = getIdString(payload.user?.id || payload.user?._id);
+        const pendingLeaveTimer = pendingLeaveTimersRef.current.get(userId);
+
+        if (pendingLeaveTimer) {
+          window.clearTimeout(pendingLeaveTimer);
+          pendingLeaveTimersRef.current.delete(userId);
+        } else {
+          showNotification(
+            COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_TITLE,
+            COLLABORATION_ACTIVITY_ALERTS.USER_JOINED_MESSAGE(
+              payload.user?.name || payload.user?.email || "A collaborator"
+            ),
+            TOAST_TYPES.INFO,
+            4000
+          );
+        }
       }
 
       if (event === "project:user-left" && String(payload?.projectId) === String(projectId)) {
+        const userId = getIdString(payload.userId || payload.user?.id || payload.user?._id);
+
         setRemoteCanvasPointers((currentPointers) =>
-          currentPointers.filter((cursor) => cursor.id !== getIdString(payload.userId))
+          currentPointers.filter((cursor) => cursor.id !== userId)
         );
-        showNotification(
-          COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_TITLE,
-          COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_MESSAGE(
-            payload.user?.name || payload.user?.email || "A collaborator"
-          ),
-          TOAST_TYPES.INFO,
-          4000
+
+        const pendingLeaveTimer = pendingLeaveTimersRef.current.get(userId);
+        if (pendingLeaveTimer) {
+          window.clearTimeout(pendingLeaveTimer);
+        }
+
+        pendingLeaveTimersRef.current.set(
+          userId,
+          window.setTimeout(() => {
+            pendingLeaveTimersRef.current.delete(userId);
+            showNotification(
+              COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_TITLE,
+              COLLABORATION_ACTIVITY_ALERTS.USER_LEFT_MESSAGE(
+                payload.user?.name || payload.user?.email || "A collaborator"
+              ),
+              TOAST_TYPES.INFO,
+              4000
+            );
+          }, 3000)
         );
       }
 
@@ -270,7 +319,7 @@ export default function ImageEditorScreen() {
         );
 
         if (selectedResponseIdRef.current === payload.chatId) {
-          setClearCanvasRequest((currentRequest) => currentRequest + 1);
+          setClearCanvasRequest({ id: Date.now(), syncCanvas: false });
         }
       }
     },
@@ -327,6 +376,7 @@ export default function ImageEditorScreen() {
     setCollaborationProvider(provider);
     provider.socket.on("connect", () => setSocketConnected(true));
     provider.connect();
+    const pendingLeaveTimers = pendingLeaveTimersRef.current;
 
     return () => {
       provider.destroy();
@@ -334,6 +384,8 @@ export default function ImageEditorScreen() {
       setActiveCollaborators([]);
       setRemoteCanvasPointers([]);
       setSocketConnected(false);
+      pendingLeaveTimers.forEach((timer) => window.clearTimeout(timer));
+      pendingLeaveTimers.clear();
     };
   }, [
     handleCollaborationEvent,
@@ -371,6 +423,7 @@ export default function ImageEditorScreen() {
 
   useEffect(() => {
     if (!canvas || !isRealProject) {
+      setIsCanvasSnapshotResolved(true);
       return;
     }
 
@@ -399,8 +452,37 @@ export default function ImageEditorScreen() {
           error.message || IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
+      })
+      .finally(() => {
+        setIsCanvasSnapshotResolved(true);
       });
   }, [canvas, isRealProject, projectId]);
+
+  // Fall back to the most recent AI response when no canvas snapshot was ever saved.
+  useEffect(() => {
+    if (!canvas || !isCanvasSnapshotResolved || hasAutoLoadedResponseRef.current) {
+      return;
+    }
+
+    if (canvas.getObjects().length > 0 || !responses.length) {
+      return;
+    }
+
+    const latestResponse = responses[0];
+
+    if (!latestResponse?.imageUrl) {
+      return;
+    }
+
+    hasAutoLoadedResponseRef.current = true;
+    setSelectedResponseId(latestResponse.id);
+    setGenerationRequest({
+      id: Date.now(),
+      imageUrl: latestResponse.imageUrl,
+      prompt: latestResponse.prompt,
+      syncCanvas: false
+    });
+  }, [canvas, isCanvasSnapshotResolved, responses]);
 
   useEffect(() => {
     if (!canvas) {
@@ -485,7 +567,7 @@ export default function ImageEditorScreen() {
 
       setResponses((currentResponses) => [savedResponse, ...currentResponses]);
       setSelectedResponseId(savedResponse.id);
-      setGenerationRequest({ id: Date.now(), imageUrl: result.imageUrl, prompt });
+      setGenerationRequest({ id: Date.now(), imageUrl: result.imageUrl, prompt, syncCanvas: true });
       showNotification(
         IMAGE_EDITOR_ALERTS.GENERATED_TITLE,
         isRealProject
@@ -754,7 +836,7 @@ export default function ImageEditorScreen() {
       currentSelectedId === responseId ? nextResponses[0]?.id || null : currentSelectedId
     );
     if (isDeletingSelectedResponse) {
-      setClearCanvasRequest((currentRequest) => currentRequest + 1);
+      setClearCanvasRequest({ id: Date.now(), syncCanvas: false });
     }
     setPendingResponseDelete(null);
     showNotification(
@@ -780,7 +862,8 @@ export default function ImageEditorScreen() {
     setGenerationRequest({
       id: Date.now(),
       imageUrl: response.imageUrl,
-      prompt: response.prompt
+      prompt: response.prompt,
+      syncCanvas: false
     });
     showNotification(
       notificationOptions.title,
@@ -986,14 +1069,16 @@ export default function ImageEditorScreen() {
 
         <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
           <FabricImageEditor
+            activeResponseId={selectedResponseId}
             collaborationProvider={collaborationProvider}
             clearCanvasRequest={clearCanvasRequest}
             editable={canEditProject}
             generationRequest={generationRequest}
             onDirtyChange={setHasUnsavedChanges}
             onReady={handleCanvasReady}
-            remoteCanvasPointers={remoteCanvasPointers}
+            remoteCanvasPointers={visibleRemoteCanvasPointers}
             remoteCanvasState={remoteCanvasState}
+            remoteCanvasTransform={remoteCanvasTransform}
             statusLabel={statusLabel}
             statusTone={canvasStatusTone}
           />
@@ -1152,6 +1237,11 @@ function getIdString(value) {
   return String(value?._id || value?.id || value || "");
 }
 
+// Only sync live canvas edits between users viewing the same AI response/page.
+function isSameResponseScope(a, b) {
+  return getIdString(a) === getIdString(b);
+}
+
 function upsertRemoteCanvasPointer(currentPointers, payload) {
   const userId = getIdString(payload.user?.id || payload.user?._id);
 
@@ -1163,6 +1253,7 @@ function upsertRemoteCanvasPointer(currentPointers, payload) {
     color: getUserColor(userId),
     id: userId,
     name: payload.user?.name || payload.user?.email || "Collaborator",
+    responseId: getIdString(payload.responseId),
     x: Number(payload.pointer.x) || 0,
     y: Number(payload.pointer.y) || 0
   };
