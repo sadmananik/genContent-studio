@@ -1,7 +1,10 @@
 const { defineConfig } = require("cypress");
+const dotenv = require("dotenv");
 const { execFile } = require("child_process");
 const crypto = require("crypto");
 const path = require("path");
+
+dotenv.config({ path: path.resolve(__dirname, "packages/backend/.env.test") });
 
 module.exports = defineConfig({
   e2e: {

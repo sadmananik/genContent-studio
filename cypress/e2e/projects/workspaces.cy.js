@@ -37,7 +37,11 @@ describe("project workspaces", () => {
     }).then((project) => {
       window.localStorage.setItem("gencontent-auth", JSON.stringify({ token }));
       cy.visit(`/editor?type=text&projectId=${project.id || project._id}`);
-      cy.contains("Start writing your content here...").should("be.visible");
+      cy.contains(`${runId}_${testData.textProject.title}`).should("be.visible");
+      cy.get(".ProseMirror")
+        .should("be.visible")
+        .find("p[data-placeholder='Start writing your content here...']")
+        .should("exist");
     });
   });
 });
