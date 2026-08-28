@@ -27,6 +27,25 @@ Cypress.Commands.add("loginUser", (email, password) => {
   });
 });
 
+Cypress.Commands.add("loginVerifiedUser", (user, runId = Cypress.env("runId")) => {
+  return cy.registerUser(user, runId).then(({ email }) => {
+    return cy.getTestMailbox().then((mailboxResponse) => {
+      expect(mailboxResponse.status).to.eq(200);
+      const verificationEmail = mailboxResponse.body.find((mail) => mail.email === email);
+      expect(verificationEmail).to.exist;
+
+      const token = new URL(verificationEmail.text.match(/http[^\s]+/)[0]).searchParams.get(
+        "token"
+      );
+
+      return cy.apiRequest("POST", "/api/auth/verify-email", { token }).then((verifyResponse) => {
+        expect(verifyResponse.status).to.eq(200);
+        return cy.loginUser(email, user.password).then((session) => ({ ...session, email }));
+      });
+    });
+  });
+});
+
 Cypress.Commands.add("createProject", (token, project) => {
   return cy.apiRequest("POST", "/api/projects", { ...project }, token).then((response) => {
     expect(response.status).to.eq(201);

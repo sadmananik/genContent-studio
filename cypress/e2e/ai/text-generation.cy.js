@@ -1,4 +1,21 @@
 describe("AI text generation", () => {
+  let runId;
+  let testData;
+  let ownerEmail;
+
+  before(() => {
+    cy.fixture("test-data").then((data) => {
+      testData = data;
+      runId = `e2e_${Date.now().toString(36)}`;
+      Cypress.env("runId", runId);
+      cy.loginVerifiedUser(data.owner, runId).then(({ email }) => {
+        ownerEmail = email;
+      });
+    });
+  });
+
+  after(() => cy.cleanupE2EData());
+
   beforeEach(() => {
     cy.intercept("POST", "**/api/ai/generate-text", {
       statusCode: 200,
@@ -7,6 +24,7 @@ describe("AI text generation", () => {
         model: "cypress-mock"
       }
     }).as("generateText");
+    cy.loginUser(ownerEmail, testData.owner.password);
     cy.visit("/editor?type=text");
   });
 
