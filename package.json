@@ -15,9 +15,11 @@
     "setup:hooks": "git config core.hooksPath .githooks",
     "start": "lerna run start --parallel",
     "lint": "lerna run lint",
+    "start:e2e:backend": "NODE_ENV=e2e yarn workspace @gencontent/backend start",
+    "dev:e2e:frontend": "yarn workspace @gencontent/frontend dev",
     "test:e2e": "cypress run",
     "test:e2e:open": "cypress open",
-    "test:e2e:chrome": "env -u ELECTRON_RUN_AS_NODE -u ELECTRON_NO_ATTACH_CONSOLE FRONTEND_URL=http://localhost:3000 API_URL=http://localhost:4000 E2E_TEST_SECRET=local-e2e-secret cypress open --browser chrome",
+    "test:e2e:chrome": "env -u ELECTRON_RUN_AS_NODE -u ELECTRON_NO_ATTACH_CONSOLE FRONTEND_URL=http://localhost:3000 API_URL=http://localhost:4000 cypress open --browser chrome",
     "test:e2e:cleanup": "node packages/backend/scripts/cleanupE2EData.js"
   },
   "devDependencies": {

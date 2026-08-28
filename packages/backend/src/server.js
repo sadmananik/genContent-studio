@@ -2,6 +2,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const connectDatabase = require("./config/database");
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
@@ -16,7 +17,7 @@ const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const { attachCollaborationServer } = require("./services/collaborationServer");
 
 dotenv.config({
-  path: process.env.NODE_ENV === "e2e" ? ".env.test" : ".env"
+  path: path.resolve(__dirname, process.env.NODE_ENV === "e2e" ? "../.env.test" : "../.env")
 });
 
 const app = express();
