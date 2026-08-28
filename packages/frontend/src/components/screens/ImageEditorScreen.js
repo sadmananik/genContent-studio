@@ -10,7 +10,13 @@ import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import AIResponseCard from "../text-workspace/AIResponseCard";
 import FabricImageEditor from "../image-workspace/FabricImageEditor";
 import { mockImageProject } from "../image-workspace/mockImageWorkspaceData";
-import { textPromptActions } from "../text-workspace/promptActions";
+import {
+  IMAGE_QUICK_ACTIONS,
+  buildImageActionPrompt,
+  buildImageHistoryPrompt,
+  getImageQuickAction,
+  resolveMainImagePrompt
+} from "../../constants/imageQuickActions";
 import {
   ACCESS_LEVELS,
   AI_CONTENT_TYPES,
@@ -519,7 +525,7 @@ export default function ImageEditorScreen() {
     setNotification({ duration, id: Date.now(), message, title, type });
   }
 
-  async function handleGenerate() {
+  async function handleGenerate(generationOptions = {}) {
     if (!canEditProject) {
       showNotification(
         PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
@@ -528,6 +534,29 @@ export default function ImageEditorScreen() {
       );
       return;
     }
+
+    if (isGenerating) {
+      return;
+    }
+
+    const {
+      action = "generate",
+      historyPrompt,
+      imageData,
+      prompt: generationPrompt = prompt
+    } = generationOptions;
+    const trimmedPrompt = String(generationPrompt || "").trim();
+
+    if (!trimmedPrompt) {
+      showNotification(
+        IMAGE_EDITOR_ALERTS.IMAGE_ACTION_CONTEXT_REQUIRED_TITLE,
+        IMAGE_EDITOR_ALERTS.IMAGE_ACTION_CONTEXT_REQUIRED_MESSAGE,
+        TOAST_TYPES.WARNING
+      );
+      return;
+    }
+
+    const persistedPrompt = String(historyPrompt || trimmedPrompt).slice(0, 1200);
 
     setIsGenerating(true);
     showNotification(
@@ -540,13 +569,19 @@ export default function ImageEditorScreen() {
     try {
       const result = await generateImageFromPrompt({
         ...(isRealProject ? { project: projectId } : {}),
-        prompt
+        action,
+        ...(imageData ? { imageData } : {}),
+        prompt: trimmedPrompt
       });
-      const responseText = result.revisedPrompt || `Generated image for "${prompt.trim()}".`;
+      const responseText =
+        result.revisedPrompt ||
+        (action && action !== "generate"
+          ? `${getImageQuickAction(action)?.label || action}: ${persistedPrompt}`
+          : `Generated image for "${persistedPrompt}".`);
       const nextResponse = {
         id: `image-response-${Date.now()}`,
         imageUrl: result.imageUrl,
-        prompt,
+        prompt: persistedPrompt,
         response: responseText,
         timestamp: "Just now",
         favourite: false
@@ -558,7 +593,7 @@ export default function ImageEditorScreen() {
                 contentType: AI_CONTENT_TYPES.IMAGE,
                 imageUrl: result.imageUrl,
                 project: projectId,
-                prompt,
+                prompt: persistedPrompt,
                 response: responseText
               })
             )
@@ -567,7 +602,12 @@ export default function ImageEditorScreen() {
 
       setResponses((currentResponses) => [savedResponse, ...currentResponses]);
       setSelectedResponseId(savedResponse.id);
-      setGenerationRequest({ id: Date.now(), imageUrl: result.imageUrl, prompt, syncCanvas: true });
+      setGenerationRequest({
+        id: Date.now(),
+        imageUrl: result.imageUrl,
+        prompt: persistedPrompt,
+        syncCanvas: true
+      });
       showNotification(
         IMAGE_EDITOR_ALERTS.GENERATED_TITLE,
         isRealProject
@@ -586,7 +626,53 @@ export default function ImageEditorScreen() {
     }
   }
 
-  function handleQuickAction(action) {
+  function getCurrentVisualInput() {
+    // Prefer the saved AI image when the canvas has not been edited, so image
+    // actions receive the full generated asset instead of a tiny thumbnail on a
+    // large white canvas export.
+    if (!hasUnsavedChanges && selectedResponse?.imageUrl) {
+      return selectedResponse.imageUrl;
+    }
+
+    const activeCanvas = canvasRef.current;
+    const objects = typeof activeCanvas?.getObjects === "function" ? activeCanvas.getObjects() : [];
+
+    if (objects.length > 0) {
+      try {
+        const soleImage = objects.length === 1 ? getFabricImageObject(objects[0]) : null;
+
+        if (soleImage && typeof soleImage.toDataURL === "function") {
+          const objectDataUrl = soleImage.toDataURL({ format: "png", multiplier: 1 });
+
+          if (objectDataUrl && objectDataUrl.length <= MAX_IMAGE_PAYLOAD_CHARS) {
+            return objectDataUrl;
+          }
+        }
+
+        return exportCanvasImageData(activeCanvas);
+      } catch (error) {
+        if (error?.code === "IMAGE_TOO_LARGE") {
+          throw error;
+        }
+
+        if (selectedResponse?.imageUrl) {
+          return selectedResponse.imageUrl;
+        }
+
+        throw Object.assign(new Error(IMAGE_EDITOR_ALERTS.CANVAS_EXPORT_FAILED_MESSAGE), {
+          code: "CANVAS_EXPORT_FAILED"
+        });
+      }
+    }
+
+    if (selectedResponse?.imageUrl) {
+      return selectedResponse.imageUrl;
+    }
+
+    return null;
+  }
+
+  async function handleQuickAction(actionId, options = {}) {
     if (!canEditProject) {
       showNotification(
         PERMISSION_MESSAGES.VIEW_ONLY_TITLE,
@@ -596,7 +682,63 @@ export default function ImageEditorScreen() {
       return;
     }
 
-    setPrompt(`${action}: ${prompt}`.slice(0, 1200));
+    if (isGenerating) {
+      return;
+    }
+
+    const action = getImageQuickAction(actionId);
+
+    if (!action) {
+      return;
+    }
+
+    const basePrompt = resolveMainImagePrompt(prompt || selectedResponse?.prompt || "");
+    let imageData = null;
+
+    try {
+      imageData = action.usesImageInput ? getCurrentVisualInput() : null;
+    } catch (error) {
+      if (error?.code === "IMAGE_TOO_LARGE") {
+        showNotification(
+          IMAGE_EDITOR_ALERTS.IMAGE_TOO_LARGE_TITLE,
+          error.message || IMAGE_EDITOR_ALERTS.IMAGE_TOO_LARGE_MESSAGE,
+          TOAST_TYPES.WARNING
+        );
+        return;
+      }
+
+      showNotification(
+        IMAGE_EDITOR_ALERTS.CANVAS_EXPORT_FAILED_TITLE,
+        error.message || IMAGE_EDITOR_ALERTS.CANVAS_EXPORT_FAILED_MESSAGE,
+        TOAST_TYPES.WARNING
+      );
+      return;
+    }
+
+    if (!basePrompt && !imageData) {
+      showNotification(
+        IMAGE_EDITOR_ALERTS.IMAGE_ACTION_CONTEXT_REQUIRED_TITLE,
+        IMAGE_EDITOR_ALERTS.IMAGE_ACTION_CONTEXT_REQUIRED_MESSAGE,
+        TOAST_TYPES.WARNING
+      );
+      return;
+    }
+
+    const generationPrompt = buildImageActionPrompt(actionId, {
+      basePrompt,
+      style: options.style
+    });
+    const historyPrompt = buildImageHistoryPrompt(actionId, {
+      basePrompt,
+      style: options.style
+    });
+
+    await handleGenerate({
+      action: actionId,
+      historyPrompt,
+      ...(imageData ? { imageData } : {}),
+      prompt: generationPrompt
+    });
   }
 
   async function handleInviteUser(emailValue, accessLevel) {
@@ -670,6 +812,12 @@ export default function ImageEditorScreen() {
     const response = responses.find((item) => item.id === responseId);
 
     if (response) {
+      const mainConcept = resolveMainImagePrompt(response.prompt);
+
+      if (mainConcept) {
+        setPrompt(mainConcept);
+      }
+
       loadImageResponseIntoCanvas(response, {
         message: IMAGE_EDITOR_ALERTS.HISTORY_LOADED_MESSAGE,
         title: IMAGE_EDITOR_ALERTS.HISTORY_LOADED_TITLE,
@@ -1067,7 +1215,7 @@ export default function ImageEditorScreen() {
           selectedHistoryId={selectedResponseId}
         />
 
-        <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
+        <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,460px)] xl:p-7">
           <FabricImageEditor
             activeResponseId={selectedResponseId}
             collaborationProvider={collaborationProvider}
@@ -1085,13 +1233,15 @@ export default function ImageEditorScreen() {
 
           <aside className="grid min-w-0 content-start gap-5">
             <AIPromptPanel
-              actions={textPromptActions}
+              actions={IMAGE_QUICK_ACTIONS}
               disabled={!canEditProject}
               isGenerating={isGenerating}
-              onGenerate={handleGenerate}
+              onGenerate={() => handleGenerate()}
               onPromptChange={setPrompt}
               onQuickAction={handleQuickAction}
+              placeholder="Describe the image you want to create or improve..."
               prompt={prompt}
+              title="Ask AI to create or improve images"
             />
 
             <section className="grid gap-4">
@@ -1192,6 +1342,38 @@ function normalizeImageChat(chat) {
     timestamp: chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "Just now",
     favourite: Boolean(chat.isFavourite)
   };
+}
+
+const MAX_IMAGE_PAYLOAD_CHARS = 10_000_000;
+
+function getFabricImageObject(object) {
+  if (!object) {
+    return null;
+  }
+
+  const type = String(object.type || "").toLowerCase();
+
+  if (type === "image") {
+    return object;
+  }
+
+  return null;
+}
+
+function exportCanvasImageData(canvas) {
+  let dataUrl = canvas.toDataURL({ format: "png", multiplier: 1, quality: 1 });
+
+  if (dataUrl.length > MAX_IMAGE_PAYLOAD_CHARS) {
+    dataUrl = canvas.toDataURL({ format: "png", multiplier: 0.5, quality: 0.92 });
+  }
+
+  if (dataUrl.length > MAX_IMAGE_PAYLOAD_CHARS) {
+    throw Object.assign(new Error(IMAGE_EDITOR_ALERTS.IMAGE_TOO_LARGE_MESSAGE), {
+      code: "IMAGE_TOO_LARGE"
+    });
+  }
+
+  return dataUrl;
 }
 
 function downloadDataUrl(dataUrl, filename) {

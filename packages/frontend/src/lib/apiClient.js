@@ -38,7 +38,19 @@ export async function apiRequest(path, options = {}) {
     return data;
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("API request timed out. Please check that the backend is running.");
+      const timeoutError = new Error(
+        "API request timed out. Please check that the backend is running."
+      );
+      timeoutError.code = "TIMEOUT";
+      throw timeoutError;
+    }
+
+    if (error instanceof TypeError || error?.message === "Failed to fetch") {
+      const networkError = new Error(
+        "Unable to reach the API. Check your connection and that the backend is running."
+      );
+      networkError.code = "NETWORK";
+      throw networkError;
     }
 
     throw error;

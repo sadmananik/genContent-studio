@@ -26,7 +26,7 @@ export default function RegisterScreen() {
     confirmPassword: ""
   });
   const [formError, setFormError] = useState("");
-  const [message, setMessage] = useState("");
+  const [registrationResult, setRegistrationResult] = useState(null);
 
   useEffect(() => {
     clearAuthError();
@@ -50,7 +50,6 @@ export default function RegisterScreen() {
   function handleChange(event) {
     const { name, value } = event.target;
     setFormValues((currentValues) => ({ ...currentValues, [name]: value }));
-    setMessage("");
 
     if (name === "password" || name === "confirmPassword") {
       setFormError("");
@@ -72,22 +71,35 @@ export default function RegisterScreen() {
         password: formValues.password
       };
       const response = await registerUser(registrationDetails);
-      setMessage(
-        response.message ||
-          "Account created. Check your email to verify your account before signing in."
-      );
+      const submittedEmail =
+        response.email || response.user?.email || String(formValues.email).trim().toLowerCase();
+
+      setRegistrationResult({
+        email: submittedEmail,
+        message: response.message,
+        emailDeliveryMode: response.emailDeliveryMode || "smtp"
+      });
     } catch (error) {
       // Error state is displayed from the auth store.
     }
   }
 
+  const verifyEmailHref = registrationResult?.email
+    ? `${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(registrationResult.email)}`
+    : ROUTES.VERIFY_EMAIL;
+
   return (
     <section className="screen login-screen">
       <Brand />
       <form className="login-panel" onSubmit={handleRegister}>
-        <h2>Create account</h2>
-        <p>Start creating with your AI workspace. Verification links expire in 5 minutes.</p>
-        {!message && (
+        <h2>{registrationResult ? "Verify your email" : "Create account"}</h2>
+        {!registrationResult ? (
+          <p>Start creating with your AI workspace. Verification links expire in 5 minutes.</p>
+        ) : (
+          <p>Your account was created. Confirm the email below, then open the verification link.</p>
+        )}
+
+        {!registrationResult && (
           <>
             <label>
               <UserRound aria-hidden="true" size={17} strokeWidth={1.8} />
@@ -142,9 +154,40 @@ export default function RegisterScreen() {
               !formError && <p className="field-hint error">Passwords must match</p>}
           </>
         )}
+
         {(formError || auth.error) && <p className="auth-error">{formError || auth.error}</p>}
-        {message && <p className="auth-success">{message}</p>}
-        {!message && (
+
+        {registrationResult && (
+          <div className="auth-success verification-summary" role="status">
+            <p>
+              <strong>Verification email sent to:</strong>
+            </p>
+            <p className="verification-email">{registrationResult.email}</p>
+            <p>{registrationResult.message}</p>
+            {registrationResult.emailDeliveryMode === "console" ? (
+              <p className="field-hint">
+                Local development tip: real inbox delivery is not configured. Open the{" "}
+                <strong>backend terminal</strong> and look for{" "}
+                <code>GenContent Studio email</code>, then copy the verification link for{" "}
+                <strong>{registrationResult.email}</strong>.
+              </p>
+            ) : (
+              <p className="field-hint">
+                Check your inbox (and spam folder) for an email addressed to{" "}
+                <strong>{registrationResult.email}</strong>.
+              </p>
+            )}
+            <Button
+              className="full-width"
+              type="button"
+              onClick={() => router.push(verifyEmailHref)}
+            >
+              Continue to verification help
+            </Button>
+          </div>
+        )}
+
+        {!registrationResult && (
           <Button className="full-width register-submit" disabled={auth.loading} type="submit">
             {auth.loading ? "Creating account..." : "Create Account"}
           </Button>

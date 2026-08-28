@@ -5,7 +5,7 @@ const AUTH_MESSAGES = {
   EMAIL_VERIFICATION_INVALID: "This verification link is invalid or has expired",
   EMAIL_VERIFICATION_REQUIRED: "Verification token is required",
   EMAIL_VERIFICATION_SENT:
-    "Account created. Check your email to verify your account before signing in.",
+    "Account created. A verification link was sent to your email. Verify before signing in.",
   EMAIL_VERIFICATION_SUCCESS: "Email verified successfully. You can now sign in.",
   INVALID_CREDENTIALS: "Invalid email or password",
   LOGIN_REQUIRED_FIELDS: "Email and password are required",
@@ -21,7 +21,8 @@ const AUTH_MESSAGES = {
   REGISTER_DUPLICATE_EMAIL: "An account with this email already exists",
   REGISTER_REQUIRED_FIELDS: "Name, email, and password are required",
   RESEND_EMAIL_REQUIRED: "Email is required",
-  UNVERIFIED_LOGIN: "Please verify your email before signing in."
+  UNVERIFIED_LOGIN:
+    "Please verify your email before signing in. Open the verification link sent to your email, or request a new link."
 };
 
 const EMAIL_TEMPLATES = {

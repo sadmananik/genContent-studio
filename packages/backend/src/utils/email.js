@@ -174,6 +174,10 @@ function shouldUseConsoleDelivery() {
   return !process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS;
 }
 
+function getEmailDeliveryMode() {
+  return shouldUseConsoleDelivery() ? "console" : "smtp";
+}
+
 async function sendTextEmail({ email, subject, text }) {
   if (shouldUseConsoleDelivery()) {
     logEmailToConsole({ email, subject, text });
@@ -215,6 +219,7 @@ function clearTestMailbox() {
 
 module.exports = {
   clearTestMailbox,
+  getEmailDeliveryMode,
   getTestMailbox,
   sendEmailVerificationEmail,
   sendExistingUserProjectInviteEmail,

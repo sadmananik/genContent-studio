@@ -814,6 +814,27 @@ a {
   line-height: 1.4;
 }
 
+.verification-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.verification-summary .verification-email {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  word-break: break-all;
+  color: #0f172a;
+}
+
+.verification-summary .field-hint {
+  margin: 0;
+}
+
+.verification-summary button {
+  margin-top: 4px;
+}
+
 .form-row,
 .title-row,
 .editor-topbar,

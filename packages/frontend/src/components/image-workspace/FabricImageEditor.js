@@ -743,12 +743,20 @@ async function createGeneratedImageObject(fabric, imageUrl, accentColor) {
       crossOrigin: imageUrl?.startsWith("http") ? "anonymous" : undefined
     });
 
+    const scale = Math.min(
+      (canvasSize.width - 48) / Math.max(generatedImage.width || 1, 1),
+      (canvasSize.height - 48) / Math.max(generatedImage.height || 1, 1)
+    );
+
     generatedImage.set({
-      left: 488,
+      left: canvasSize.width / 2,
+      originX: "center",
+      originY: "center",
+      scaleX: scale,
+      scaleY: scale,
       shadow: "0 18px 34px rgba(15,23,42,0.18)",
-      top: 118
+      top: canvasSize.height / 2
     });
-    generatedImage.scaleToWidth(320);
     return generatedImage;
   } catch (error) {
     return new fabric.Group(
@@ -779,8 +787,8 @@ async function createGeneratedImageObject(fabric, imageUrl, accentColor) {
         })
       ],
       {
-        left: 488,
-        top: 118
+        left: canvasSize.width / 2 - 160,
+        top: canvasSize.height / 2 - 105
       }
     );
   }

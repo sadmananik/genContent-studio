@@ -167,11 +167,20 @@ export const IMAGE_EDITOR_ALERTS = {
   DRAFT_RESTORED_MESSAGE: "Saved image canvas loaded.",
   DRAFT_RESTORED_TITLE: "Draft restored",
   EXIT_WITHOUT_SAVING: "Exit Without Saving",
-  GENERATE_FAILED_MESSAGE: "Generated image could not be saved.",
+  CANVAS_EXPORT_FAILED_MESSAGE:
+    "The current canvas could not be exported for AI refinement. Try again or use Generate with a text prompt.",
+  CANVAS_EXPORT_FAILED_TITLE: "Canvas export failed",
+  GENERATE_FAILED_MESSAGE: "Unable to generate the image. Please try again.",
   GENERATE_FAILED_TITLE: "Generate failed",
   GENERATED_LOCAL_MESSAGE: "Generated image inserted into the canvas.",
   GENERATED_SAVED_MESSAGE: "Generated image saved to history and inserted into the canvas.",
   GENERATED_TITLE: "Image generated",
+  IMAGE_ACTION_CONTEXT_REQUIRED_MESSAGE:
+    "Add a prompt or load an image into the canvas before using this action.",
+  IMAGE_ACTION_CONTEXT_REQUIRED_TITLE: "Image context needed",
+  IMAGE_TOO_LARGE_MESSAGE:
+    "The current canvas image is too large to send for AI refinement. Simplify the design or export a smaller image.",
+  IMAGE_TOO_LARGE_TITLE: "Image too large",
   HISTORY_LOADED_MESSAGE: "Image response selected.",
   HISTORY_LOADED_TITLE: "History loaded",
   HISTORY_IMAGE_MISSING_MESSAGE:
@@ -243,12 +252,18 @@ export const AI_HISTORY_TEXT = {
 
 export const VERIFY_EMAIL_TEXT = {
   CHECKING_LINK: "Checking verification link...",
+  ENTER_EMAIL_HINT:
+    "Enter the same email address you used when creating your account so we can send a new verification link.",
   EXPIRED_HINT: "Account verification links expire in 5 minutes.",
-  INVALID_LINK: "This verification link is invalid or incomplete",
+  INVALID_LINK:
+    "No verification link was found in this page URL. If you just signed up, enter your email below to request a new link.",
+  LOCAL_CONSOLE_HINT:
+    "Local development: if SMTP is not configured, open the backend terminal and look for “GenContent Studio email” to copy the verification link.",
   RESEND_BUTTON: "Send New Verification Link",
   RESEND_BUTTON_LOADING: "Sending...",
   SIGN_IN_BACK: "Back to sign in",
   SIGN_IN_CONTINUE: "Continue to sign in",
+  TARGET_EMAIL_LABEL: "Verification email for:",
   TITLE: "Verify email"
 };
 
