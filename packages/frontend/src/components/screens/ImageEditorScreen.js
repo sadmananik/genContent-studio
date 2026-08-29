@@ -1177,7 +1177,7 @@ export default function ImageEditorScreen() {
   }
 
   return (
-    <section className="min-h-screen overflow-hidden bg-slate-50">
+    <section className="flex min-h-screen flex-col overflow-hidden bg-slate-50">
       <TextWorkspaceHeader
         activeCollaborators={collaborationState.activeCollaborators}
         canEdit={canEditProject}
@@ -1204,7 +1204,7 @@ export default function ImageEditorScreen() {
         }}
       />
 
-      <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[auto_minmax(0,1fr)]">
         <AIHistorySidebar
           history={history}
           isCollapsed={isHistoryCollapsed}
@@ -1215,21 +1215,23 @@ export default function ImageEditorScreen() {
           selectedHistoryId={selectedResponseId}
         />
 
-        <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,460px)] xl:p-7">
-          <FabricImageEditor
-            activeResponseId={selectedResponseId}
-            collaborationProvider={collaborationProvider}
-            clearCanvasRequest={clearCanvasRequest}
-            editable={canEditProject}
-            generationRequest={generationRequest}
-            onDirtyChange={setHasUnsavedChanges}
-            onReady={handleCanvasReady}
-            remoteCanvasPointers={visibleRemoteCanvasPointers}
-            remoteCanvasState={remoteCanvasState}
-            remoteCanvasTransform={remoteCanvasTransform}
-            statusLabel={statusLabel}
-            statusTone={canvasStatusTone}
-          />
+        <main className="grid min-h-0 min-w-0 items-start gap-5 overflow-auto p-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,460px)] xl:p-7">
+          <div className="min-w-0 self-start">
+            <FabricImageEditor
+              activeResponseId={selectedResponseId}
+              collaborationProvider={collaborationProvider}
+              clearCanvasRequest={clearCanvasRequest}
+              editable={canEditProject}
+              generationRequest={generationRequest}
+              onDirtyChange={setHasUnsavedChanges}
+              onReady={handleCanvasReady}
+              remoteCanvasPointers={visibleRemoteCanvasPointers}
+              remoteCanvasState={remoteCanvasState}
+              remoteCanvasTransform={remoteCanvasTransform}
+              statusLabel={statusLabel}
+              statusTone={canvasStatusTone}
+            />
+          </div>
 
           <aside className="grid min-w-0 content-start gap-5">
             <AIPromptPanel
