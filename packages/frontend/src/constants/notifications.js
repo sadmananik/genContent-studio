@@ -167,11 +167,20 @@ export const IMAGE_EDITOR_ALERTS = {
   DRAFT_RESTORED_MESSAGE: "Saved image canvas loaded.",
   DRAFT_RESTORED_TITLE: "Draft restored",
   EXIT_WITHOUT_SAVING: "Exit Without Saving",
-  GENERATE_FAILED_MESSAGE: "Generated image could not be saved.",
+  CANVAS_EXPORT_FAILED_MESSAGE:
+    "The current canvas could not be exported for AI refinement. Try again or use Generate with a text prompt.",
+  CANVAS_EXPORT_FAILED_TITLE: "Canvas export failed",
+  GENERATE_FAILED_MESSAGE: "Unable to generate the image. Please try again.",
   GENERATE_FAILED_TITLE: "Generate failed",
   GENERATED_LOCAL_MESSAGE: "Generated image inserted into the canvas.",
   GENERATED_SAVED_MESSAGE: "Generated image saved to history and inserted into the canvas.",
   GENERATED_TITLE: "Image generated",
+  IMAGE_ACTION_CONTEXT_REQUIRED_MESSAGE:
+    "Add a prompt or load an image into the canvas before using this action.",
+  IMAGE_ACTION_CONTEXT_REQUIRED_TITLE: "Image context needed",
+  IMAGE_TOO_LARGE_MESSAGE:
+    "The current canvas image is too large to send for AI refinement. Simplify the design or export a smaller image.",
+  IMAGE_TOO_LARGE_TITLE: "Image too large",
   HISTORY_LOADED_MESSAGE: "Image response selected.",
   HISTORY_LOADED_TITLE: "History loaded",
   HISTORY_IMAGE_MISSING_MESSAGE:

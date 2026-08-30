@@ -1,7 +1,1 @@
-export const textPromptActions = [
-  "Rewrite",
-  "Improve Tone",
-  "Summarise",
-  "Expand",
-  "SEO Suggestions"
-];
+export { TEXT_QUICK_ACTIONS as textPromptActions } from "../../constants/textQuickActions";

@@ -16,7 +16,7 @@ router.post(
   "/generate-image",
   requireUser,
   asyncHandler(async (req, res) => {
-    const { project, prompt } = req.body || {};
+    const { project, prompt, action, imageData } = req.body || {};
     let accessibleProject;
 
     if (project && Types.ObjectId.isValid(project)) {
@@ -25,13 +25,18 @@ router.post(
       await recordAuditEvent({
         actionType: AUDIT_ACTION_TYPES.AI_PROMPT_SUBMITTED,
         actor: req.user.id,
-        metadata: { contentType: AI_CONTENT_TYPES.IMAGE, prompt },
+        metadata: {
+          action: action || "generate",
+          contentType: AI_CONTENT_TYPES.IMAGE,
+          hasImageInput: Boolean(imageData),
+          prompt
+        },
         project,
         workspace: AUDIT_WORKSPACES.IMAGE
       });
     }
 
-    const result = await generateImage({ prompt });
+    const result = await generateImage({ action, imageData, prompt });
     res.json(result);
   })
 );

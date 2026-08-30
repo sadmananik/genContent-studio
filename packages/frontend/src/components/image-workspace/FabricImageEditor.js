@@ -25,6 +25,7 @@ export default function FabricImageEditor({
   const canvasElementRef = useRef(null);
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
+  const surfaceRef = useRef(null);
   const applyingRemoteStateRef = useRef(false);
   const remoteApplyStateRef = useRef({ isApplying: false, pendingState: null });
   const lastCanvasEmitRef = useRef(0);
@@ -39,6 +40,8 @@ export default function FabricImageEditor({
   const [activeObjectType, setActiveObjectType] = useState("None");
   const [canRedo, setCanRedo] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
+  const [displaySize, setDisplaySize] = useState(canvasSize);
+  const [displayScale, setDisplayScale] = useState(1);
   const [fillColor, setFillColor] = useState("#8b5cf6");
   const [opacity, setOpacity] = useState(100);
 
@@ -102,6 +105,7 @@ export default function FabricImageEditor({
 
       canvasRef.current = canvas;
       canvas.setDimensions(canvasSize);
+      fitCanvasToSurface(canvas, surfaceRef.current, setDisplaySize, setDisplayScale);
 
       canvas.calcOffset();
       canvas.requestRenderAll();
@@ -213,6 +217,42 @@ export default function FabricImageEditor({
       canvasRef.current = null;
     };
   }, [onDirtyChange, onReady, recordHistory, resetHistory]);
+
+  useEffect(() => {
+    const surface = surfaceRef.current;
+
+    if (!surface || typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+
+    const syncCanvasLayout = () => {
+      const canvas = canvasRef.current;
+
+      if (!canvas) {
+        return;
+      }
+
+      fitCanvasToSurface(canvas, surface, setDisplaySize, setDisplayScale);
+    };
+
+    const handleScroll = () => {
+      canvasRef.current?.calcOffset();
+    };
+
+    const observer = new ResizeObserver(() => {
+      syncCanvasLayout();
+    });
+
+    observer.observe(surface);
+    surface.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", syncCanvasLayout);
+
+    return () => {
+      observer.disconnect();
+      surface.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", syncCanvasLayout);
+    };
+  }, []);
 
   const applyRemoteCanvasState = useCallback(
     (canvas, state) => {
@@ -592,8 +632,8 @@ export default function FabricImageEditor({
   }
 
   return (
-    <section className="grid min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-3">
+    <section className="fabric-image-editor grid min-w-0 content-start overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
+      <div className="flex flex-wrap content-start items-center gap-2 border-b border-slate-200 p-3">
         <Button
           aria-label="Undo canvas change"
           disabled={!editable || !canUndo}
@@ -691,19 +731,24 @@ export default function FabricImageEditor({
           <ImagePlus aria-hidden="true" size={17} />
           Back
         </Button>
-        <div className="hidden flex-1 md:block" />
-        <StatusText tone={statusTone} variant="compact">
-          {statusLabel}
-        </StatusText>
-        <span className="text-xs font-bold uppercase text-slate-500">
-          Selected: {activeObjectType}
-        </span>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <StatusText tone={statusTone} variant="compact">
+            {statusLabel}
+          </StatusText>
+          <span className="text-xs font-bold uppercase text-slate-500">
+            Selected: {activeObjectType}
+          </span>
+        </div>
       </div>
 
-      <div className="fabric-canvas-surface overflow-auto bg-white p-3">
+      <div
+        className="fabric-canvas-surface overflow-auto bg-slate-50 p-3 pb-10"
+        ref={surfaceRef}
+        style={{ maxHeight: "calc(100vh - 170px)" }}
+      >
         <div
-          className="fabric-canvas-surface relative mx-auto rounded-md bg-white"
-          style={{ height: canvasSize.height, width: canvasSize.width }}
+          className="fabric-canvas-frame relative mx-auto rounded-md bg-white shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
+          style={{ height: displaySize.height, width: displaySize.width }}
         >
           <canvas height={canvasSize.height} ref={canvasElementRef} width={canvasSize.width} />
           {remoteCanvasPointers.map((cursor) => (
@@ -711,8 +756,8 @@ export default function FabricImageEditor({
               className="pointer-events-none absolute z-10"
               key={cursor.id}
               style={{
-                left: cursor.x,
-                top: cursor.y,
+                left: cursor.x * displayScale,
+                top: cursor.y * displayScale,
                 transform: "translate(4px, 4px)"
               }}
             >
@@ -743,12 +788,20 @@ async function createGeneratedImageObject(fabric, imageUrl, accentColor) {
       crossOrigin: imageUrl?.startsWith("http") ? "anonymous" : undefined
     });
 
+    const scale = Math.min(
+      (canvasSize.width - 48) / Math.max(generatedImage.width || 1, 1),
+      (canvasSize.height - 48) / Math.max(generatedImage.height || 1, 1)
+    );
+
     generatedImage.set({
-      left: 488,
+      left: canvasSize.width / 2,
+      originX: "center",
+      originY: "center",
+      scaleX: scale,
+      scaleY: scale,
       shadow: "0 18px 34px rgba(15,23,42,0.18)",
-      top: 118
+      top: canvasSize.height / 2
     });
-    generatedImage.scaleToWidth(320);
     return generatedImage;
   } catch (error) {
     return new fabric.Group(
@@ -779,8 +832,8 @@ async function createGeneratedImageObject(fabric, imageUrl, accentColor) {
         })
       ],
       {
-        left: 488,
-        top: 118
+        left: canvasSize.width / 2 - 160,
+        top: canvasSize.height / 2 - 105
       }
     );
   }
@@ -812,6 +865,25 @@ function buildGeneratedDemoSvg(accentColor) {
   <rect x="370" y="206" width="132" height="14" rx="7" fill="#475569" opacity="0.38"/>
   <rect x="370" y="250" width="96" height="34" rx="17" fill="${accentColor}" opacity="0.86"/>
 </svg>`;
+}
+
+function fitCanvasToSurface(canvas, surface, setDisplaySize, setDisplayScale) {
+  if (!canvas || !surface) {
+    return;
+  }
+
+  const availableWidth = Math.max(surface.clientWidth - 24, 240);
+  // Fit to width so the full canvas stays visible; allow vertical scroll if needed.
+  const scale = Math.min(1, availableWidth / canvasSize.width);
+  const width = Math.max(1, Math.floor(canvasSize.width * scale));
+  const height = Math.max(1, Math.floor(canvasSize.height * scale));
+
+  canvas.setDimensions({ width: canvasSize.width, height: canvasSize.height });
+  canvas.setDimensions({ width, height }, { cssOnly: true });
+  canvas.calcOffset();
+  canvas.requestRenderAll();
+  setDisplaySize({ height, width });
+  setDisplayScale(scale);
 }
 
 function getCanvasPointer(event, canvas) {

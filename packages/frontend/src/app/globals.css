@@ -200,7 +200,25 @@ a {
 
 /* Keep the image editor's canvas surface white in dark mode to avoid a black flash while it reloads. */
 :root[data-active-theme="dark"] .fabric-canvas-surface {
-  background-color: #ffffff;
+  background-color: #f8fafc;
+}
+
+.fabric-image-editor {
+  align-content: start;
+  height: fit-content;
+  max-width: 100%;
+}
+
+.fabric-canvas-frame .canvas-container {
+  display: block !important;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.fabric-canvas-frame .canvas-container,
+.fabric-canvas-frame .upper-canvas,
+.fabric-canvas-frame .lower-canvas {
+  border-radius: 0.375rem;
 }
 
 :root[data-active-theme="dark"] [class*="bg-slate-50"] {
