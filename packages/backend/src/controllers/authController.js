@@ -7,8 +7,7 @@ const httpError = require("../utils/httpError");
 const {
   sendEmailVerificationEmail,
   sendPasswordChangeEmail,
-  sendPasswordResetEmail,
-  getEmailDeliveryMode
+  sendPasswordResetEmail
 } = require("../utils/email");
 const { applyPendingProjectInvites } = require("../services/projectInviteService");
 const { signAuthToken } = require("../utils/token");
@@ -61,8 +60,6 @@ const register = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     message: AUTH_MESSAGES.EMAIL_VERIFICATION_SENT,
-    email: user.email,
-    emailDeliveryMode: getEmailDeliveryMode(),
     user: serializeUser(user)
   });
 });

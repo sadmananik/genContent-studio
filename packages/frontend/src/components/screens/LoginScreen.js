@@ -9,7 +9,6 @@ import Brand from "../common/Brand";
 import Button from "../common/Button";
 import PasswordField from "../common/PasswordField";
 import { ROUTES } from "../../constants/navigation";
-import { DEV_AUTH_BYPASS_ENABLED, ensureDevAuthSession } from "../../lib/devAuth";
 import { useAppStore } from "../../store";
 
 export default function LoginScreen() {
@@ -32,26 +31,6 @@ export default function LoginScreen() {
       router.replace(ROUTES.DASHBOARD);
     }
   }, [auth.isAuthenticated, router]);
-
-  function enterDevBypass() {
-    const session = ensureDevAuthSession();
-
-    if (!session) {
-      return;
-    }
-
-    useAppStore.setState((state) => ({
-      auth: {
-        ...state.auth,
-        user: session.user,
-        token: session.token,
-        isAuthenticated: true,
-        loading: false,
-        error: null
-      }
-    }));
-    router.replace(ROUTES.DASHBOARD);
-  }
 
   function handleChange(event) {
     const { checked, name, type, value } = event.target;
@@ -114,24 +93,9 @@ export default function LoginScreen() {
           <Link href={ROUTES.FORGOT_PASSWORD}>Forgot password?</Link>
         </div>
         {auth.error && <p className="auth-error">{auth.error}</p>}
-        {auth.error && /verify your email/i.test(auth.error) && formValues.email ? (
-          <p className="field-hint">
-            Need a new link for <strong>{formValues.email}</strong>?{" "}
-            <Link
-              href={`${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(formValues.email.trim().toLowerCase())}`}
-            >
-              Open email verification
-            </Link>
-          </p>
-        ) : null}
         <Button className="full-width" disabled={auth.loading} type="submit">
           {auth.loading ? "Signing in..." : "Sign In"}
         </Button>
-        {DEV_AUTH_BYPASS_ENABLED ? (
-          <Button className="full-width" onClick={enterDevBypass} type="button">
-            Skip login (dev preview)
-          </Button>
-        ) : null}
         <p className="signup">
           Don&apos;t have an account? <Link href={ROUTES.REGISTER}>Sign up</Link>
         </p>
