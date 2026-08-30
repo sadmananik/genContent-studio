@@ -16,9 +16,11 @@ const aiRoutes = require("./routes/aiRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const { attachCollaborationServer } = require("./services/collaborationServer");
 
-dotenv.config({
-  path: path.resolve(__dirname, process.env.NODE_ENV === "e2e" ? "../.env.test" : "../.env")
-});
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config({
+    path: path.resolve(__dirname, process.env.NODE_ENV === "e2e" ? "../.env.test" : "../.env")
+  });
+}
 
 const app = express();
 const httpServer = http.createServer(app);
