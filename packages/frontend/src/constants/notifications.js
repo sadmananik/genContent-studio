@@ -252,18 +252,12 @@ export const AI_HISTORY_TEXT = {
 
 export const VERIFY_EMAIL_TEXT = {
   CHECKING_LINK: "Checking verification link...",
-  ENTER_EMAIL_HINT:
-    "Enter the same email address you used when creating your account so we can send a new verification link.",
   EXPIRED_HINT: "Account verification links expire in 5 minutes.",
-  INVALID_LINK:
-    "No verification link was found in this page URL. If you just signed up, enter your email below to request a new link.",
-  LOCAL_CONSOLE_HINT:
-    "Local development: if SMTP is not configured, open the backend terminal and look for “GenContent Studio email” to copy the verification link.",
+  INVALID_LINK: "This verification link is invalid or incomplete",
   RESEND_BUTTON: "Send New Verification Link",
   RESEND_BUTTON_LOADING: "Sending...",
   SIGN_IN_BACK: "Back to sign in",
   SIGN_IN_CONTINUE: "Continue to sign in",
-  TARGET_EMAIL_LABEL: "Verification email for:",
   TITLE: "Verify email"
 };
 

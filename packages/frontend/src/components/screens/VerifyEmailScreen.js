@@ -20,24 +20,17 @@ export default function VerifyEmailScreen() {
     searchParams.get("verificationToken") ||
     searchParams.get("code") ||
     "";
-  const emailFromQuery = searchParams.get("email") || "";
   const auth = useAppStore((state) => state.auth);
   const clearAuthError = useAppStore((state) => state.clearAuthError);
   const resendVerificationEmail = useAppStore((state) => state.resendVerificationEmail);
   const verifyEmail = useAppStore((state) => state.verifyEmail);
-  const [email, setEmail] = useState(emailFromQuery);
+  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [resendMessage, setResendMessage] = useState("");
   const [verificationAttempted, setVerificationAttempted] = useState(false);
   const errorMessage = auth.error || (!token && !message ? VERIFY_EMAIL_TEXT.INVALID_LINK : "");
 
   useEffect(() => clearAuthError(), [clearAuthError]);
-
-  useEffect(() => {
-    if (emailFromQuery) {
-      setEmail(emailFromQuery);
-    }
-  }, [emailFromQuery]);
 
   useEffect(() => {
     let isActive = true;
@@ -76,9 +69,7 @@ export default function VerifyEmailScreen() {
 
     try {
       const response = await resendVerificationEmail(email);
-      setResendMessage(
-        `${response.message} Sent for: ${String(email).trim().toLowerCase()}.`
-      );
+      setResendMessage(response.message);
     } catch (error) {
       // Error state is displayed from the auth store.
     }
@@ -90,13 +81,6 @@ export default function VerifyEmailScreen() {
       <form className="login-panel" onSubmit={handleResend}>
         <h2>{VERIFY_EMAIL_TEXT.TITLE}</h2>
         <p>{VERIFY_EMAIL_TEXT.EXPIRED_HINT}</p>
-        {email ? (
-          <p className="auth-success" role="status">
-            {VERIFY_EMAIL_TEXT.TARGET_EMAIL_LABEL} <strong>{email}</strong>
-          </p>
-        ) : (
-          <p className="field-hint">{VERIFY_EMAIL_TEXT.ENTER_EMAIL_HINT}</p>
-        )}
         {!verificationAttempted && (
           <p className="auth-success">{VERIFY_EMAIL_TEXT.CHECKING_LINK}</p>
         )}
@@ -110,7 +94,7 @@ export default function VerifyEmailScreen() {
                 autoComplete="email"
                 name="email"
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="Email address used at signup"
+                placeholder="Email address"
                 required
                 type="email"
                 value={email}
@@ -126,7 +110,6 @@ export default function VerifyEmailScreen() {
                 ? VERIFY_EMAIL_TEXT.RESEND_BUTTON_LOADING
                 : VERIFY_EMAIL_TEXT.RESEND_BUTTON}
             </Button>
-            <p className="field-hint">{VERIFY_EMAIL_TEXT.LOCAL_CONSOLE_HINT}</p>
           </div>
         )}
         <p className="signup">

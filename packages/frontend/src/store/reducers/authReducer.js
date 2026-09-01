@@ -92,33 +92,9 @@ export function createAuthReducer(set, get) {
         get().setCurrentUser(user);
         return user;
       } catch (error) {
-        // Only clear the session for auth failures. Network/timeouts should not
-        // force logout after a refresh during temporary connection loss.
-        if (error?.status === 401) {
-          clearAuthState();
-          get().clearUserState();
-          setAuthSessionError(set, error);
-          throw error;
-        }
-
-        const session = getAuthSession();
-
-        if (session?.token && session?.user) {
-          set((state) => ({
-            auth: {
-              ...state.auth,
-              user: session.user,
-              token: session.token,
-              isAuthenticated: true,
-              loading: false,
-              error: null
-            }
-          }));
-          get().setCurrentUser(session.user);
-          return session.user;
-        }
-
-        setAuthError(set, error);
+        clearAuthState();
+        get().clearUserState();
+        setAuthSessionError(set, error);
         throw error;
       }
     },
