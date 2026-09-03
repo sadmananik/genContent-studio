@@ -1,0 +1,116 @@
+name: Deploy Backend Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_target:
+        description: "Release selection"
+        required: true
+        type: choice
+        default: "latest"
+        options:
+          - latest
+          - custom
+      release_tag:
+        description: "Required only when deployment_target is custom, for example v1.0.0"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy backend to EC2
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production-backend
+      cancel-in-progress: false
+
+    steps:
+      - name: Resolve release tag
+        id: release
+        env:
+          DEPLOYMENT_TARGET: ${{ inputs.deployment_target }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [ "$DEPLOYMENT_TARGET" = "latest" ]; then
+            git fetch --tags --force
+            RELEASE_TAG="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
+
+            if [ -z "$RELEASE_TAG" ]; then
+              echo "No release tag matching vMAJOR.MINOR.PATCH was found."
+              exit 1
+            fi
+          else
+            if ! printf '%s' "$RELEASE_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "release_tag must match vMAJOR.MINOR.PATCH, for example v1.0.0"
+              exit 1
+            fi
+          fi
+
+          echo "Deploying $RELEASE_TAG"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout selected release tag
+        uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ steps.release.outputs.release_tag }}
+
+      - name: Verify backend Docker build
+        run: docker build -f packages/backend/Dockerfile -t gencontent-backend:${{ github.sha }} .
+
+      - name: Configure SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          test -n "$EC2_HOST"
+          test -n "$EC2_USER"
+          test -n "$EC2_SSH_KEY"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/gencontent_ec2
+          chmod 600 ~/.ssh/gencontent_ec2
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync repository to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '**/node_modules' \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            -e "ssh -i ~/.ssh/gencontent_ec2" \
+            ./ "$EC2_USER@$EC2_HOST:~/gencontent-studio/"
+
+      - name: Rebuild and restart backend on EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/gencontent_ec2 "$EC2_USER@$EC2_HOST" <<'EOF'
+          set -euo pipefail
+          cd ~/gencontent-studio
+          test -f packages/backend/.env.production
+          docker build -f packages/backend/Dockerfile -t gencontent-backend:latest .
+          docker rm -f gencontent-backend || true
+          docker run -d \
+            --name gencontent-backend \
+            --restart unless-stopped \
+            --env-file packages/backend/.env.production \
+            -p 127.0.0.1:4000:4000 \
+            gencontent-backend:latest
+          EOF
+
+      - name: Health check through Nginx
+        env:
+          BACKEND_PUBLIC_URL: ${{ vars.BACKEND_PUBLIC_URL }}
+        run: |
+          test -n "$BACKEND_PUBLIC_URL"
+          curl --fail --retry 8 --retry-delay 5 "$BACKEND_PUBLIC_URL/health"
