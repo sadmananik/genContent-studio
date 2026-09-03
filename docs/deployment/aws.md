@@ -2,6 +2,14 @@
 
 GenContent Studio production deployment uses AWS Amplify for the Next.js frontend and an EC2-hosted Docker backend behind Nginx.
 
+Current production URLs:
+
+```text
+Frontend: https://gencontentstudio.com/
+Frontend www: https://www.gencontentstudio.com/
+Backend API: https://api.gencontentstudio.com
+```
+
 ## Architecture
 
 ```mermaid
@@ -51,15 +59,17 @@ The frontend is deployed separately through AWS Amplify.
 GitHub repository
   -> AWS Amplify
   -> Next.js frontend
-  -> public Amplify URL
+  -> https://gencontentstudio.com/
 ```
 
-In Amplify, connect the GitHub repository and choose the production branch or release process required for the project. Amplify builds the frontend from `packages/frontend`.
+In Amplify, connect the GitHub repository and choose the production branch or release process required for the project. The current production deployment builds the `main` branch from `packages/frontend`.
 
 Configure this frontend environment variable in Amplify:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://api.your-domain.com
+AMPLIFY_DIFF_DEPLOY=false
+AMPLIFY_MONOREPO_APP_ROOT=packages/frontend
+NEXT_PUBLIC_API_BASE_URL=https://api.gencontentstudio.com
 ```
 
 Use the public HTTPS Nginx backend endpoint.
@@ -71,6 +81,40 @@ Amplify serves the frontend over HTTPS automatically. The backend should also us
 Do not put backend secrets in Amplify. The frontend variable above is public because it is bundled into the browser app.
 
 Frontend deployment is not handled by `.github/workflows/deploy-backend-production.yml`. That workflow deploys only the backend Docker container to EC2.
+
+Use this Amplify build specification for the monorepo frontend:
+
+```yaml
+version: 1
+applications:
+  - frontend:
+      phases:
+        preBuild:
+          commands:
+            - yarn install --frozen-lockfile
+        build:
+          commands:
+            - yarn --cwd packages/frontend build
+      artifacts:
+        baseDirectory: packages/frontend/.next
+        files:
+          - "**/*"
+      cache:
+        paths:
+          - packages/frontend/.next/cache/**/*
+          - node_modules/**/*
+    buildPath: /
+    appRoot: packages/frontend
+```
+
+Namecheap DNS records for the frontend should match the values shown by Amplify. The current pattern is:
+
+```text
+@    ALIAS   <Amplify CloudFront target>
+www  CNAME   <Amplify CloudFront target>
+```
+
+Keep the AWS certificate validation CNAME in Namecheap so Amplify can renew the managed certificate.
 
 ## Backend Deployment
 
@@ -140,7 +184,7 @@ Use `packages/backend/.env.production.example` as the template and set productio
 ```env
 NODE_ENV=production
 PORT=4000
-FRONTEND_ORIGIN=https://your-amplify-url
+FRONTEND_ORIGIN=https://gencontentstudio.com
 MONGODB_URI=
 AUTH_TOKEN_SECRET=
 OPENAI_API_KEY=
@@ -178,14 +222,14 @@ The repository template is:
 deploy/nginx/gencontent.conf
 ```
 
-On EC2, copy or link it into the Nginx sites configuration and replace `api.your-domain.com` with the real backend domain.
+On EC2, copy or link it into the Nginx sites configuration and replace `api.your-domain.com` with `api.gencontentstudio.com`.
 
 ### Certbot HTTPS Setup
 
 Before running Certbot, create a DNS `A` record for the backend domain:
 
 ```text
-api.your-domain.com -> EC2 public IP
+api.gencontentstudio.com -> EC2 public IP
 ```
 
 The EC2 security group must allow:
@@ -202,41 +246,73 @@ sudo apt update
 sudo apt install nginx certbot python3-certbot-nginx -y
 ```
 
-Enable the Nginx site:
+On a fresh server, the full Nginx template cannot validate until Let's Encrypt certificate files exist. Bootstrap with a temporary HTTP-only config first:
 
-```bash
-sudo cp deploy/nginx/gencontent.conf /etc/nginx/sites-available/gencontent
-sudo sed -i 's/api.your-domain.com/your-real-backend-domain/g' /etc/nginx/sites-available/gencontent
-sudo ln -s /etc/nginx/sites-available/gencontent /etc/nginx/sites-enabled/gencontent
+```nginx
+server {
+  listen 80;
+  server_name api.gencontentstudio.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:4000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
 ```
 
-If the certificate files do not exist yet, temporarily comment out the `listen 443 ssl http2`, `ssl_certificate`, and `ssl_certificate_key` lines before the first Nginx validation. Then run Certbot:
+Enable the temporary Nginx site:
 
 ```bash
+sudo nano /etc/nginx/sites-available/gencontent
+sudo ln -s /etc/nginx/sites-available/gencontent /etc/nginx/sites-enabled/gencontent
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
-sudo certbot --nginx -d your-real-backend-domain
+```
+
+After DNS resolves and the backend container is healthy, run Certbot:
+
+```bash
+sudo certbot --nginx -d api.gencontentstudio.com
 ```
 
 Certbot creates the certificate under:
 
 ```text
-/etc/letsencrypt/live/your-real-backend-domain/
+/etc/letsencrypt/live/api.gencontentstudio.com/
 ```
 
-After Certbot succeeds, make sure the final Nginx config includes:
+After Certbot succeeds, install the full repository Nginx config:
+
+```bash
+sudo cp deploy/nginx/gencontent.conf /etc/nginx/sites-available/gencontent
+sudo sed -i 's/api.your-domain.com/api.gencontentstudio.com/g' /etc/nginx/sites-available/gencontent
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+The final Nginx config should include:
 
 ```nginx
 listen 443 ssl http2;
-ssl_certificate /etc/letsencrypt/live/your-real-backend-domain/fullchain.pem;
-ssl_certificate_key /etc/letsencrypt/live/your-real-backend-domain/privkey.pem;
+ssl_certificate /etc/letsencrypt/live/api.gencontentstudio.com/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/api.gencontentstudio.com/privkey.pem;
 ```
 
-Validate and reload:
+Validate the public backend:
 
 ```bash
-sudo nginx -t
-sudo systemctl reload nginx
+curl https://api.gencontentstudio.com/health
+```
+
+Expected response:
+
+```json
+{ "status": "ok", "service": "gencontent-backend" }
 ```
 
 Check certificate auto-renewal:
@@ -318,7 +394,7 @@ BACKEND_PUBLIC_URL
 ```
 
 ```text
-BACKEND_PUBLIC_URL=https://api.your-domain.com
+BACKEND_PUBLIC_URL=https://api.gencontentstudio.com
 ```
 
 Application secrets such as MongoDB, OpenAI, SMTP, and auth token values should stay in the EC2 runtime env file or a production secrets manager, not in workflow logs.
