@@ -18,9 +18,11 @@ export const ROUTES = {
 export const NAV_ITEMS = [
   { icon: "LayoutDashboard", label: "Dashboard", href: ROUTES.DASHBOARD },
   { icon: "FolderKanban", label: "Projects", href: ROUTES.PROJECTS },
-  { icon: "Users", label: "Shared with Me", href: ROUTES.SHARED },
+  { icon: "Sparkles", label: "AI Studio", href: ROUTES.TEMPLATES },
+  { icon: "Image", label: "Image Studio", href: `${ROUTES.PROJECTS}?type=image` },
+  { icon: "SearchCheck", label: "SEO Tools", href: ROUTES.TEMPLATES },
   { icon: "Star", label: "Favorites", href: ROUTES.FAVORITES },
-  { icon: "PanelTop", label: "Templates", href: ROUTES.TEMPLATES }
+  { icon: "Users", label: "Shared with Me", href: ROUTES.SHARED }
 ];
 
 export const EDITOR_NAV_ITEMS = [

@@ -1,16 +1,23 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, Search } from "lucide-react";
 import UserProfileMenu from "./UserProfileMenu";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
 export default function AppHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const auth = useAppStore((state) => state.auth);
   const userState = useAppStore((state) => state.userState);
   const logoutUser = useAppStore((state) => state.logoutUser);
+  const projectState = useAppStore((state) => state.projectState);
   const user = userState.profile || auth.user;
+  const [query, setQuery] = useState("");
+
+  const planLabel = useMemo(() => "Free Plan", []);
 
   function handleLogout() {
     logoutUser();
@@ -25,14 +32,57 @@ export default function AppHeader() {
     router.push(ROUTES.SETTINGS);
   }
 
+  function handleSearch(event) {
+    event.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const match = (projectState.projects || []).find((project) =>
+      String(project.title || "")
+        .toLowerCase()
+        .includes(trimmed.toLowerCase())
+    );
+
+    if (match) {
+      const projectId = match._id || match.id;
+      const type = match.type === "image" ? "image" : "text";
+      router.push(`${ROUTES.EDITOR}?projectId=${projectId}&type=${type}`);
+      return;
+    }
+
+    router.push(`${ROUTES.PROJECTS}?q=${encodeURIComponent(trimmed)}`);
+  }
+
   return (
-    <header className="flex min-h-[73px] items-center justify-end border-b border-slate-200 bg-white px-5 py-4 md:px-7">
-      <UserProfileMenu
-        user={user}
-        onLogout={handleLogout}
-        onProfile={handleProfile}
-        onSettings={handleSettings}
-      />
+    <header className="dash-header">
+      <form className="dash-search" onSubmit={handleSearch}>
+        <Search aria-hidden="true" size={16} />
+        <input
+          aria-label="Search projects"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search projects, content, prompts..."
+          type="search"
+          value={query}
+        />
+        <kbd>⌘ K</kbd>
+      </form>
+
+      <div className="dash-header-actions">
+        <button aria-label="Notifications" className="dash-bell" type="button">
+          <Bell size={18} />
+        </button>
+        <div className="dash-header-user">
+          <UserProfileMenu
+            user={user}
+            onLogout={handleLogout}
+            onProfile={handleProfile}
+            onSettings={handleSettings}
+          />
+          {pathname === ROUTES.DASHBOARD ? <span className="dash-plan-badge">{planLabel}</span> : null}
+        </div>
+      </div>
     </header>
   );
 }

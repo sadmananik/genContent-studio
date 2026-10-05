@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import AppHeader from "../../components/common/AppHeader";
 import ProtectedRoute from "../../components/common/ProtectedRoute";
@@ -36,7 +36,9 @@ export default function ProtectedLayout({ children }) {
     <ProtectedRoute>
       <main className="protected-stage">
         <section className="screen app-frame">
-          <AppSidebar />
+          <Suspense fallback={<aside className="app-sidebar dash-sidebar" />}>
+            <AppSidebar />
+          </Suspense>
           <div className="min-w-0">
             <AppHeader />
             {children}
