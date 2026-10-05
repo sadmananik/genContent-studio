@@ -364,9 +364,7 @@
 
 .lp-product-main {
   padding: 1.15rem 1.2rem 1.25rem;
-  background:
-    radial-gradient(circle at 85% 15%, rgba(167, 139, 250, 0.18), transparent 40%),
-    #fff;
+  background: radial-gradient(circle at 85% 15%, rgba(167, 139, 250, 0.18), transparent 40%), #fff;
 }
 
 .lp-product-main h3 {

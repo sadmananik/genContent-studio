@@ -35,21 +35,24 @@ const FEATURES = [
   },
   {
     title: "Content Improvement",
-    description: "Refine your content with grammar correction, summarisation, paraphrasing and tone adjustment.",
+    description:
+      "Refine your content with grammar correction, summarisation, paraphrasing and tone adjustment.",
     icon: WandSparkles,
     color: "#10b981",
     bg: "rgba(16, 185, 129, 0.12)"
   },
   {
     title: "SEO Assistant",
-    description: "Get AI-driven SEO suggestions to make your content rank higher on search engines.",
+    description:
+      "Get AI-driven SEO suggestions to make your content rank higher on search engines.",
     icon: SearchCheck,
     color: "#f59e0b",
     bg: "rgba(245, 158, 11, 0.12)"
   },
   {
     title: "AI Image Generation",
-    description: "Create stunning images from text prompts for your blogs, ads and social projects.",
+    description:
+      "Create stunning images from text prompts for your blogs, ads and social projects.",
     icon: ImageIcon,
     color: "#3b82f6",
     bg: "rgba(59, 130, 246, 0.12)"
@@ -63,7 +66,8 @@ const FEATURES = [
   },
   {
     title: "Real-Time Collaboration",
-    description: "Work together with your team on documents and visual content in one shared workspace.",
+    description:
+      "Work together with your team on documents and visual content in one shared workspace.",
     icon: Users,
     color: "#6366f1",
     bg: "rgba(99, 102, 241, 0.12)"
@@ -138,7 +142,9 @@ function HeroProductMock() {
         <h3>Create Amazing Content</h3>
         <p>Describe what you want to create and let AI do the heavy lifting.</p>
         <div className="lp-composer">
-          <div className="placeholder">Write a blog post about sustainable living tips for beginners...</div>
+          <div className="placeholder">
+            Write a blog post about sustainable living tips for beginners...
+          </div>
           <div className="lp-composer-row">
             <div className="lp-chip-row">
               <span className="lp-chip">Blog</span>
@@ -295,7 +301,10 @@ export default function LandingPage() {
               return (
                 <article className="lp-feature-card" key={feature.title}>
                   <div className="lp-feature-top">
-                    <span className="lp-feature-icon" style={{ background: feature.bg, color: feature.color }}>
+                    <span
+                      className="lp-feature-icon"
+                      style={{ background: feature.bg, color: feature.color }}
+                    >
                       <Icon size={20} />
                     </span>
                     <ArrowRight className="lp-feature-arrow" size={16} />
@@ -414,16 +423,40 @@ export default function LandingPage() {
               <a href="#contact">Contact</a>
             </div>
             <div className="lp-footer-social" aria-label="Social links">
-              <a aria-label="GitHub" className="lp-social" href="https://github.com" rel="noreferrer" target="_blank">
+              <a
+                aria-label="GitHub"
+                className="lp-social"
+                href="https://github.com"
+                rel="noreferrer"
+                target="_blank"
+              >
                 <Github size={16} />
               </a>
-              <a aria-label="LinkedIn" className="lp-social" href="https://linkedin.com" rel="noreferrer" target="_blank">
+              <a
+                aria-label="LinkedIn"
+                className="lp-social"
+                href="https://linkedin.com"
+                rel="noreferrer"
+                target="_blank"
+              >
                 <Linkedin size={16} />
               </a>
-              <a aria-label="X" className="lp-social" href="https://x.com" rel="noreferrer" target="_blank">
+              <a
+                aria-label="X"
+                className="lp-social"
+                href="https://x.com"
+                rel="noreferrer"
+                target="_blank"
+              >
                 <X size={16} />
               </a>
-              <a aria-label="YouTube" className="lp-social" href="https://youtube.com" rel="noreferrer" target="_blank">
+              <a
+                aria-label="YouTube"
+                className="lp-social"
+                href="https://youtube.com"
+                rel="noreferrer"
+                target="_blank"
+              >
                 <Youtube size={16} />
               </a>
             </div>

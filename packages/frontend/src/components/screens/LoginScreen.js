@@ -21,9 +21,19 @@ import "./signin.css";
 
 const FEATURE_CHIPS = [
   { label: "AI Writing", color: "#7c3aed", bg: "rgba(124, 58, 237, 0.12)", icon: PenLine },
-  { label: "Content Improvement", color: "#10b981", bg: "rgba(16, 185, 129, 0.12)", icon: WandSparkles },
+  {
+    label: "Content Improvement",
+    color: "#10b981",
+    bg: "rgba(16, 185, 129, 0.12)",
+    icon: WandSparkles
+  },
   { label: "SEO Suggestions", color: "#f90c0c", bg: "rgb(245 11 11 / 12%)", icon: SearchCheck },
-  { label: "AI Image Generation", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.12)", icon: ImageIcon }
+  {
+    label: "AI Image Generation",
+    color: "#3b82f6",
+    bg: "rgba(59, 130, 246, 0.12)",
+    icon: ImageIcon
+  }
 ];
 
 export default function LoginScreen() {
@@ -88,7 +98,11 @@ export default function LoginScreen() {
             {FEATURE_CHIPS.map((chip) => {
               const Icon = chip.icon;
               return (
-                <span className="signin-chip" key={chip.label} style={{ background: chip.bg, color: chip.color }}>
+                <span
+                  className="signin-chip"
+                  key={chip.label}
+                  style={{ background: chip.bg, color: chip.color }}
+                >
                   <Icon size={14} />
                   {chip.label}
                 </span>
