@@ -190,10 +190,10 @@ export default function LandingPage() {
             <a href="#about">About</a>
           </nav>
           <div className="lp-nav-actions">
-            <Link className="lp-link-btn" href={ROUTES.LOGIN}>
+            <Link className="lp-link-btn lp-desktop-auth" href={ROUTES.LOGIN}>
               Sign In
             </Link>
-            <Link className="lp-btn lp-btn-primary" href={ROUTES.REGISTER}>
+            <Link className="lp-btn lp-btn-primary lp-desktop-auth" href={ROUTES.REGISTER}>
               Get Started
             </Link>
             <button
@@ -217,6 +217,16 @@ export default function LandingPage() {
           <a href="#about" onClick={() => setMenuOpen(false)}>
             About
           </a>
+          <Link className="lp-mobile-link" href={ROUTES.LOGIN} onClick={() => setMenuOpen(false)}>
+            Sign In
+          </Link>
+          <Link
+            className="lp-btn lp-btn-primary lp-mobile-cta"
+            href={ROUTES.REGISTER}
+            onClick={() => setMenuOpen(false)}
+          >
+            Get Started
+          </Link>
         </div>
       </header>
 

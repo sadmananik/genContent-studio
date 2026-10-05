@@ -187,13 +187,33 @@
   display: none;
   flex-direction: column;
   gap: 0.85rem;
-  padding: 0 0 1.1rem;
+  padding: 0.35rem 0 1.25rem;
   color: var(--lp-muted);
   font-weight: 500;
 }
 
 .lp-mobile-menu.is-open {
   display: flex;
+}
+
+.lp-mobile-link {
+  color: var(--lp-muted);
+  font-weight: 600;
+  padding: 0.35rem 0;
+}
+
+.lp-mobile-link:hover {
+  color: var(--lp-indigo);
+}
+
+.lp-mobile-cta {
+  width: 100%;
+  margin-top: 0.35rem;
+  justify-content: center;
+}
+
+.lp-desktop-auth {
+  display: none;
 }
 
 .lp-hero {
@@ -785,6 +805,10 @@
 @media (min-width: 768px) {
   .lp-nav-links {
     display: flex;
+  }
+
+  .lp-desktop-auth {
+    display: inline-flex;
   }
 
   .lp-menu-toggle {
