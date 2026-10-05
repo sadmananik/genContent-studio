@@ -83,7 +83,12 @@ export default function RegisterScreen() {
 
   return (
     <section className="screen login-screen">
-      <Brand />
+      <div className="auth-topbar">
+        <Brand />
+        <a className="auth-back-link" href="/">
+          Back to home
+        </a>
+      </div>
       <form className="login-panel" onSubmit={handleRegister}>
         <h2>Create account</h2>
         <p>Start creating with your AI workspace. Verification links expire in 5 minutes.</p>

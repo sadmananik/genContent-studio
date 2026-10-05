@@ -174,9 +174,12 @@ export default function LandingPage() {
 
   useEffect(() => {
     const session = getAuthSession();
-    if (session?.token) {
-      router.replace(ROUTES.DASHBOARD);
+    if (!session?.token) {
+      return;
     }
+
+    // Replace so authenticated users don't keep "/" in history and break Back.
+    router.replace(ROUTES.DASHBOARD);
   }, [router]);
 
   return (
@@ -190,12 +193,12 @@ export default function LandingPage() {
             <a href="#about">About</a>
           </nav>
           <div className="lp-nav-actions">
-            <Link className="lp-link-btn lp-desktop-auth" href={ROUTES.LOGIN}>
+            <a className="lp-link-btn lp-desktop-auth" href={ROUTES.LOGIN}>
               Sign In
-            </Link>
-            <Link className="lp-btn lp-btn-primary lp-desktop-auth" href={ROUTES.REGISTER}>
+            </a>
+            <a className="lp-btn lp-btn-primary lp-desktop-auth" href={ROUTES.REGISTER}>
               Get Started
-            </Link>
+            </a>
             <button
               aria-expanded={menuOpen}
               aria-label="Toggle menu"
@@ -217,16 +220,16 @@ export default function LandingPage() {
           <a href="#about" onClick={() => setMenuOpen(false)}>
             About
           </a>
-          <Link className="lp-mobile-link" href={ROUTES.LOGIN} onClick={() => setMenuOpen(false)}>
+          <a className="lp-mobile-link" href={ROUTES.LOGIN} onClick={() => setMenuOpen(false)}>
             Sign In
-          </Link>
-          <Link
+          </a>
+          <a
             className="lp-btn lp-btn-primary lp-mobile-cta"
             href={ROUTES.REGISTER}
             onClick={() => setMenuOpen(false)}
           >
             Get Started
-          </Link>
+          </a>
         </div>
       </header>
 
@@ -242,9 +245,9 @@ export default function LandingPage() {
               one intelligent workspace.
             </p>
             <div className="lp-hero-ctas">
-              <Link className="lp-btn lp-btn-primary lp-btn-lg" href={ROUTES.REGISTER}>
+              <a className="lp-btn lp-btn-primary lp-btn-lg" href={ROUTES.REGISTER}>
                 Start Creating <ArrowRight size={18} />
-              </Link>
+              </a>
               <a className="lp-btn lp-btn-secondary lp-btn-lg" href="#features">
                 Explore Features
               </a>
@@ -389,9 +392,9 @@ export default function LandingPage() {
           <div className="lp-cta-banner">
             <h2>Ready to turn your ideas into content?</h2>
             <p>Create your first AI-powered project with GenContent Studio.</p>
-            <Link className="lp-btn lp-btn-primary lp-btn-lg" href={ROUTES.REGISTER}>
+            <a className="lp-btn lp-btn-primary lp-btn-lg" href={ROUTES.REGISTER}>
               Get Started <ArrowRight size={18} />
-            </Link>
+            </a>
           </div>
         </div>
       </section>

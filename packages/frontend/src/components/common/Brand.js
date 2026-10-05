@@ -1,8 +1,8 @@
 import Image from "next/image";
 
-export default function Brand({ compact = false }) {
+export default function Brand({ compact = false, href = "/" }) {
   return (
-    <div className="brand">
+    <a className="brand" href={href}>
       <Image
         alt=""
         aria-hidden="true"
@@ -12,6 +12,6 @@ export default function Brand({ compact = false }) {
         width={40}
       />
       {!compact && <strong>genContent Studio</strong>}
-    </div>
+    </a>
   );
 }

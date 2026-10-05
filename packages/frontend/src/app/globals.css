@@ -450,8 +450,13 @@ a {
   opacity: 0.2;
 }
 
-:root[data-active-theme="dark"] .login-screen .brand {
-  color: #f8fafc;
+:root[data-active-theme="dark"] .login-screen .brand,
+:root[data-active-theme="dark"] .auth-back-link {
+  color: #c4b5fd;
+}
+
+:root[data-active-theme="dark"] .auth-back-link:hover {
+  color: #ddd6fe;
 }
 
 :root[data-active-theme="dark"] .login-panel {
@@ -512,6 +517,11 @@ a {
   gap: 14px;
   color: #111827;
   font-size: 15px;
+  text-decoration: none;
+}
+
+a.brand:hover {
+  color: #111827;
 }
 
 .brand-mark {
@@ -605,10 +615,44 @@ a {
   z-index: 1;
 }
 
-.login-screen .brand {
+.login-screen > .brand {
   position: absolute;
   top: 38px;
   left: clamp(28px, 5vw, 72px);
+}
+
+.auth-topbar {
+  position: absolute;
+  top: 28px;
+  left: clamp(20px, 5vw, 72px);
+  right: clamp(20px, 5vw, 72px);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.auth-topbar .brand {
+  position: static;
+}
+
+.auth-topbar .brand-mark {
+  width: 40px;
+  height: 40px;
+}
+
+.auth-back-link {
+  color: #4f46e5;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.auth-back-link:hover {
+  color: #4338ca;
+  text-decoration: underline;
 }
 
 .login-panel {
