@@ -12,3 +12,6 @@ yarn.lock
 .env*.local
 .env.example
 **/.env.example
+
+**/.next-integration
+cypress/artifacts

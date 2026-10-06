@@ -52,6 +52,13 @@ jobs:
           }
       - name: Run Cypress
         run: yarn test:e2e
+      - name: Upload Cypress failure screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-e2e-screenshots
+          path: cypress/screenshots
+          if-no-files-found: ignore
       - name: Cleanup E2E data
         if: always() && env.E2E_DB_READY == 'true'
         run: node packages/backend/scripts/cleanupE2EData.js "$E2E_RUN_ID"

@@ -82,3 +82,9 @@ Copy the backend env example before wiring the ChatGPT API:
 ```bash
 cp packages/backend/.env.example packages/backend/.env
 ```
+
+### Frontend integration tests
+
+Run `yarn test:frontend` for Jest and React Testing Library component integration tests configured with `next/jest.js`. No running server, browser, or database is needed. See [Jest setup and coverage](packages/frontend/test/README.md).
+
+The mocked browser scenarios now live alongside the existing Cypress tests in `cypress/e2e/mocked`. Run them independently with `yarn test:frontend:browser`, or as part of `yarn test:e2e`. See [Cypress instructions](cypress/e2e/mocked/README.md).
