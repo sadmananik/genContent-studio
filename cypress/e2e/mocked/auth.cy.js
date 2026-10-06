@@ -94,14 +94,21 @@ describe("authentication pages", () => {
   it("rejects incomplete reset links", () => {
     cy.visitFrontend("/reset-password", false);
     cy.contains("This password reset link is invalid, expired, or incomplete").should("be.visible");
-    cy.get("button[type=submit]").should("be.disabled");
+    cy.get("input[name=password]").should("not.exist");
+    cy.contains("a", "Request a new reset link")
+      .should("be.visible")
+      .and("have.attr", "href", "/forgot-password");
   });
 
   it("resets a password with the supplied link token", () => {
+    cy.intercept("POST", "**/api/auth/validate-reset-token", {
+      body: { valid: true }
+    }).as("validateResetToken");
     cy.intercept("POST", "**/api/auth/reset-password", {
       body: { message: "Password reset successfully" }
     }).as("reset");
     cy.visitFrontend("/reset-password?token=reset-token", false);
+    cy.wait("@validateResetToken").its("request.body.token").should("eq", "reset-token");
     cy.get("input[name=password]").type("Password123!");
     cy.get("input[name=confirmPassword]").type("Password123!");
     cy.get("button[type=submit]").click();
