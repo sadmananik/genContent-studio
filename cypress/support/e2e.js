@@ -5,3 +5,7 @@ Cypress.on("uncaught:exception", (error) => {
     return false;
   }
 });
+
+if (Cypress.spec.relative.replaceAll("\\", "/").includes("/e2e/mocked/")) {
+  require("./mocked");
+}

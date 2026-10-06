@@ -8,10 +8,12 @@
 
 # testing
 /coverage
+/cypress/artifacts/
 
 # next.js
 /.next/
 **/.next/
+**/.next-integration/
 /out/
 **/out/
 
