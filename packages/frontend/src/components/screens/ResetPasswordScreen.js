@@ -16,16 +16,38 @@ export default function ResetPasswordScreen() {
   const token = searchParams.get("token");
   const auth = useAppStore((state) => state.auth);
   const resetPassword = useAppStore((state) => state.resetPassword);
+  const validatePasswordResetToken = useAppStore((state) => state.validatePasswordResetToken);
   const clearAuthError = useAppStore((state) => state.clearAuthError);
   const [formValues, setFormValues] = useState({ password: "", confirmPassword: "" });
   const [formError, setFormError] = useState("");
   const [message, setMessage] = useState("");
+  const [tokenStatus, setTokenStatus] = useState(token ? "checking" : "invalid");
   const errorMessage =
     formError ||
     auth.error ||
     (!token ? "This password reset link is invalid, expired, or incomplete" : "");
 
-  useEffect(() => clearAuthError(), [clearAuthError]);
+  useEffect(() => {
+    clearAuthError();
+    if (!token) {
+      setTokenStatus("invalid");
+      return undefined;
+    }
+
+    let isCurrent = true;
+    setTokenStatus("checking");
+    validatePasswordResetToken(token)
+      .then(() => {
+        if (isCurrent) setTokenStatus("valid");
+      })
+      .catch(() => {
+        if (isCurrent) setTokenStatus("invalid");
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [clearAuthError, token, validatePasswordResetToken]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -51,7 +73,9 @@ export default function ResetPasswordScreen() {
       const response = await resetPassword({ token, password: formValues.password });
       setMessage(response.message);
     } catch (error) {
-      // Error state is displayed from the auth store.
+      if (error.message === "This password reset link is invalid or has expired") {
+        setTokenStatus("invalid");
+      }
     }
   }
 
@@ -61,9 +85,11 @@ export default function ResetPasswordScreen() {
       <form className="login-panel reset-password-panel" onSubmit={handleSubmit}>
         <h2>Create new password</h2>
         <p>
-          Choose a secure password with at least eight characters. Reset links expire in 5 minutes.
+          {tokenStatus === "checking"
+            ? "Checking your reset link…"
+            : "Choose a secure password with at least eight characters. Use your reset link within the time stated in your email."}
         </p>
-        {!message && (
+        {tokenStatus === "valid" && !message && (
           <>
             <PasswordField
               autoComplete="new-password"
@@ -95,9 +121,14 @@ export default function ResetPasswordScreen() {
               !formError && <p className="field-hint error">Passwords must match</p>}
           </>
         )}
-        {errorMessage && <p className="auth-error">{errorMessage}</p>}
+        {tokenStatus === "invalid" && (
+          <p className="auth-error">
+            {auth.error || errorMessage || "This password reset link is invalid or has expired."}
+          </p>
+        )}
+        {tokenStatus === "checking" && <p role="status">Checking reset link…</p>}
         {message && <p className="auth-success">{message}</p>}
-        {!message && (
+        {tokenStatus === "valid" && !message && (
           <Button
             className="full-width reset-password-submit"
             disabled={auth.loading || !token}
@@ -106,9 +137,15 @@ export default function ResetPasswordScreen() {
             {auth.loading ? "Updating..." : "Update Password"}
           </Button>
         )}
-        <p className="signup">
-          <Link href={ROUTES.LOGIN}>{message ? "Continue to sign in" : "Back to sign in"}</Link>
-        </p>
+        {tokenStatus === "invalid" ? (
+          <p className="signup">
+            <Link href={ROUTES.FORGOT_PASSWORD}>Request a new reset link</Link>
+          </p>
+        ) : (
+          <p className="signup">
+            <Link href={ROUTES.LOGIN}>{message ? "Continue to sign in" : "Back to sign in"}</Link>
+          </p>
+        )}
       </form>
       <AuthVisual />
     </section>
