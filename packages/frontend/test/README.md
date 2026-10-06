@@ -21,9 +21,10 @@ Page tests render the real components and retain the real Zustand actions and AP
 | `templates.test.js`  | Open/close preview, upvote counts, toggling and downvotes, pending/failed votes, favourites, cancel/confirm deletion, use template |
 | `pages.test.js`      | Profile saves/errors, settings confirmation/cancellation, theme, shared-project details/leaving, AI favourites                     |
 | `components.test.js` | AI prompt panel with real store actions, generated results/errors, quick-action style menus, outside-click dismissal               |
+| `common.test.js`     | Password strength states, avatar initials/stacks, confirmation loading state, theme persistence and system preference changes      |
 
 Assertions check visible DOM changes, request payloads, store changes, and navigation. Cancel flows check that no mutation request was sent. Tests do not replace page components or mock successful store actions.
 
 The prompt panel uses a small controlled host; it does not test the full TipTap editor. Browser-only canvas, editor, and navigation coverage remains in `cypress/e2e/mocked`, runnable with `yarn test:frontend:browser`. Real backend integration remains in the other Cypress folders.
 
-Both Jest and the mocked browser suite run in the Frontend tests GitHub Actions workflow for PRs to `main` and pushes to `main`. Coverage reports are written to the ignored `coverage/frontend` directory.
+Only Jest runs in the Frontend tests GitHub Actions workflow for PRs to `main` and pushes to `main`. The Cypress E2E workflow runs all Cypress specs, including `cypress/e2e/mocked`. Coverage reports are written to the ignored `coverage/frontend` directory.
