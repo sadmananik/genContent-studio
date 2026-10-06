@@ -8,9 +8,7 @@ import {
   ArrowRight,
   Download,
   FolderKanban,
-  Github,
   ImageIcon,
-  Linkedin,
   Menu,
   Paintbrush,
   PenLine,
@@ -18,8 +16,7 @@ import {
   Sparkles,
   Users,
   WandSparkles,
-  X,
-  Youtube
+  X
 } from "lucide-react";
 import { ROUTES } from "../../constants/navigation";
 import { getAuthSession } from "../../lib/auth";
@@ -418,47 +415,6 @@ export default function LandingPage() {
             <div className="lp-footer-links">
               <a href="#features">Features</a>
               <a href="#about">About</a>
-              <a href="#privacy">Privacy</a>
-              <a href="#terms">Terms</a>
-              <a href="#contact">Contact</a>
-            </div>
-            <div className="lp-footer-social" aria-label="Social links">
-              <a
-                aria-label="GitHub"
-                className="lp-social"
-                href="https://github.com"
-                rel="noreferrer"
-                target="_blank"
-              >
-                <Github size={16} />
-              </a>
-              <a
-                aria-label="LinkedIn"
-                className="lp-social"
-                href="https://linkedin.com"
-                rel="noreferrer"
-                target="_blank"
-              >
-                <Linkedin size={16} />
-              </a>
-              <a
-                aria-label="X"
-                className="lp-social"
-                href="https://x.com"
-                rel="noreferrer"
-                target="_blank"
-              >
-                <X size={16} />
-              </a>
-              <a
-                aria-label="YouTube"
-                className="lp-social"
-                href="https://youtube.com"
-                rel="noreferrer"
-                target="_blank"
-              >
-                <Youtube size={16} />
-              </a>
             </div>
           </div>
           <div className="lp-footer-copy">© 2026 GenContent Studio. All rights reserved.</div>

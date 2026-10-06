@@ -13,6 +13,12 @@
   --mint: #16c79a;
   --mint-soft: #ddfbf1;
   --shadow: 0 18px 45px rgba(31, 41, 55, 0.08);
+  --public-page-background: radial-gradient(
+    circle at 30% 5%,
+    #ffffff 0,
+    #f8f7ff 30%,
+    var(--bg) 68%
+  );
 }
 
 :root[data-theme="dark"] {
@@ -24,6 +30,10 @@
   --panel: #09090b;
   --purple-soft: #1e1b4b;
   --shadow: 0 18px 45px rgba(0, 0, 0, 0.58);
+}
+
+:root[data-active-theme="dark"] {
+  --public-page-background: radial-gradient(circle at 30% 0%, #111827 0, #060713 34%, #030712 76%);
 }
 
 :root[data-theme="system"] {
@@ -114,7 +124,7 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 30% 5%, #ffffff 0, #f8f7ff 30%, var(--bg) 68%);
+  background: var(--public-page-background);
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -164,7 +174,7 @@ body {
 }
 
 :root[data-active-theme="dark"] body {
-  background: radial-gradient(circle at 30% 0%, #111827 0, #060713 34%, #030712 76%);
+  background: var(--public-page-background);
 }
 
 button,
@@ -949,13 +959,18 @@ a.brand:hover {
 
 .robot-scene::before {
   position: absolute;
-  inset: 0;
+  inset: 12% 5% 10% 9%;
   content: "";
   background:
-    radial-gradient(circle at 55% 18%, #efeaff, transparent 23%),
-    linear-gradient(135deg, transparent 42%, #d9d0ff 43%, #8a77ff 78%, transparent 79%);
-  border-radius: 50%;
-  opacity: 0.85;
+    radial-gradient(circle at 74% 22%, rgba(255, 255, 255, 0.86), transparent 25%),
+    radial-gradient(circle at 24% 78%, rgba(132, 105, 244, 0.45), transparent 38%),
+    linear-gradient(138deg, #f0ecff 2%, #d9ceff 36%, #ad99ff 70%, #8a73f2 100%);
+  border-radius: 42% 58% 62% 38% / 34% 39% 61% 66%;
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.7),
+    0 26px 58px rgba(101, 69, 246, 0.16);
+  opacity: 0.96;
+  transform: rotate(-9deg);
 }
 
 .robot-scene::after {
@@ -1187,8 +1202,9 @@ a.brand:hover {
 
 :root[data-active-theme="dark"] .robot-scene::before {
   background:
-    radial-gradient(circle at 55% 18%, rgba(99, 102, 241, 0.28), transparent 24%),
-    linear-gradient(135deg, transparent 42%, #312e81 43%, #4f46e5 78%, transparent 79%);
+    radial-gradient(circle at 74% 22%, rgba(199, 190, 255, 0.24), transparent 26%),
+    radial-gradient(circle at 24% 78%, rgba(99, 102, 241, 0.42), transparent 38%),
+    linear-gradient(138deg, #312e81 2%, #37308e 36%, #4f46e5 70%, #6554ce 100%);
 }
 
 :root[data-active-theme="dark"] .robot-scene::after {
