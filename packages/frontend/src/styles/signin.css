@@ -123,6 +123,31 @@
   font-weight: 700;
 }
 
+.signin-preview {
+  position: relative;
+  width: min(720px, 100%);
+  margin-top: 0.85rem;
+  padding: 1.1rem 0.5rem 1.5rem;
+  background: transparent;
+  perspective: 1400px;
+}
+
+.signin-preview-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: transparent;
+  image-rendering: auto;
+  transform: rotateY(-6deg) rotateX(3deg);
+  transform-origin: center left;
+  filter: drop-shadow(0 28px 48px rgba(79, 70, 229, 0.2));
+  transition: transform 420ms ease;
+}
+
+.signin-preview:hover .signin-preview-img {
+  transform: rotateY(-3deg) rotateX(1.5deg);
+}
+
 .signin-form-wrap {
   display: flex;
   justify-content: center;
@@ -338,6 +363,11 @@
 
   .signin-marketing {
     display: block;
+  }
+
+  .signin-preview {
+    width: min(720px, 110%);
+    margin-left: -0.35rem;
   }
 
   .signin-form-wrap {

@@ -353,6 +353,16 @@ export default function LandingPage() {
               teams.
             </p>
           </div>
+          <div className="lp-showcase-image">
+            <Image
+              alt="GenContent Studio workspace with AI Assistant, SEO suggestions, image generation, and export tools"
+              className="lp-showcase-img"
+              height={900}
+              priority={false}
+              src="/images/dashboard-showcase.jpg"
+              width={1400}
+            />
+          </div>
         </div>
       </section>
 

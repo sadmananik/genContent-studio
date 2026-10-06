@@ -109,6 +109,20 @@ export default function LoginScreen() {
               );
             })}
           </div>
+
+          <div className="signin-preview">
+            <Image
+              alt="GenContent Studio 3D workspace preview"
+              className="signin-preview-img"
+              height={1020}
+              priority
+              quality={100}
+              sizes="(max-width: 979px) 92vw, min(720px, 52vw)"
+              src="/images/signin-showcase.png"
+              unoptimized
+              width={1530}
+            />
+          </div>
         </div>
 
         <div className="signin-form-wrap">
