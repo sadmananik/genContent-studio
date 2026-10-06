@@ -28,6 +28,7 @@ import {
 import { apiRequest } from "../../lib/apiClient";
 import { getAuthSession } from "../../lib/auth";
 import { createCollaborationProvider } from "../../lib/collaboration";
+import { loadWorkspaceDraft, saveWorkspaceDraft } from "../../lib/imageWorkspaceDrafts";
 import { useAppStore } from "../../store";
 import { textPromptActions } from "../text-workspace/promptActions";
 
@@ -40,6 +41,8 @@ const defaultTextProject = {
   content: ""
 };
 const starterPrompt = "Write an introduction about how AI tools help small businesses.";
+const demoTextDraftId = "demo-text-workspace";
+const demoTextDraftStorageKey = "gencontent-demo-text-workspace";
 const maxPromptDisplayLength = 180;
 const maxQuickActionContentLength = 3200;
 const quickActionPromptBuilders = {
@@ -103,6 +106,7 @@ function TextEditorScreen() {
   const setCollaborationError = useAppStore((state) => state.setCollaborationError);
   const collaborationState = useAppStore((state) => state.collaborationState);
   const [editor, setEditor] = useState(null);
+  const [restoredDemoContent, setRestoredDemoContent] = useState(null);
   const [project, setProject] = useState(defaultTextProject);
   const [editorContent, setEditorContent] = useState({
     html: defaultTextProject.content,
@@ -137,6 +141,7 @@ function TextEditorScreen() {
   const editorContentRef = useRef(editorContent);
   const lastPermissionNotificationRef = useRef(null);
   const pendingLeaveTimersRef = useRef(new Map());
+  const restoredDemoDraftRef = useRef(false);
   projectRef.current = project;
   editorRef.current = editor;
   responsesRef.current = responses;
@@ -171,6 +176,46 @@ function TextEditorScreen() {
       })),
     [responses]
   );
+
+  useEffect(() => {
+    if (isRealProject) {
+      return undefined;
+    }
+
+    let isActive = true;
+    loadWorkspaceDraft(demoTextDraftId, demoTextDraftStorageKey)
+      .then((savedDraft) => {
+        if (!isActive || !savedDraft) {
+          return;
+        }
+
+        const parsedDraft = JSON.parse(savedDraft);
+        if (typeof parsedDraft.content === "string") {
+          setRestoredDemoContent(parsedDraft.content);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isActive = false;
+    };
+  }, [isRealProject]);
+
+  useEffect(() => {
+    if (!editor || restoredDemoDraftRef.current || restoredDemoContent === null) {
+      return;
+    }
+
+    restoredDemoDraftRef.current = true;
+    editor.commands.setContent(restoredDemoContent, false);
+    const restoredContent = {
+      html: restoredDemoContent,
+      text: editor.getText()
+    };
+    setEditorContent(restoredContent);
+    lastPersistedContentHtmlRef.current = normalizeEditorHtml(restoredDemoContent);
+    setHasUnsavedChanges(false);
+  }, [editor, restoredDemoContent]);
   const templateHistoryOptions = useMemo(
     () =>
       responses.map((response) => ({
@@ -634,6 +679,12 @@ function TextEditorScreen() {
 
     clearAiError();
     setIsGenerating(true);
+    showNotification(
+      "Generating content",
+      "AI is creating your content. This may take a moment.",
+      TOAST_TYPES.INFO,
+      120000
+    );
 
     try {
       const currentUser = getAuthSession()?.user;
@@ -1144,7 +1195,11 @@ function TextEditorScreen() {
         contentType: AI_CONTENT_TYPES.TEXT
       });
     } else {
-      window.localStorage.setItem("gencontent-demo-text-workspace", JSON.stringify(savePayload));
+      await saveWorkspaceDraft(
+        demoTextDraftId,
+        JSON.stringify(savePayload),
+        demoTextDraftStorageKey
+      );
     }
   }
 

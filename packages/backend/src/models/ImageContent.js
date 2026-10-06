@@ -8,6 +8,7 @@ const imageContentSchema = new mongoose.Schema(
       required: true,
       unique: true
     },
+    responseId: { type: String, default: null },
     imageUrl: {
       type: String,
       trim: true

@@ -334,23 +334,23 @@ export default function FabricImageEditor({
   }, [onDirtyChange]);
 
   const addGeneratedImage = useCallback(
-    async ({ imageUrl, requestId, syncCanvas = true }) => {
+    async ({ imageUrl, requestId, syncCanvas = true, isCurrent = () => true }) => {
       const fabric = fabricRef.current;
       const canvas = canvasRef.current;
 
-      if (!fabric || !canvas || !editableRef.current) {
+      if (!fabric || !canvas) {
         return;
       }
 
       applyingRemoteStateRef.current = true;
       try {
-        canvas.discardActiveObject();
-        canvas.remove(...canvas.getObjects());
-
         const colors = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899"];
         const accentColor = colors[requestId % colors.length];
         const generatedImage = await createGeneratedImageObject(fabric, imageUrl, accentColor);
 
+        if (!isCurrent()) return;
+        canvas.discardActiveObject();
+        canvas.remove(...canvas.getObjects());
         canvas.add(generatedImage);
         canvas.setActiveObject(generatedImage);
         canvas.requestRenderAll();
@@ -373,11 +373,22 @@ export default function FabricImageEditor({
       return;
     }
 
+    let isActive = true;
     addGeneratedImage({
       imageUrl: generationRequest.imageUrl,
       requestId: generationRequest.id,
-      syncCanvas: generationRequest.syncCanvas
-    });
+      syncCanvas: generationRequest.syncCanvas,
+      isCurrent: () => isActive
+    })
+      .then(() => {
+        if (isActive) generationRequest.onLoaded?.();
+      })
+      .catch((error) => {
+        if (isActive) generationRequest.onError?.(error);
+      });
+    return () => {
+      isActive = false;
+    };
   }, [addGeneratedImage, generationRequest]);
 
   useEffect(() => {
@@ -747,7 +758,7 @@ export default function FabricImageEditor({
         style={{ maxHeight: "calc(100vh - 170px)" }}
       >
         <div
-          className="fabric-canvas-frame relative mx-auto rounded-md bg-white shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
+          className="fabric-canvas-frame relative mx-auto rounded-md border border-slate-200 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
           style={{ height: displaySize.height, width: displaySize.width }}
         >
           <canvas height={canvasSize.height} ref={canvasElementRef} width={canvasSize.width} />
@@ -873,8 +884,10 @@ function fitCanvasToSurface(canvas, surface, setDisplaySize, setDisplayScale) {
   }
 
   const availableWidth = Math.max(surface.clientWidth - 24, 240);
-  // Fit to width so the full canvas stays visible; allow vertical scroll if needed.
-  const scale = Math.min(1, availableWidth / canvasSize.width);
+  const availableHeight = Math.max(canvasSize.height, window.innerHeight - 222);
+  const fitScale = Math.min(availableWidth / canvasSize.width, availableHeight / canvasSize.height);
+  // Use spare viewport space to enlarge the canvas while keeping it fully visible.
+  const scale = Math.max(1, Math.min(1.4, fitScale));
   const width = Math.max(1, Math.floor(canvasSize.width * scale));
   const height = Math.max(1, Math.floor(canvasSize.height * scale));
 

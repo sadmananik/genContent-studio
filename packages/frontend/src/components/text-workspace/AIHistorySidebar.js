@@ -15,11 +15,7 @@ export default function AIHistorySidebar({
   selectedHistoryId
 }) {
   return (
-    <aside
-      className={`ai-history-sidebar border-r border-slate-200 bg-white transition-all ${
-        isCollapsed ? "lg:w-16" : "lg:w-72"
-      }`}
-    >
+    <aside className="ai-history-sidebar min-h-0 min-w-0 overflow-x-hidden overflow-y-auto border-r border-slate-200 bg-white">
       <div className="flex items-center justify-between gap-2 border-b border-slate-200 p-4">
         {!isCollapsed && <h2 className="text-sm font-bold text-slate-950">AI Prompt History</h2>}
         <button
@@ -33,7 +29,7 @@ export default function AIHistorySidebar({
       </div>
 
       {!isCollapsed && (
-        <div className="grid gap-2 p-3">
+        <div className="grid min-w-0 gap-2 p-3">
           {isLoading ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
               {AI_HISTORY_TEXT.LOADING}
@@ -50,7 +46,7 @@ export default function AIHistorySidebar({
           ) : (
             history.map((item) => (
               <div
-                className={`group rounded-lg border p-3 text-left transition ${
+                className={`group min-w-0 rounded-lg border p-3 text-left transition ${
                   selectedHistoryId === item.id
                     ? "border-violet-300 bg-violet-50"
                     : "border-transparent bg-white hover:border-slate-200 hover:bg-slate-50 hover:shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
