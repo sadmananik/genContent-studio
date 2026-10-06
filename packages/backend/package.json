@@ -10,7 +10,10 @@
     "db:seed:templates": "node scripts/seedDefaultTemplates.js",
     "db:cleanup:e2e": "node scripts/cleanupE2EData.js",
     "start": "node src/server.js",
-    "lint": "find src -name '*.js' -print -exec node --check {} \\;"
+    "lint": "find src -name '*.js' -print -exec node --check {} \\;",
+    "test": "node --test test/unit/*.test.js test/integration/*.test.js",
+    "test:unit": "node --test test/unit/*.test.js",
+    "test:integration": "node --test test/integration/*.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -24,6 +27,7 @@
     "yjs": "^13.6.32"
   },
   "devDependencies": {
+    "mongodb-memory-server": "^11.3.0",
     "nodemon": "^3.1.4"
   }
 }
