@@ -20,7 +20,8 @@
     "test:e2e": "cypress run",
     "test:e2e:open": "cypress open",
     "test:e2e:chrome": "env -u ELECTRON_RUN_AS_NODE -u ELECTRON_NO_ATTACH_CONSOLE FRONTEND_URL=http://localhost:3000 API_URL=http://localhost:4000 cypress open --browser chrome",
-    "test:e2e:cleanup": "node packages/backend/scripts/cleanupE2EData.js"
+    "test:e2e:cleanup": "node packages/backend/scripts/cleanupE2EData.js",
+    "test:backend": "yarn workspace @gencontent/backend test"
   },
   "devDependencies": {
     "lerna": "^8.1.9",
