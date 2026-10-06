@@ -250,6 +250,25 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.json({ message: AUTH_MESSAGES.PASSWORD_RESET_SUCCESS });
 });
 
+const validatePasswordResetToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    throw httpError(400, AUTH_MESSAGES.PASSWORD_RESET_INVALID);
+  }
+
+  const user = await User.exists({
+    passwordResetTokenHash: hashAuthLinkToken(token),
+    passwordResetExpiresAt: { $gt: new Date() }
+  });
+
+  if (!user) {
+    throw httpError(400, AUTH_MESSAGES.PASSWORD_RESET_INVALID);
+  }
+
+  res.json({ valid: true });
+});
+
 function createAuthLinkToken() {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -312,6 +331,7 @@ module.exports = {
   requestPasswordReset,
   resendVerificationEmail,
   resetPassword,
+  validatePasswordResetToken,
   register,
   verifyEmail
 };

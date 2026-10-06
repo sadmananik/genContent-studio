@@ -193,6 +193,22 @@ export function createAuthReducer(set, get) {
       }
     },
 
+    validatePasswordResetToken: async (token) => {
+      setAuthRequest(set);
+
+      try {
+        const response = await apiRequest("/api/auth/validate-reset-token", {
+          method: "POST",
+          body: JSON.stringify({ token })
+        });
+        finishAuthRequest(set);
+        return response;
+      } catch (error) {
+        setAuthError(set, error);
+        throw error;
+      }
+    },
+
     clearAuthError: () => {
       set((state) => ({ auth: { ...state.auth, error: null } }));
     }
