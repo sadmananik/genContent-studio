@@ -14,7 +14,7 @@ import {
   Users
 } from "lucide-react";
 import Brand from "./Brand";
-import { EDITOR_NAV_ITEMS, NAV_ITEMS } from "../../constants/navigation";
+import { EDITOR_NAV_ITEMS, NAV_ITEMS, ROUTES } from "../../constants/navigation";
 
 const APP_VERSION = "0.1.0";
 
@@ -36,7 +36,7 @@ export function AppSidebar({ active }) {
 
   return (
     <aside className="app-sidebar">
-      <Brand />
+      <Brand href={ROUTES.DASHBOARD} />
       <nav className="nav-list">
         {NAV_ITEMS.map(({ icon, label, href }) => {
           const Icon = navIcons[icon];
