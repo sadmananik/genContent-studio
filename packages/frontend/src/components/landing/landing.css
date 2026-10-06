@@ -503,18 +503,6 @@
   margin-bottom: 1.35rem;
 }
 
-.lp-showcase-image {
-  width: min(860px, 100%);
-  margin: 0 auto;
-}
-
-.lp-showcase-img {
-  width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 16px;
-}
-
 .lp-feature-grid {
   display: grid;
   gap: 1rem;

@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
-import "./signin.css";
+import "../../styles/signin.css";
 
 const FEATURE_CHIPS = [
   { label: "AI Writing", color: "#7c3aed", bg: "rgba(124, 58, 237, 0.12)", icon: PenLine },
