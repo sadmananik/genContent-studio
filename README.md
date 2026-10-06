@@ -2,6 +2,8 @@
 
 AI-driven content creation platform for the COIT20273 capstone project.
 
+Production site: https://gencontentstudio.com/
+
 ## Copyright
 
 Copyright (c) 2026 Sadman Anik, Sravya Matta, and Akramul Ratul. All rights reserved.
@@ -24,6 +26,7 @@ genContent-studio/
 - [User Guide](docs/user-guide.md)
 - [Feature List](docs/feature-list.md)
 - [Developer Guide](docs/developer-guide.md)
+- [AWS Deployment](docs/deployment/aws.md)
 - [Documentation index](docs/README.md)
 
 ## Getting Started
