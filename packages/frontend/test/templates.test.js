@@ -20,6 +20,9 @@ function setup(extra = {}) {
 
 async function loaded() {
   await screen.findByRole("heading", { name: template.title });
+  // TemplatesScreen also loads recent templates in the background on mount.
+  // Wait for that request so its Zustand update stays inside RTL's act window.
+  await waitFor(() => expect(useAppStore.getState().templateState.recentTemplates).toEqual([]));
 }
 
 test("preview opens and closes without creating a project", async () => {
@@ -101,7 +104,7 @@ test("favourite and unfavourite update the card and real store", async () => {
 test("cancel delete closes confirmation without a delete request", async () => {
   const ui = userEvent.setup();
   const fetch = setup();
-  await ui.click(screen.getByRole("button", { name: "My Published Templates" }));
+  await ui.click(screen.getByRole("tab", { name: "My Published Templates" }));
   await loaded();
   await ui.click(screen.getByRole("button", { name: "Delete", exact: true }));
   await ui.click(within(screen.getByRole("dialog")).getByRole("button", { name: /cancel|no/i }));
@@ -113,7 +116,7 @@ test("cancel delete closes confirmation without a delete request", async () => {
 test("confirmed deletion removes the template from the page", async () => {
   const ui = userEvent.setup();
   setup({ [`DELETE /api/templates/${template.id}`]: { body: { message: "Deleted" } } });
-  await ui.click(screen.getByRole("button", { name: "My Published Templates" }));
+  await ui.click(screen.getByRole("tab", { name: "My Published Templates" }));
   await loaded();
   await ui.click(screen.getByRole("button", { name: "Delete", exact: true }));
   await ui.click(
