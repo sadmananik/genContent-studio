@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import WorkspaceLoading from "../common/WorkspaceLoading";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import ImageEditorScreen from "./ImageEditorScreen";
@@ -105,6 +106,7 @@ function TextEditorScreen() {
   const setSocketConnected = useAppStore((state) => state.setSocketConnected);
   const setCollaborationError = useAppStore((state) => state.setCollaborationError);
   const collaborationState = useAppStore((state) => state.collaborationState);
+  const [workspaceLoadError, setWorkspaceLoadError] = useState(null);
   const [editor, setEditor] = useState(null);
   const [restoredDemoContent, setRestoredDemoContent] = useState(null);
   const [project, setProject] = useState(defaultTextProject);
@@ -525,104 +527,47 @@ function TextEditorScreen() {
     setIsLoadingContent(true);
     setSaveError(null);
 
-    fetchProjectById(projectId)
-      .then((loadedProject) => {
-        if (isActive) {
-          setProject(normalizeProject(loadedProject));
-          projectStarterContentRef.current = loadedProject.starterContent || "";
-          if (loadedProject.starterPrompt) {
-            setPrompt(loadedProject.starterPrompt);
-          }
-          if (typeof loadedProject.starterContent === "string" && loadedProject.starterContent) {
-            setEditorContent({
-              html: loadedProject.starterContent,
-              text: stripHtml(loadedProject.starterContent)
-            });
-          }
-        }
-      })
-      .catch((error) => {
-        if (isActive) {
-          showNotification(
-            TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_TITLE,
-            error.message || TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_MESSAGE,
-            TOAST_TYPES.ERROR
-          );
-        }
-      });
-
-    apiRequest(`/api/text-content/${projectId}`)
-      .then((textContent) => {
-        if (!isActive) {
-          return;
-        }
-
-        const html =
-          typeof textContent.content === "string" && textContent.content
-            ? textContent.content
-            : projectStarterContentRef.current;
-
-        if (!html && projectStarterContentRef.current === "") {
-          setHasUnsavedChanges(false);
-          return;
-        }
-        lastPersistedContentHtmlRef.current = normalizeEditorHtml(html);
-
-        if (editorRef.current) {
-          editorRef.current.commands.setContent(html, false);
-        }
-
-        setEditorContent({
-          html,
-          text: editorRef.current ? editorRef.current.getText() : stripHtml(html)
-        });
-        setHasUnsavedChanges(false);
-        setLastSavedAt(textContent.updatedAt ? new Date(textContent.updatedAt) : null);
-      })
-      .catch((error) => {
-        if (!isActive) {
-          return;
-        }
-
-        if (error.message === API_ERROR_MESSAGES.TEXT_CONTENT_NOT_FOUND) {
-          lastPersistedContentHtmlRef.current = "";
-          setEditorContent({ html: "", text: "" });
-          setHasUnsavedChanges(false);
-
-          if (editorRef.current) {
-            editorRef.current.commands.clearContent(false);
-          }
-          return;
-        }
-
-        setSaveError(error.message || TEXT_EDITOR_ALERTS.CONTENT_LOAD_FAILED_MESSAGE);
-        showNotification(
-          TEXT_EDITOR_ALERTS.CONTENT_LOAD_FAILED_TITLE,
-          error.message || TEXT_EDITOR_ALERTS.CONTENT_LOAD_FAILED_MESSAGE,
-          TOAST_TYPES.ERROR
-        );
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoadingContent(false);
-        }
-      });
-
+    setIsLoadingHistory(true);
+    setWorkspaceLoadError(null);
     setSelectedHistoryId(null);
     restoredHistoryResponseRef.current = null;
     setHistoryError(null);
 
-    fetchProjectChatHistory(projectId)
+    Promise.all([
+      fetchProjectById(projectId),
+      apiRequest(`/api/text-content/${projectId}`).catch((error) => {
+        if (error.status === 404 || error.message === API_ERROR_MESSAGES.TEXT_CONTENT_NOT_FOUND)
+          return null;
+        throw error;
+      }),
+      fetchProjectChatHistory(projectId)
+    ])
+      .then(([loadedProject, textContent, chats]) => {
+        if (!isActive) return;
+        setProject(normalizeProject(loadedProject));
+        projectStarterContentRef.current = loadedProject.starterContent || "";
+        if (loadedProject.starterPrompt) setPrompt(loadedProject.starterPrompt);
+        const realResponses = chats
+          .filter((chat) => chat.contentType === AI_CONTENT_TYPES.TEXT)
+          .map(formatChatAsResponse);
+        setResponses(realResponses);
+        setSelectedHistoryId(realResponses[0]?.id || null);
+        const html =
+          typeof textContent?.content === "string"
+            ? textContent.content
+            : projectStarterContentRef.current;
+        lastPersistedContentHtmlRef.current = normalizeEditorHtml(html);
+        editorRef.current?.commands.setContent(html, false);
+        setEditorContent({ html, text: stripHtml(html) });
+        setHasUnsavedChanges(false);
+        setLastSavedAt(textContent?.updatedAt ? new Date(textContent.updatedAt) : null);
+      })
       .catch((error) => {
-        if (isActive) {
-          setHistoryError(error.message || "AI history could not be loaded.");
-          setResponses([]);
-          setSelectedHistoryId(null);
-          clearAiError();
-        }
+        if (isActive) setWorkspaceLoadError(error.message || "Please try again.");
       })
       .finally(() => {
         if (isActive) {
+          setIsLoadingContent(false);
           setIsLoadingHistory(false);
         }
       });
@@ -633,7 +578,7 @@ function TextEditorScreen() {
   }, [clearAiError, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
 
   useEffect(() => {
-    if (!isRealProject) {
+    if (!isRealProject || isLoadingContent || workspaceLoadError) {
       return;
     }
 
@@ -1256,153 +1201,164 @@ function TextEditorScreen() {
   }
 
   return (
-    <section className="min-h-screen overflow-hidden bg-slate-50">
-      <TextWorkspaceHeader
-        activeCollaborators={collaborationState.activeCollaborators}
-        canEdit={canEditProject}
-        canManageSharing={canManageSharing}
-        collaborationProvider={collaborationProvider}
-        invitedUsers={invitedUsers}
-        isSaving={isSaving}
-        onBackToProjects={handleBackToProjects}
-        onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
-        onExport={handleExport}
-        onInviteUser={handleInviteUser}
-        onNotify={showNotification}
-        onSave={handleSave}
-        project={project}
-        templateHistoryOptions={templateHistoryOptions}
-        statusLabel={statusLabel}
-        templateInitialValues={{
-          projectType: API_PROJECT_TYPES.TEXT,
-          starterContent: editorContent.html,
-          starterPrompt: prompt
-        }}
-      />
-
-      <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
-        <AIHistorySidebar
-          error={historyError}
-          history={history}
-          isCollapsed={isHistoryCollapsed}
-          isLoading={isLoadingHistory}
-          onDeleteHistory={requestDeleteResponse}
-          onSelectHistory={handleSelectHistory}
-          onToggleFavourite={handleFavouriteResponse}
-          onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
-          selectedHistoryId={selectedHistoryId}
-        />
-
-        <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
-          <section className="grid min-w-0 gap-5">
-            <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
-              <EditorToolbar disabled={!canEditProject} editor={editor} />
-              <div
-                className={`border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide ${
-                  saveError
-                    ? "text-red-700"
-                    : hasUnsavedChanges || isSaving
-                      ? "text-amber-700"
-                      : "text-emerald-700"
-                }`}
-              >
-                {statusLabel} • {wordCount} words • {characterCount} characters • {readingTimeLabel}
-              </div>
-              <TipTapEditor
-                collaborationProvider={collaborationReady ? collaborationProvider : null}
-                key={`${project.id}-${collaborationReady ? "shared" : "local"}`}
-                editorKey={`${project.id}-${collaborationReady ? "shared" : "local"}`}
-                editable={canEditProject}
-                initialContent={editorContent.html}
-                onContentChange={handleEditorChange}
-                onEditorReady={setEditor}
-              />
-            </article>
-          </section>
-
-          <aside className="grid min-w-0 content-start gap-5">
-            <AIPromptPanel
-              actions={textPromptActions}
-              disabled={!canEditProject}
-              error={aiState.error}
-              isGenerating={isGenerating}
-              onGenerate={handleGenerate}
-              onPromptChange={(value) => {
-                if (aiState.error) {
-                  clearAiError();
-                }
-                setPrompt(value);
-              }}
-              onPromptFocus={handlePromptFocus}
-              onQuickAction={handleQuickAction}
-              prompt={prompt}
-            />
-
-            <section className="grid gap-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-950">Selected AI Response</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Generate with OpenAI, then copy, edit, favourite, or insert the selected response
-                  into TipTap.
-                </p>
-              </div>
-              {selectedResponse ? (
-                <AIResponseCard
-                  canEdit={canEditProject}
-                  copied={copiedResponseId === selectedResponse.id}
-                  key={selectedResponse.id}
-                  onCopy={handleCopyResponse}
-                  onDelete={requestDeleteResponse}
-                  onFavourite={handleFavouriteResponse}
-                  onUpdate={handleUpdateResponse}
-                  response={selectedResponse}
-                  selected
-                />
-              ) : (
-                <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
-                  {TEXT_EDITOR_ALERTS.NO_RESPONSE_SELECTED}
-                </div>
-              )}
-            </section>
-          </aside>
-        </main>
-      </div>
-      {pendingEditorAction && (
-        <ConfirmDialog
-          cancelLabel={TEXT_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
-          confirmLabel="Save and Continue"
-          description={
-            pendingEditorActionCopy?.description ||
-            "Your current editor content has unsaved changes. Save this draft before continuing?"
-          }
-          onCancel={() => {
-            pendingEditorAction?.();
-            setPendingEditorAction(null);
-            setPendingEditorActionCopy(null);
+    <>
+      {(isLoadingContent || isLoadingHistory || workspaceLoadError || isSaving) && (
+        <WorkspaceLoading type="text" error={workspaceLoadError} isSaving={isSaving} />
+      )}
+      <section
+        inert={
+          isLoadingContent || isLoadingHistory || workspaceLoadError || isSaving ? "" : undefined
+        }
+        className="min-h-screen overflow-hidden bg-slate-50"
+      >
+        <TextWorkspaceHeader
+          activeCollaborators={collaborationState.activeCollaborators}
+          canEdit={canEditProject}
+          canManageSharing={canManageSharing}
+          collaborationProvider={collaborationProvider}
+          invitedUsers={invitedUsers}
+          isSaving={isSaving}
+          onBackToProjects={handleBackToProjects}
+          onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
+          onExport={handleExport}
+          onInviteUser={handleInviteUser}
+          onNotify={showNotification}
+          onSave={handleSave}
+          project={project}
+          templateHistoryOptions={templateHistoryOptions}
+          statusLabel={statusLabel}
+          templateInitialValues={{
+            projectType: API_PROJECT_TYPES.TEXT,
+            starterContent: editorContent.html,
+            starterPrompt: prompt
           }}
-          onConfirm={handleConfirmPendingAction}
-          title={pendingEditorActionCopy?.title || "Save changes before continuing?"}
         />
-      )}
-      {pendingResponseDelete && (
-        <ConfirmDialog
-          cancelLabel="Cancel"
-          confirmLabel={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_LABEL}
-          description={TEXT_EDITOR_ALERTS.deleteConfirmDescription(pendingResponseDelete.prompt)}
-          onCancel={() => setPendingResponseDelete(null)}
-          onConfirm={() => handleDeleteResponse(pendingResponseDelete.id)}
-          title={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_TITLE}
+
+        <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
+          <AIHistorySidebar
+            error={historyError}
+            history={history}
+            isCollapsed={isHistoryCollapsed}
+            isLoading={isLoadingHistory}
+            onDeleteHistory={requestDeleteResponse}
+            onSelectHistory={handleSelectHistory}
+            onToggleFavourite={handleFavouriteResponse}
+            onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
+            selectedHistoryId={selectedHistoryId}
+          />
+
+          <main className="grid min-w-0 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:p-7">
+            <section className="grid min-w-0 gap-5">
+              <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
+                <EditorToolbar disabled={!canEditProject} editor={editor} />
+                <div
+                  className={`border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide ${
+                    saveError
+                      ? "text-red-700"
+                      : hasUnsavedChanges || isSaving
+                        ? "text-amber-700"
+                        : "text-emerald-700"
+                  }`}
+                >
+                  {statusLabel} • {wordCount} words • {characterCount} characters •{" "}
+                  {readingTimeLabel}
+                </div>
+                <TipTapEditor
+                  collaborationProvider={collaborationReady ? collaborationProvider : null}
+                  key={`${project.id}-${collaborationReady ? "shared" : "local"}`}
+                  editorKey={`${project.id}-${collaborationReady ? "shared" : "local"}`}
+                  editable={canEditProject}
+                  initialContent={editorContent.html}
+                  onContentChange={handleEditorChange}
+                  onEditorReady={setEditor}
+                />
+              </article>
+            </section>
+
+            <aside className="grid min-w-0 content-start gap-5">
+              <AIPromptPanel
+                actions={textPromptActions}
+                disabled={!canEditProject}
+                error={aiState.error}
+                isGenerating={isGenerating}
+                onGenerate={handleGenerate}
+                onPromptChange={(value) => {
+                  if (aiState.error) {
+                    clearAiError();
+                  }
+                  setPrompt(value);
+                }}
+                onPromptFocus={handlePromptFocus}
+                onQuickAction={handleQuickAction}
+                prompt={prompt}
+              />
+
+              <section className="grid gap-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-950">Selected AI Response</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Generate with OpenAI, then copy, edit, favourite, or insert the selected
+                    response into TipTap.
+                  </p>
+                </div>
+                {selectedResponse ? (
+                  <AIResponseCard
+                    canEdit={canEditProject}
+                    copied={copiedResponseId === selectedResponse.id}
+                    key={selectedResponse.id}
+                    onCopy={handleCopyResponse}
+                    onDelete={requestDeleteResponse}
+                    onFavourite={handleFavouriteResponse}
+                    onUpdate={handleUpdateResponse}
+                    response={selectedResponse}
+                    selected
+                  />
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
+                    {TEXT_EDITOR_ALERTS.NO_RESPONSE_SELECTED}
+                  </div>
+                )}
+              </section>
+            </aside>
+          </main>
+        </div>
+        {pendingEditorAction && (
+          <ConfirmDialog
+            cancelLabel={TEXT_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
+            confirmLabel="Save and Continue"
+            description={
+              pendingEditorActionCopy?.description ||
+              "Your current editor content has unsaved changes. Save this draft before continuing?"
+            }
+            onCancel={() => {
+              pendingEditorAction?.();
+              setPendingEditorAction(null);
+              setPendingEditorActionCopy(null);
+            }}
+            onConfirm={handleConfirmPendingAction}
+            title={pendingEditorActionCopy?.title || "Save changes before continuing?"}
+          />
+        )}
+        {pendingResponseDelete && (
+          <ConfirmDialog
+            cancelLabel="Cancel"
+            confirmLabel={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_LABEL}
+            description={TEXT_EDITOR_ALERTS.deleteConfirmDescription(pendingResponseDelete.prompt)}
+            onCancel={() => setPendingResponseDelete(null)}
+            onConfirm={() => handleDeleteResponse(pendingResponseDelete.id)}
+            title={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_TITLE}
+          />
+        )}
+        <ToastNotification
+          duration={notification?.duration}
+          key={notification?.id}
+          message={notification?.message}
+          onClose={dismissNotification}
+          title={notification?.title}
+          type={notification?.type}
         />
-      )}
-      <ToastNotification
-        duration={notification?.duration}
-        key={notification?.id}
-        message={notification?.message}
-        onClose={dismissNotification}
-        title={notification?.title}
-        type={notification?.type}
-      />
-    </section>
+      </section>
+    </>
   );
 }
 

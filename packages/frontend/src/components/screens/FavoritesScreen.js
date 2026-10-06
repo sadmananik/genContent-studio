@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, ExternalLink, StarOff } from "lucide-react";
+import TemplateCard from "../templates/TemplateCard";
+import TemplatePreviewModal from "../templates/TemplatePreviewModal";
 import Button from "../common/Button";
 import { EmptyState, SectionHeader } from "../common/Cards";
 import ProjectListCard from "../common/ProjectListCard";
@@ -19,6 +21,15 @@ export default function FavoritesScreen() {
   const aiState = useAppStore((state) => state.aiState);
   const fetchFavouriteResponses = useAppStore((state) => state.fetchFavouriteResponses);
   const toggleAiResponseFavourite = useAppStore((state) => state.toggleAiResponseFavourite);
+  const templateState = useAppStore((state) => state.templateState);
+  const fetchFavoriteTemplates = useAppStore((state) => state.fetchFavoriteTemplates);
+  const toggleTemplateFavorite = useAppStore((state) => state.toggleTemplateFavorite);
+  const createProjectFromTemplate = useAppStore((state) => state.useTemplate);
+  const voteTemplate = useAppStore((state) => state.voteTemplate);
+  const [templateError, setTemplateError] = useState(null);
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [pendingTemplateId, setPendingTemplateId] = useState(null);
+  const [usingTemplateId, setUsingTemplateId] = useState(null);
   const [copiedResponseId, setCopiedResponseId] = useState(null);
   const [notification, setNotification] = useState(null);
   const favourites = useMemo(
@@ -31,6 +42,40 @@ export default function FavoritesScreen() {
       fetchFavouriteResponses().catch(() => {});
     }
   }, [auth.token, fetchFavouriteResponses]);
+
+  useEffect(() => {
+    if (auth.token) {
+      fetchFavoriteTemplates()
+        .then(() => setTemplateError(null))
+        .catch((error) => setTemplateError(error.message));
+    }
+  }, [auth.token, fetchFavoriteTemplates]);
+
+  async function removeTemplate(template) {
+    setPendingTemplateId(template.id);
+    try {
+      await toggleTemplateFavorite(template.id, false);
+      showNotification("Favorite removed", "Template removed from favorites.", TOAST_TYPES.SUCCESS);
+    } catch (error) {
+      showNotification("Unable to remove favorite", error.message, TOAST_TYPES.ERROR);
+    } finally {
+      setPendingTemplateId(null);
+    }
+  }
+
+  async function createFromTemplate(template) {
+    setUsingTemplateId(template.id);
+    try {
+      const { project } = await createProjectFromTemplate(template.id);
+      const params = new URLSearchParams({ projectId: project.id || project._id });
+      if (project.type === API_PROJECT_TYPES.IMAGE) params.set("type", API_PROJECT_TYPES.IMAGE);
+      router.push(`${ROUTES.EDITOR}?${params}`);
+    } catch (error) {
+      showNotification("Template not used", error.message, TOAST_TYPES.ERROR);
+    } finally {
+      setUsingTemplateId(null);
+    }
+  }
 
   function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
     setNotification({ duration, id: Date.now(), message, title, type });
@@ -170,6 +215,60 @@ export default function FavoritesScreen() {
           ))}
         </section>
       )}
+
+      <section className="mt-8">
+        <SectionHeader title={`Favorite Templates (${templateState.favoriteTemplates.length})`} />
+        {templateState.favoriteLoading ? (
+          <EmptyState title="Loading favorite templates..." description="Please wait." />
+        ) : templateError ? (
+          <EmptyState
+            title="Unable to load favorite templates"
+            description={templateError}
+            action={
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  fetchFavoriteTemplates()
+                    .then(() => setTemplateError(null))
+                    .catch((error) => setTemplateError(error.message))
+                }
+              >
+                Try Again
+              </Button>
+            }
+          />
+        ) : templateState.favoriteTemplates.length === 0 ? (
+          <EmptyState
+            title="No favorite templates yet"
+            description="Star a template in Browse Templates to save it here."
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {templateState.favoriteTemplates.map((template) => (
+              <TemplateCard
+                key={template.id}
+                template={template}
+                isFavoritePending={pendingTemplateId === template.id}
+                isUsing={usingTemplateId === template.id}
+                onFavorite={removeTemplate}
+                onPreview={setPreviewTemplate}
+                onUse={createFromTemplate}
+                onVote={(item, vote) =>
+                  voteTemplate(item.id, vote).catch((error) =>
+                    showNotification("Vote not saved", error.message, TOAST_TYPES.ERROR)
+                  )
+                }
+              />
+            ))}
+          </div>
+        )}
+      </section>
+      <TemplatePreviewModal
+        template={previewTemplate}
+        onClose={() => setPreviewTemplate(null)}
+        onUse={createFromTemplate}
+        isUsing={usingTemplateId === previewTemplate?.id}
+      />
 
       <ToastNotification
         duration={notification?.duration}

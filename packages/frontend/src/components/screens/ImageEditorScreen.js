@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import WorkspaceLoading from "../common/WorkspaceLoading";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
@@ -57,6 +58,7 @@ export default function ImageEditorScreen() {
   const setActiveCollaborators = useAppStore((state) => state.setActiveCollaborators);
   const setSocketConnected = useAppStore((state) => state.setSocketConnected);
   const setCollaborationError = useAppStore((state) => state.setCollaborationError);
+  const [workspaceLoadError, setWorkspaceLoadError] = useState(null);
   const [canvas, setCanvas] = useState(null);
   const [collaborationProvider, setCollaborationProvider] = useState(null);
   const [remoteCanvasPointers, setRemoteCanvasPointers] = useState([]);
@@ -408,32 +410,8 @@ export default function ImageEditorScreen() {
   ]);
 
   useEffect(() => {
-    if (!isRealProject) {
-      setResponses([]);
-      setSelectedResponseId(null);
-      return;
-    }
-
-    fetchProjectChatHistory(projectId)
-      .then((chatHistory) => {
-        const imageResponses = chatHistory
-          .filter((chat) => chat.contentType === AI_CONTENT_TYPES.IMAGE)
-          .map(normalizeImageChat);
-
-        setResponses(imageResponses);
-        setSelectedResponseId(restoredResponseIdRef.current || imageResponses[0]?.id || null);
-      })
-      .catch((error) => {
-        showNotification(
-          IMAGE_EDITOR_ALERTS.HISTORY_UNAVAILABLE_TITLE,
-          error.message || IMAGE_EDITOR_ALERTS.HISTORY_UNAVAILABLE_MESSAGE,
-          TOAST_TYPES.ERROR
-        );
-      });
-  }, [fetchProjectChatHistory, isRealProject, projectId]);
-
-  useEffect(() => {
     setIsCanvasSnapshotResolved(false);
+    setWorkspaceLoadError(null);
     hasAutoLoadedResponseRef.current = false;
     if (!canvas) return undefined;
 
@@ -447,10 +425,20 @@ export default function ImageEditorScreen() {
       try {
         if (isRealProject) {
           try {
-            const content = await apiRequest(`/api/image-content/${projectId}`, {
-              timeoutMs: 60000
-            });
+            const [savedContent, chats] = await Promise.all([
+              apiRequest(`/api/image-content/${projectId}`, { timeoutMs: 60000 }).catch((error) => {
+                if (error.status === 404) return null;
+                throw error;
+              }),
+              fetchProjectChatHistory(projectId)
+            ]);
             if (!isCurrent) return;
+            const imageResponses = chats
+              .filter((chat) => chat.contentType === AI_CONTENT_TYPES.IMAGE)
+              .map(normalizeImageChat);
+            setResponses(imageResponses);
+            const content = savedContent || {};
+            setSelectedResponseId(content.responseId || imageResponses[0]?.id || null);
             if (content.responseId) {
               restoredResponseIdRef.current = content.responseId;
               setSelectedResponseId(content.responseId);
@@ -503,6 +491,7 @@ export default function ImageEditorScreen() {
         if (isCurrent) setIsCanvasSnapshotResolved(true);
       } catch (error) {
         if (!isCurrent) return;
+        setWorkspaceLoadError(error.message || "Please try again.");
         showNotification(
           IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_TITLE,
           error.message || IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_MESSAGE,
@@ -516,7 +505,7 @@ export default function ImageEditorScreen() {
       isCurrent = false;
       controller.abort();
     };
-  }, [canvas, isRealProject, projectId]);
+  }, [canvas, fetchProjectChatHistory, isRealProject, projectId]);
 
   useEffect(() => {
     const legacy = unassignedSnapshotRef.current;
@@ -537,12 +526,15 @@ export default function ImageEditorScreen() {
     const latestResponse = responses[0];
     if (!latestResponse?.imageUrl) return;
     hasAutoLoadedResponseRef.current = true;
+    setIsCanvasSnapshotResolved(false);
     setSelectedResponseId(latestResponse.id);
     setGenerationRequest({
       id: Date.now(),
       imageUrl: latestResponse.imageUrl,
       prompt: latestResponse.prompt,
-      syncCanvas: false
+      syncCanvas: false,
+      onLoaded: () => setIsCanvasSnapshotResolved(true),
+      onError: (error) => setWorkspaceLoadError(error.message || "Image could not load.")
     });
   }, [canvas, isCanvasSnapshotResolved, responses]);
 
@@ -1282,150 +1274,160 @@ export default function ImageEditorScreen() {
   }
 
   return (
-    <section className="flex min-h-screen flex-col overflow-hidden bg-slate-50">
-      <TextWorkspaceHeader
-        activeCollaborators={collaborationState.activeCollaborators}
-        canEdit={canEditProject}
-        canManageSharing={canManageSharing}
-        collaborationProvider={collaborationProvider}
-        exportOptions={[
-          { label: "PNG image", value: "png" },
-          { label: "JPEG image", value: "jpeg" },
-          { label: "Canvas JSON", value: "json" }
-        ]}
-        invitedUsers={invitedUsers}
-        isSaving={isSaving}
-        onBackToProjects={handleBackToProjects}
-        onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
-        onExport={handleExport}
-        onInviteUser={handleInviteUser}
-        onNotify={showNotification}
-        onSave={handleHeaderSave}
-        project={project}
-        templateHistoryOptions={templateHistoryOptions}
-        statusLabel={statusLabel}
-        templateInitialValues={{
-          projectType: API_PROJECT_TYPES.IMAGE,
-          starterPrompt: prompt
-        }}
-      />
-
-      <div
-        className={`grid min-h-0 flex-1 grid-cols-1 overflow-hidden ${
-          isHistoryCollapsed
-            ? "lg:grid-cols-[4rem_minmax(0,1fr)]"
-            : "lg:grid-cols-[18rem_minmax(0,1fr)]"
-        }`}
+    <>
+      {(!isCanvasSnapshotResolved || workspaceLoadError || isSaving) && (
+        <WorkspaceLoading type="image" error={workspaceLoadError} isSaving={isSaving} />
+      )}
+      <section
+        inert={!isCanvasSnapshotResolved || workspaceLoadError || isSaving ? "" : undefined}
+        className="flex min-h-screen flex-col overflow-hidden bg-slate-50"
       >
-        <AIHistorySidebar
-          history={history}
-          isCollapsed={isHistoryCollapsed}
-          onDeleteHistory={requestDeleteResponse}
-          onSelectHistory={handleSelectHistory}
-          onToggleFavourite={handleFavouriteResponse}
-          onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
-          selectedHistoryId={selectedResponseId}
-        />
-
-        <main className="grid min-h-0 min-w-0 items-start gap-5 overflow-auto p-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,460px)] xl:p-7">
-          <div className="min-w-0 self-start">
-            <FabricImageEditor
-              activeResponseId={selectedResponseId}
-              collaborationProvider={collaborationProvider}
-              clearCanvasRequest={clearCanvasRequest}
-              editable={canEditProject}
-              generationRequest={generationRequest}
-              onDirtyChange={setHasUnsavedChanges}
-              onReady={handleCanvasReady}
-              remoteCanvasPointers={visibleRemoteCanvasPointers}
-              remoteCanvasState={remoteCanvasState}
-              remoteCanvasTransform={remoteCanvasTransform}
-              statusLabel={statusLabel}
-              statusTone={canvasStatusTone}
-            />
-          </div>
-
-          <aside className="grid min-w-0 content-start gap-5">
-            <AIPromptPanel
-              actions={IMAGE_QUICK_ACTIONS}
-              disabled={!canEditProject}
-              isGenerating={isGenerating}
-              onGenerate={() => handleGenerate()}
-              onPromptFocus={handlePromptFocus}
-              onPromptChange={setPrompt}
-              onQuickAction={handleQuickAction}
-              placeholder="Describe the image you want to create or improve..."
-              prompt={prompt}
-              title="Ask AI to create or improve images"
-            />
-
-            <section className="grid gap-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-950">Selected Image Response</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Generate an image, then copy, edit, favourite, or insert it into the canvas.
-                </p>
-              </div>
-              {selectedResponse ? (
-                <AIResponseCard
-                  canEdit={canEditProject}
-                  copied={copiedResponseId === selectedResponse.id}
-                  key={selectedResponse.id}
-                  onCopy={handleCopyResponse}
-                  onDelete={requestDeleteResponse}
-                  onFavourite={handleFavouriteResponse}
-                  onUpdate={handleUpdateResponse}
-                  response={selectedResponse}
-                  responseLabel="Image Response"
-                  selected
-                />
-              ) : (
-                <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
-                  {IMAGE_EDITOR_ALERTS.NO_RESPONSE_SELECTED}
-                </div>
-              )}
-            </section>
-          </aside>
-        </main>
-      </div>
-
-      {pendingCanvasAction && (
-        <ConfirmDialog
-          cancelLabel={IMAGE_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
-          confirmLabel="Save and Continue"
-          description={
-            pendingCanvasActionCopy?.description ||
-            IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION
-          }
-          onCancel={() => {
-            pendingCanvasAction?.();
-            setPendingCanvasAction(null);
-            setPendingCanvasActionCopy(null);
+        <TextWorkspaceHeader
+          activeCollaborators={collaborationState.activeCollaborators}
+          canEdit={canEditProject}
+          canManageSharing={canManageSharing}
+          collaborationProvider={collaborationProvider}
+          exportOptions={[
+            { label: "PNG image", value: "png" },
+            { label: "JPEG image", value: "jpeg" },
+            { label: "Canvas JSON", value: "json" }
+          ]}
+          invitedUsers={invitedUsers}
+          isSaving={isSaving}
+          onBackToProjects={handleBackToProjects}
+          onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
+          onExport={handleExport}
+          onInviteUser={handleInviteUser}
+          onNotify={showNotification}
+          onSave={handleHeaderSave}
+          project={project}
+          templateHistoryOptions={templateHistoryOptions}
+          statusLabel={statusLabel}
+          templateInitialValues={{
+            projectType: API_PROJECT_TYPES.IMAGE,
+            starterPrompt: prompt
           }}
-          onConfirm={handleConfirmPendingAction}
-          title={pendingCanvasActionCopy?.title || IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE}
         />
-      )}
-      {pendingResponseDelete && (
-        <ConfirmDialog
-          cancelLabel="Cancel"
-          confirmLabel={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_LABEL}
-          description={TEXT_EDITOR_ALERTS.deleteConfirmDescription(pendingResponseDelete.prompt)}
-          onCancel={() => setPendingResponseDelete(null)}
-          onConfirm={() => handleDeleteResponse(pendingResponseDelete.id)}
-          title={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_TITLE}
-        />
-      )}
 
-      <ToastNotification
-        duration={notification?.duration}
-        key={notification?.id}
-        message={notification?.message}
-        onClose={() => setNotification(null)}
-        title={notification?.title}
-        type={notification?.type}
-      />
-    </section>
+        <div
+          className={`grid min-h-0 flex-1 grid-cols-1 overflow-hidden ${
+            isHistoryCollapsed
+              ? "lg:grid-cols-[4rem_minmax(0,1fr)]"
+              : "lg:grid-cols-[18rem_minmax(0,1fr)]"
+          }`}
+        >
+          <AIHistorySidebar
+            history={history}
+            isCollapsed={isHistoryCollapsed}
+            onDeleteHistory={requestDeleteResponse}
+            onSelectHistory={handleSelectHistory}
+            onToggleFavourite={handleFavouriteResponse}
+            onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
+            selectedHistoryId={selectedResponseId}
+          />
+
+          <main className="grid min-h-0 min-w-0 items-start gap-5 overflow-auto p-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,460px)] xl:p-7">
+            <div className="min-w-0 self-start">
+              <FabricImageEditor
+                activeResponseId={selectedResponseId}
+                collaborationProvider={collaborationProvider}
+                clearCanvasRequest={clearCanvasRequest}
+                editable={canEditProject}
+                generationRequest={generationRequest}
+                onDirtyChange={setHasUnsavedChanges}
+                onReady={handleCanvasReady}
+                remoteCanvasPointers={visibleRemoteCanvasPointers}
+                remoteCanvasState={remoteCanvasState}
+                remoteCanvasTransform={remoteCanvasTransform}
+                statusLabel={statusLabel}
+                statusTone={canvasStatusTone}
+              />
+            </div>
+
+            <aside className="grid min-w-0 content-start gap-5">
+              <AIPromptPanel
+                actions={IMAGE_QUICK_ACTIONS}
+                disabled={!canEditProject}
+                isGenerating={isGenerating}
+                onGenerate={() => handleGenerate()}
+                onPromptFocus={handlePromptFocus}
+                onPromptChange={setPrompt}
+                onQuickAction={handleQuickAction}
+                placeholder="Describe the image you want to create or improve..."
+                prompt={prompt}
+                title="Ask AI to create or improve images"
+              />
+
+              <section className="grid gap-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-950">Selected Image Response</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Generate an image, then copy, edit, favourite, or insert it into the canvas.
+                  </p>
+                </div>
+                {selectedResponse ? (
+                  <AIResponseCard
+                    canEdit={canEditProject}
+                    copied={copiedResponseId === selectedResponse.id}
+                    key={selectedResponse.id}
+                    onCopy={handleCopyResponse}
+                    onDelete={requestDeleteResponse}
+                    onFavourite={handleFavouriteResponse}
+                    onUpdate={handleUpdateResponse}
+                    response={selectedResponse}
+                    responseLabel="Image Response"
+                    selected
+                  />
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
+                    {IMAGE_EDITOR_ALERTS.NO_RESPONSE_SELECTED}
+                  </div>
+                )}
+              </section>
+            </aside>
+          </main>
+        </div>
+
+        {pendingCanvasAction && (
+          <ConfirmDialog
+            cancelLabel={IMAGE_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
+            confirmLabel="Save and Continue"
+            description={
+              pendingCanvasActionCopy?.description ||
+              IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION
+            }
+            onCancel={() => {
+              pendingCanvasAction?.();
+              setPendingCanvasAction(null);
+              setPendingCanvasActionCopy(null);
+            }}
+            onConfirm={handleConfirmPendingAction}
+            title={
+              pendingCanvasActionCopy?.title || IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE
+            }
+          />
+        )}
+        {pendingResponseDelete && (
+          <ConfirmDialog
+            cancelLabel="Cancel"
+            confirmLabel={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_LABEL}
+            description={TEXT_EDITOR_ALERTS.deleteConfirmDescription(pendingResponseDelete.prompt)}
+            onCancel={() => setPendingResponseDelete(null)}
+            onConfirm={() => handleDeleteResponse(pendingResponseDelete.id)}
+            title={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_TITLE}
+          />
+        )}
+
+        <ToastNotification
+          duration={notification?.duration}
+          key={notification?.id}
+          message={notification?.message}
+          onClose={() => setNotification(null)}
+          title={notification?.title}
+          type={notification?.type}
+        />
+      </section>
+    </>
   );
 }
 
