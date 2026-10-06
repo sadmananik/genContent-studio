@@ -67,12 +67,17 @@ test("forgot-password form shows the mocked response", async () => {
   expect(await screen.findByText("Reset email sent")).toBeVisible();
 });
 
-test("missing reset token disables submission", () => {
+test("missing reset token hides the form and offers a fresh reset link", () => {
   render(<ResetPasswordScreen />);
   expect(
     screen.getByText("This password reset link is invalid, expired, or incomplete")
   ).toBeVisible();
-  expect(screen.getByRole("button", { name: /reset|update/i })).toBeDisabled();
+  expect(screen.queryByLabelText("New password")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /reset|update/i })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Request a new reset link" })).toHaveAttribute(
+    "href",
+    "/forgot-password"
+  );
 });
 
 test("protected content stays hidden without a session", () => {
