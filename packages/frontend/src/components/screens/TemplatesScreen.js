@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Pencil, Search, Send, Trash2 } from "lucide-react";
+import { Eye, EyeOff, LayoutTemplate, Pencil, Search, Send, Trash2 } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, SectionHeader } from "../common/Cards";
@@ -272,25 +272,36 @@ export default function TemplatesScreen() {
 
   return (
     <main className="min-w-0 p-5 md:p-7">
-      <header className="-m-5 mb-6 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
-        <h1 className="m-0 text-2xl font-bold text-slate-950">{TEMPLATE_TEXT.PAGE_TITLE}</h1>
-        <p className="mt-1.5 text-sm text-slate-500">{TEMPLATE_TEXT.PAGE_DESCRIPTION}</p>
+      <header className="-m-5 mb-6 flex items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-700">
+          <LayoutTemplate aria-hidden="true" size={23} />
+        </span>
+        <div className="min-w-0">
+          <h1 className="m-0 text-2xl font-bold text-slate-950">{TEMPLATE_TEXT.PAGE_TITLE}</h1>
+          <p className="mt-1.5 text-sm text-slate-500">{TEMPLATE_TEXT.PAGE_DESCRIPTION}</p>
+        </div>
       </header>
 
-      <div className="mb-6 flex w-full max-w-md rounded-md border border-slate-200 bg-white p-1">
+      <div
+        aria-label="Template sections"
+        className="mb-6 flex w-full max-w-xl rounded-lg border border-slate-200 bg-white p-1 shadow-sm"
+        role="tablist"
+      >
         {[
           [TEMPLATE_TABS.BROWSE, TEMPLATE_TEXT.BROWSE_TAB],
           [TEMPLATE_TABS.FAVORITES, TEMPLATE_TEXT.FAVORITES_TAB],
           [TEMPLATE_TABS.MINE, TEMPLATE_TEXT.MY_TAB]
         ].map(([tab, label]) => (
           <button
-            className={`min-h-9 min-w-0 flex-1 rounded px-3 text-sm font-bold transition ${
+            className={`min-h-9 min-w-0 flex-1 cursor-pointer rounded px-3 text-sm font-bold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-1 ${
               activeTab === tab
-                ? "bg-violet-600 text-white shadow-sm"
+                ? "bg-violet-600 text-white shadow-sm hover:bg-violet-700"
                 : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
             }`}
             key={tab}
             onClick={() => setActiveTab(tab)}
+            aria-selected={activeTab === tab}
+            role="tab"
             type="button"
           >
             {label}
@@ -548,7 +559,7 @@ function TemplateGrid({
   templates
 }) {
   return (
-    <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <section className="grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr))]">
       {templates.map((template) => (
         <TemplateCard
           actions={renderActions?.(template)}

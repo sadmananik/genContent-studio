@@ -127,6 +127,7 @@ test("removing an AI favourite removes its card", async () => {
     contentType: "text"
   };
   mockApi({
+    "GET /api/templates/favorites": { body: [] },
     "GET /api/chats/favourites": { body: [chat] },
     "PATCH /api/chats/chat-1/favourite": { body: { ...chat, isFavourite: false } }
   });
@@ -135,4 +136,30 @@ test("removing an AI favourite removes its card", async () => {
   await ui.click(screen.getByRole("button", { name: /remove/i }));
   await waitFor(() => expect(screen.queryByText(chat.response)).not.toBeInTheDocument());
   expect(useAppStore.getState().aiState.favouriteResponses).toEqual([]);
+});
+
+test("Favorites loads saved templates and removing one clears its star in Browse", async () => {
+  const ui = userEvent.setup();
+  const template = {
+    id: "template-1",
+    title: "Saved template",
+    projectType: "text",
+    isFavorite: true,
+    visibility: "public"
+  };
+  useAppStore.setState((state) => ({
+    templateState: { ...state.templateState, templates: [template] }
+  }));
+  mockApi({
+    "GET /api/chats/favourites": { body: [] },
+    "GET /api/templates/favorites": { body: [template] },
+    "DELETE /api/templates/template-1/favorite": { body: { message: "Removed" } }
+  });
+  render(<FavoritesScreen />);
+  expect(await screen.findByRole("heading", { name: template.title })).toBeVisible();
+  await ui.click(screen.getByRole("button", { name: "Remove Saved template from favorites" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("heading", { name: template.title })).not.toBeInTheDocument()
+  );
+  expect(useAppStore.getState().templateState.templates[0].isFavorite).toBe(false);
 });

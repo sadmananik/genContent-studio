@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import WorkspaceLoading from "../common/WorkspaceLoading";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
@@ -34,7 +35,10 @@ import {
 import { apiRequest } from "../../lib/apiClient";
 import { getAuthSession } from "../../lib/auth";
 import { createCollaborationProvider } from "../../lib/collaboration";
+import { loadImageWorkspaceDraft, saveImageWorkspaceDraft } from "../../lib/imageWorkspaceDrafts";
 import { useAppStore } from "../../store";
+
+const imageStarterPrompt = "Create a clean product launch social post.";
 
 export default function ImageEditorScreen() {
   const router = useRouter();
@@ -54,6 +58,7 @@ export default function ImageEditorScreen() {
   const setActiveCollaborators = useAppStore((state) => state.setActiveCollaborators);
   const setSocketConnected = useAppStore((state) => state.setSocketConnected);
   const setCollaborationError = useAppStore((state) => state.setCollaborationError);
+  const [workspaceLoadError, setWorkspaceLoadError] = useState(null);
   const [canvas, setCanvas] = useState(null);
   const [collaborationProvider, setCollaborationProvider] = useState(null);
   const [remoteCanvasPointers, setRemoteCanvasPointers] = useState([]);
@@ -73,11 +78,14 @@ export default function ImageEditorScreen() {
   const [pendingCanvasAction, setPendingCanvasAction] = useState(null);
   const [pendingCanvasActionCopy, setPendingCanvasActionCopy] = useState(null);
   const [pendingResponseDelete, setPendingResponseDelete] = useState(null);
-  const [prompt, setPrompt] = useState("Create a clean product launch social post.");
+  const [prompt, setPrompt] = useState(imageStarterPrompt);
   const [project, setProject] = useState(mockImageProject);
   const [responses, setResponses] = useState([]);
   const [selectedResponseId, setSelectedResponseId] = useState(null);
   const selectedResponse = responses.find((response) => response.id === selectedResponseId);
+  const savedResponseCanvasesRef = useRef(new Map());
+  const restoredResponseIdRef = useRef(null);
+  const unassignedSnapshotRef = useRef(null);
   const canvasRef = useRef(null);
   const projectRef = useRef(project);
   const responsesRef = useRef(responses);
@@ -146,9 +154,8 @@ export default function ImageEditorScreen() {
         setActiveCollaborators(payload?.collaborators || []);
       }
 
-      if (event === "project:joined" && payload?.canvasState?.objects?.length) {
-        setRemoteCanvasState(payload.canvasState);
-      }
+      // Initial content comes from the persisted project snapshot. The room's
+      // cached canvas may belong to an older response or a previous session.
 
       if (
         event === "canvas:update" &&
@@ -403,126 +410,142 @@ export default function ImageEditorScreen() {
   ]);
 
   useEffect(() => {
-    if (!isRealProject) {
-      setResponses([]);
-      setSelectedResponseId(null);
-      return;
-    }
+    setIsCanvasSnapshotResolved(false);
+    setWorkspaceLoadError(null);
+    hasAutoLoadedResponseRef.current = false;
+    if (!canvas) return undefined;
 
-    fetchProjectChatHistory(projectId)
-      .then((chatHistory) => {
-        const imageResponses = chatHistory
-          .filter((chat) => chat.contentType === AI_CONTENT_TYPES.IMAGE)
-          .map(normalizeImageChat);
+    let isCurrent = true;
+    const controller = new AbortController();
 
-        setResponses(imageResponses);
-        setSelectedResponseId(imageResponses[0]?.id || null);
-      })
-      .catch((error) => {
-        showNotification(
-          IMAGE_EDITOR_ALERTS.HISTORY_UNAVAILABLE_TITLE,
-          error.message || IMAGE_EDITOR_ALERTS.HISTORY_UNAVAILABLE_MESSAGE,
-          TOAST_TYPES.ERROR
-        );
-      });
-  }, [fetchProjectChatHistory, isRealProject, projectId]);
-
-  useEffect(() => {
-    if (!canvas || !isRealProject) {
-      setIsCanvasSnapshotResolved(true);
-      return;
-    }
-
-    apiRequest(`/api/image-content/${projectId}`)
-      .then((imageContent) => {
-        if (imageContent.generationPrompt) {
-          setPrompt(imageContent.generationPrompt);
+    async function restoreCanvas() {
+      let snapshot = null;
+      let savedAt = null;
+      let localDraft = false;
+      try {
+        if (isRealProject) {
+          try {
+            const [savedContent, chats] = await Promise.all([
+              apiRequest(`/api/image-content/${projectId}`, { timeoutMs: 60000 }).catch((error) => {
+                if (error.status === 404) return null;
+                throw error;
+              }),
+              fetchProjectChatHistory(projectId)
+            ]);
+            if (!isCurrent) return;
+            const imageResponses = chats
+              .filter((chat) => chat.contentType === AI_CONTENT_TYPES.IMAGE)
+              .map(normalizeImageChat);
+            setResponses(imageResponses);
+            const content = savedContent || {};
+            setSelectedResponseId(content.responseId || imageResponses[0]?.id || null);
+            if (content.responseId) {
+              restoredResponseIdRef.current = content.responseId;
+              setSelectedResponseId(content.responseId);
+              savedResponseCanvasesRef.current.set(content.responseId, content.canvasState);
+            }
+            if (Array.isArray(content.canvasState?.objects)) {
+              if (!content.responseId) {
+                unassignedSnapshotRef.current = {
+                  canvasState: content.canvasState,
+                  prompt: content.generationPrompt
+                };
+              }
+              snapshot = content.canvasState;
+              savedAt = content.updatedAt;
+            }
+            if (content.generationPrompt) setPrompt(content.generationPrompt);
+          } catch (error) {
+            if (!isCurrent) return;
+            if (error.status !== 404) throw error;
+          }
         }
 
-        if (!imageContent.canvasState?.objects?.length) {
-          return null;
+        if (!snapshot) {
+          const draft = await loadImageWorkspaceDraft(projectId);
+          if (!isCurrent) return;
+          const parsed = safeParseJson(draft);
+          if (Array.isArray(parsed?.objects)) {
+            snapshot = parsed;
+            localDraft = true;
+          }
         }
 
-        return canvas.loadFromJSON(imageContent.canvasState).then(() => {
+        if (snapshot) {
+          // A saved empty canvas is intentional, so do not insert the original AI image.
+          hasAutoLoadedResponseRef.current = true;
+          await canvas.loadFromJSON(snapshot, undefined, { signal: controller.signal });
+          if (!isCurrent) return;
           canvas.requestRenderAll();
           setHasUnsavedChanges(false);
-        });
-      })
-      .catch((error) => {
-        if (error.status === 404 || error.message === "Image content not found") {
-          return;
+          setLastSavedAt(savedAt ? new Date(savedAt) : null);
+          if (localDraft) {
+            showNotification(
+              IMAGE_EDITOR_ALERTS.DRAFT_RESTORED_TITLE,
+              IMAGE_EDITOR_ALERTS.DRAFT_RESTORED_MESSAGE,
+              TOAST_TYPES.INFO,
+              3000
+            );
+          }
         }
-
+        if (isCurrent) setIsCanvasSnapshotResolved(true);
+      } catch (error) {
+        if (!isCurrent) return;
+        setWorkspaceLoadError(error.message || "Please try again.");
         showNotification(
           IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_TITLE,
           error.message || IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_MESSAGE,
           TOAST_TYPES.ERROR
         );
-      })
-      .finally(() => {
-        setIsCanvasSnapshotResolved(true);
-      });
-  }, [canvas, isRealProject, projectId]);
+      }
+    }
 
-  // Fall back to the most recent AI response when no canvas snapshot was ever saved.
+    restoreCanvas();
+    return () => {
+      isCurrent = false;
+      controller.abort();
+    };
+  }, [canvas, fetchProjectChatHistory, isRealProject, projectId]);
+
   useEffect(() => {
-    if (!canvas || !isCanvasSnapshotResolved || hasAutoLoadedResponseRef.current) {
-      return;
+    const legacy = unassignedSnapshotRef.current;
+    if (!isCanvasSnapshotResolved || !legacy || !responses.length) return;
+    const matches = responses.filter((response) => response.prompt === legacy.prompt);
+    if (matches.length === 1) {
+      savedResponseCanvasesRef.current.set(matches[0].id, legacy.canvasState);
+      restoredResponseIdRef.current = matches[0].id;
+      setSelectedResponseId(matches[0].id);
+      unassignedSnapshotRef.current = null;
     }
+  }, [isCanvasSnapshotResolved, responses]);
 
-    if (canvas.getObjects().length > 0 || !responses.length) {
-      return;
-    }
-
+  // Only insert the original image after confirming there is no saved snapshot.
+  useEffect(() => {
+    if (!canvas || !isCanvasSnapshotResolved || hasAutoLoadedResponseRef.current) return;
+    if (canvas.getObjects().length > 0 || !responses.length) return;
     const latestResponse = responses[0];
-
-    if (!latestResponse?.imageUrl) {
-      return;
-    }
-
+    if (!latestResponse?.imageUrl) return;
     hasAutoLoadedResponseRef.current = true;
+    setIsCanvasSnapshotResolved(false);
     setSelectedResponseId(latestResponse.id);
     setGenerationRequest({
       id: Date.now(),
       imageUrl: latestResponse.imageUrl,
       prompt: latestResponse.prompt,
-      syncCanvas: false
+      syncCanvas: false,
+      onLoaded: () => setIsCanvasSnapshotResolved(true),
+      onError: (error) => setWorkspaceLoadError(error.message || "Image could not load.")
     });
   }, [canvas, isCanvasSnapshotResolved, responses]);
 
-  useEffect(() => {
-    if (!canvas) {
-      return;
-    }
-
-    const savedCanvas = window.localStorage.getItem(getImageWorkspaceDraftKey(projectId));
-
-    if (!savedCanvas) {
-      return;
-    }
-
-    const parsedCanvas = safeParseJson(savedCanvas);
-    if (!parsedCanvas.objects?.length) {
-      return;
-    }
-
-    canvas
-      .loadFromJSON(parsedCanvas)
-      .then(() => {
-        canvas.requestRenderAll();
-        setHasUnsavedChanges(false);
-        showNotification(
-          IMAGE_EDITOR_ALERTS.DRAFT_RESTORED_TITLE,
-          IMAGE_EDITOR_ALERTS.DRAFT_RESTORED_MESSAGE,
-          TOAST_TYPES.INFO,
-          3000
-        );
-      })
-      .catch(() => {});
-  }, [canvas, projectId]);
-
   function showNotification(title, message, type = TOAST_TYPES.INFO, duration = 5000) {
     setNotification({ duration, id: Date.now(), message, title, type });
+  }
+
+  function handlePromptFocus() {
+    if (prompt === imageStarterPrompt) {
+      setPrompt("");
+    }
   }
 
   async function handleGenerate(generationOptions = {}) {
@@ -800,6 +823,7 @@ export default function ImageEditorScreen() {
   }
 
   function handleSelectHistory(responseId) {
+    if (!isCanvasSnapshotResolved || isSaving || responseId === selectedResponseId) return;
     if (queueUnsavedCanvasAction(() => selectHistoryResponse(responseId))) {
       return;
     }
@@ -808,6 +832,8 @@ export default function ImageEditorScreen() {
   }
 
   function selectHistoryResponse(responseId) {
+    setGenerationRequest(null);
+    setRemoteCanvasState(null);
     setSelectedResponseId(responseId);
     const response = responses.find((item) => item.id === responseId);
 
@@ -995,8 +1021,48 @@ export default function ImageEditorScreen() {
     );
   }
 
-  function loadImageResponseIntoCanvas(response, notificationOptions) {
+  async function loadImageResponseIntoCanvas(response, notificationOptions) {
     setPrompt(response.prompt);
+    setIsCanvasSnapshotResolved(false);
+    try {
+      let snapshot = savedResponseCanvasesRef.current.get(response.id);
+      if (!snapshot && isRealProject) {
+        try {
+          const saved = await apiRequest(
+            `/api/image-content/${projectId}?responseId=${encodeURIComponent(response.id)}`,
+            { timeoutMs: 60000 }
+          );
+          // Older backends ignore responseId and return the project canvas for
+          // every request. Never attach that canvas to a different history entry.
+          if (String(saved.responseId || "") === String(response.id)) {
+            snapshot = saved.canvasState;
+          }
+        } catch (error) {
+          if (error.status !== 404) throw error;
+        }
+      }
+      if (snapshot && Array.isArray(snapshot.objects)) {
+        savedResponseCanvasesRef.current.set(response.id, snapshot);
+        await canvas.loadFromJSON(snapshot);
+        canvas.requestRenderAll();
+        setIsCanvasSnapshotResolved(true);
+        setHasUnsavedChanges(false);
+        showNotification(
+          notificationOptions.title,
+          notificationOptions.message,
+          notificationOptions.type,
+          3000
+        );
+        return true;
+      }
+    } catch (error) {
+      showNotification(
+        IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_TITLE,
+        error.message,
+        TOAST_TYPES.ERROR
+      );
+      return false;
+    }
 
     if (!response.imageUrl) {
       showNotification(
@@ -1011,7 +1077,14 @@ export default function ImageEditorScreen() {
       id: Date.now(),
       imageUrl: response.imageUrl,
       prompt: response.prompt,
-      syncCanvas: false
+      syncCanvas: false,
+      onLoaded: () => setIsCanvasSnapshotResolved(true),
+      onError: (error) =>
+        showNotification(
+          IMAGE_EDITOR_ALERTS.CANVAS_LOAD_FAILED_TITLE,
+          error.message,
+          TOAST_TYPES.ERROR
+        )
     });
     showNotification(
       notificationOptions.title,
@@ -1032,10 +1105,24 @@ export default function ImageEditorScreen() {
       return;
     }
 
-    window.localStorage.setItem(getImageWorkspaceDraftKey(projectId), payload);
+    try {
+      await saveImageWorkspaceDraft(projectId, payload);
+    } catch (error) {
+      if (!isRealProject) {
+        throw new Error(
+          "Could not save the local image draft in this browser. Please free storage and try again.",
+          {
+            cause: error
+          }
+        );
+      }
+      console.warn("Could not cache image draft locally; continuing with server save.", error);
+    }
 
     if (isRealProject) {
       await sendImageGenerationRequest({
+        responseId: selectedResponseId,
+        summaryOnly: true,
         canvasState: safeParseJson(payload),
         generationPrompt: prompt,
         project: projectId
@@ -1048,6 +1135,8 @@ export default function ImageEditorScreen() {
 
     setHasUnsavedChanges(false);
     setLastSavedAt(new Date());
+    if (selectedResponseId)
+      savedResponseCanvasesRef.current.set(selectedResponseId, safeParseJson(payload));
 
     if (notify) {
       showNotification(
@@ -1061,6 +1150,11 @@ export default function ImageEditorScreen() {
   }
 
   async function saveCurrentCanvas(options) {
+    if (!canvas || !isCanvasSnapshotResolved) {
+      throw new Error(
+        "Wait for the saved canvas to load before saving. If loading failed, reopen the project and try again."
+      );
+    }
     const payload = canvas ? JSON.stringify(canvas.toJSON()) : "{}";
     await handleSaveCanvas(payload, options);
   }
@@ -1149,8 +1243,6 @@ export default function ImageEditorScreen() {
       return;
     }
 
-    const dataUrl = canvas.toDataURL({ format: "png", multiplier: 1, quality: 1 });
-
     if (format === "json") {
       downloadBlob(
         new Blob([JSON.stringify(canvas.toJSON(), null, 2)], {
@@ -1167,152 +1259,175 @@ export default function ImageEditorScreen() {
       return;
     }
 
-    downloadDataUrl(dataUrl, `${slugify(project.title)}.png`);
+    const exportFormat = format === "jpeg" ? "jpeg" : "png";
+    const dataUrl = exportCanvasWithBackground(canvas, exportFormat);
+    const extension = exportFormat === "jpeg" ? "jpg" : "png";
+    downloadDataUrl(dataUrl, `${slugify(project.title)}.${extension}`);
     showNotification(
       TEXT_EDITOR_ALERTS.EXPORTED_TITLE,
-      IMAGE_EDITOR_ALERTS.IMAGE_PNG_EXPORTED_MESSAGE,
+      exportFormat === "jpeg"
+        ? "Canvas exported as a white-background JPG image."
+        : IMAGE_EDITOR_ALERTS.IMAGE_PNG_EXPORTED_MESSAGE,
       TOAST_TYPES.SUCCESS,
       3000
     );
   }
 
   return (
-    <section className="flex min-h-screen flex-col overflow-hidden bg-slate-50">
-      <TextWorkspaceHeader
-        activeCollaborators={collaborationState.activeCollaborators}
-        canEdit={canEditProject}
-        canManageSharing={canManageSharing}
-        collaborationProvider={collaborationProvider}
-        exportOptions={[
-          { label: "PNG image", value: "png" },
-          { label: "Canvas JSON", value: "json" }
-        ]}
-        invitedUsers={invitedUsers}
-        isSaving={isSaving}
-        onBackToProjects={handleBackToProjects}
-        onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
-        onExport={handleExport}
-        onInviteUser={handleInviteUser}
-        onNotify={showNotification}
-        onSave={handleHeaderSave}
-        project={project}
-        templateHistoryOptions={templateHistoryOptions}
-        statusLabel={statusLabel}
-        templateInitialValues={{
-          projectType: API_PROJECT_TYPES.IMAGE,
-          starterPrompt: prompt
-        }}
-      />
-
-      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[auto_minmax(0,1fr)]">
-        <AIHistorySidebar
-          history={history}
-          isCollapsed={isHistoryCollapsed}
-          onDeleteHistory={requestDeleteResponse}
-          onSelectHistory={handleSelectHistory}
-          onToggleFavourite={handleFavouriteResponse}
-          onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
-          selectedHistoryId={selectedResponseId}
-        />
-
-        <main className="grid min-h-0 min-w-0 items-start gap-5 overflow-auto p-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,460px)] xl:p-7">
-          <div className="min-w-0 self-start">
-            <FabricImageEditor
-              activeResponseId={selectedResponseId}
-              collaborationProvider={collaborationProvider}
-              clearCanvasRequest={clearCanvasRequest}
-              editable={canEditProject}
-              generationRequest={generationRequest}
-              onDirtyChange={setHasUnsavedChanges}
-              onReady={handleCanvasReady}
-              remoteCanvasPointers={visibleRemoteCanvasPointers}
-              remoteCanvasState={remoteCanvasState}
-              remoteCanvasTransform={remoteCanvasTransform}
-              statusLabel={statusLabel}
-              statusTone={canvasStatusTone}
-            />
-          </div>
-
-          <aside className="grid min-w-0 content-start gap-5">
-            <AIPromptPanel
-              actions={IMAGE_QUICK_ACTIONS}
-              disabled={!canEditProject}
-              isGenerating={isGenerating}
-              onGenerate={() => handleGenerate()}
-              onPromptChange={setPrompt}
-              onQuickAction={handleQuickAction}
-              placeholder="Describe the image you want to create or improve..."
-              prompt={prompt}
-              title="Ask AI to create or improve images"
-            />
-
-            <section className="grid gap-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-950">Selected Image Response</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Generate an image, then copy, edit, favourite, or insert it into the canvas.
-                </p>
-              </div>
-              {selectedResponse ? (
-                <AIResponseCard
-                  canEdit={canEditProject}
-                  copied={copiedResponseId === selectedResponse.id}
-                  key={selectedResponse.id}
-                  onCopy={handleCopyResponse}
-                  onDelete={requestDeleteResponse}
-                  onFavourite={handleFavouriteResponse}
-                  onUpdate={handleUpdateResponse}
-                  response={selectedResponse}
-                  responseLabel="Image Response"
-                  selected
-                />
-              ) : (
-                <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
-                  {IMAGE_EDITOR_ALERTS.NO_RESPONSE_SELECTED}
-                </div>
-              )}
-            </section>
-          </aside>
-        </main>
-      </div>
-
-      {pendingCanvasAction && (
-        <ConfirmDialog
-          cancelLabel={IMAGE_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
-          confirmLabel="Save and Continue"
-          description={
-            pendingCanvasActionCopy?.description ||
-            IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION
-          }
-          onCancel={() => {
-            pendingCanvasAction?.();
-            setPendingCanvasAction(null);
-            setPendingCanvasActionCopy(null);
+    <>
+      {(!isCanvasSnapshotResolved || workspaceLoadError || isSaving) && (
+        <WorkspaceLoading type="image" error={workspaceLoadError} isSaving={isSaving} />
+      )}
+      <section
+        inert={!isCanvasSnapshotResolved || workspaceLoadError || isSaving ? "" : undefined}
+        className="flex min-h-screen flex-col overflow-hidden bg-slate-50"
+      >
+        <TextWorkspaceHeader
+          activeCollaborators={collaborationState.activeCollaborators}
+          canEdit={canEditProject}
+          canManageSharing={canManageSharing}
+          collaborationProvider={collaborationProvider}
+          exportOptions={[
+            { label: "PNG image", value: "png" },
+            { label: "JPEG image", value: "jpeg" },
+            { label: "Canvas JSON", value: "json" }
+          ]}
+          invitedUsers={invitedUsers}
+          isSaving={isSaving}
+          onBackToProjects={handleBackToProjects}
+          onProjectUpdated={(updatedProject) => setProject(normalizeProject(updatedProject))}
+          onExport={handleExport}
+          onInviteUser={handleInviteUser}
+          onNotify={showNotification}
+          onSave={handleHeaderSave}
+          project={project}
+          templateHistoryOptions={templateHistoryOptions}
+          statusLabel={statusLabel}
+          templateInitialValues={{
+            projectType: API_PROJECT_TYPES.IMAGE,
+            starterPrompt: prompt
           }}
-          onConfirm={handleConfirmPendingAction}
-          title={pendingCanvasActionCopy?.title || IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE}
         />
-      )}
-      {pendingResponseDelete && (
-        <ConfirmDialog
-          cancelLabel="Cancel"
-          confirmLabel={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_LABEL}
-          description={TEXT_EDITOR_ALERTS.deleteConfirmDescription(pendingResponseDelete.prompt)}
-          onCancel={() => setPendingResponseDelete(null)}
-          onConfirm={() => handleDeleteResponse(pendingResponseDelete.id)}
-          title={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_TITLE}
-        />
-      )}
 
-      <ToastNotification
-        duration={notification?.duration}
-        key={notification?.id}
-        message={notification?.message}
-        onClose={() => setNotification(null)}
-        title={notification?.title}
-        type={notification?.type}
-      />
-    </section>
+        <div
+          className={`grid min-h-0 flex-1 grid-cols-1 overflow-hidden ${
+            isHistoryCollapsed
+              ? "lg:grid-cols-[4rem_minmax(0,1fr)]"
+              : "lg:grid-cols-[18rem_minmax(0,1fr)]"
+          }`}
+        >
+          <AIHistorySidebar
+            history={history}
+            isCollapsed={isHistoryCollapsed}
+            onDeleteHistory={requestDeleteResponse}
+            onSelectHistory={handleSelectHistory}
+            onToggleFavourite={handleFavouriteResponse}
+            onToggleCollapsed={() => setIsHistoryCollapsed((currentValue) => !currentValue)}
+            selectedHistoryId={selectedResponseId}
+          />
+
+          <main className="grid min-h-0 min-w-0 items-start gap-5 overflow-auto p-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,460px)] xl:p-7">
+            <div className="min-w-0 self-start">
+              <FabricImageEditor
+                activeResponseId={selectedResponseId}
+                collaborationProvider={collaborationProvider}
+                clearCanvasRequest={clearCanvasRequest}
+                editable={canEditProject}
+                generationRequest={generationRequest}
+                onDirtyChange={setHasUnsavedChanges}
+                onReady={handleCanvasReady}
+                remoteCanvasPointers={visibleRemoteCanvasPointers}
+                remoteCanvasState={remoteCanvasState}
+                remoteCanvasTransform={remoteCanvasTransform}
+                statusLabel={statusLabel}
+                statusTone={canvasStatusTone}
+              />
+            </div>
+
+            <aside className="grid min-w-0 content-start gap-5">
+              <AIPromptPanel
+                actions={IMAGE_QUICK_ACTIONS}
+                disabled={!canEditProject}
+                isGenerating={isGenerating}
+                onGenerate={() => handleGenerate()}
+                onPromptFocus={handlePromptFocus}
+                onPromptChange={setPrompt}
+                onQuickAction={handleQuickAction}
+                placeholder="Describe the image you want to create or improve..."
+                prompt={prompt}
+                title="Ask AI to create or improve images"
+              />
+
+              <section className="grid gap-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-950">Selected Image Response</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Generate an image, then copy, edit, favourite, or insert it into the canvas.
+                  </p>
+                </div>
+                {selectedResponse ? (
+                  <AIResponseCard
+                    canEdit={canEditProject}
+                    copied={copiedResponseId === selectedResponse.id}
+                    key={selectedResponse.id}
+                    onCopy={handleCopyResponse}
+                    onDelete={requestDeleteResponse}
+                    onFavourite={handleFavouriteResponse}
+                    onUpdate={handleUpdateResponse}
+                    response={selectedResponse}
+                    responseLabel="Image Response"
+                    selected
+                  />
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500">
+                    {IMAGE_EDITOR_ALERTS.NO_RESPONSE_SELECTED}
+                  </div>
+                )}
+              </section>
+            </aside>
+          </main>
+        </div>
+
+        {pendingCanvasAction && (
+          <ConfirmDialog
+            cancelLabel={IMAGE_EDITOR_ALERTS.EXIT_WITHOUT_SAVING}
+            confirmLabel="Save and Continue"
+            description={
+              pendingCanvasActionCopy?.description ||
+              IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_DESCRIPTION
+            }
+            onCancel={() => {
+              pendingCanvasAction?.();
+              setPendingCanvasAction(null);
+              setPendingCanvasActionCopy(null);
+            }}
+            onConfirm={handleConfirmPendingAction}
+            title={
+              pendingCanvasActionCopy?.title || IMAGE_EDITOR_ALERTS.UNSAVED_CANVAS_CONFIRM_TITLE
+            }
+          />
+        )}
+        {pendingResponseDelete && (
+          <ConfirmDialog
+            cancelLabel="Cancel"
+            confirmLabel={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_LABEL}
+            description={TEXT_EDITOR_ALERTS.deleteConfirmDescription(pendingResponseDelete.prompt)}
+            onCancel={() => setPendingResponseDelete(null)}
+            onConfirm={() => handleDeleteResponse(pendingResponseDelete.id)}
+            title={TEXT_EDITOR_ALERTS.DELETE_CONFIRM_TITLE}
+          />
+        )}
+
+        <ToastNotification
+          duration={notification?.duration}
+          key={notification?.id}
+          message={notification?.message}
+          onClose={() => setNotification(null)}
+          title={notification?.title}
+          type={notification?.type}
+        />
+      </section>
+    </>
   );
 }
 
@@ -1363,10 +1478,10 @@ function getFabricImageObject(object) {
 }
 
 function exportCanvasImageData(canvas) {
-  let dataUrl = canvas.toDataURL({ format: "png", multiplier: 1, quality: 1 });
+  let dataUrl = exportCanvasWithBackground(canvas, "png", 1, 1);
 
   if (dataUrl.length > MAX_IMAGE_PAYLOAD_CHARS) {
-    dataUrl = canvas.toDataURL({ format: "png", multiplier: 0.5, quality: 0.92 });
+    dataUrl = exportCanvasWithBackground(canvas, "png", 0.5, 0.92);
   }
 
   if (dataUrl.length > MAX_IMAGE_PAYLOAD_CHARS) {
@@ -1376,6 +1491,18 @@ function exportCanvasImageData(canvas) {
   }
 
   return dataUrl;
+}
+
+function exportCanvasWithBackground(canvas, format, multiplier = 1, quality = 1) {
+  const originalBackground = canvas.backgroundColor;
+  canvas.backgroundColor = "#ffffff";
+
+  try {
+    return canvas.toDataURL({ format, multiplier, quality });
+  } finally {
+    canvas.backgroundColor = originalBackground;
+    canvas.requestRenderAll();
+  }
 }
 
 function downloadDataUrl(dataUrl, filename) {
@@ -1459,10 +1586,6 @@ function buildDemoImageResponse(prompt) {
   const cleanPrompt = prompt.trim() || "Create a polished social media image.";
 
   return `Demo image concept for "${cleanPrompt}" with an editable generated image layer, headline card, caption block, and accent shapes ready for Fabric.js editing.`;
-}
-
-function getImageWorkspaceDraftKey(projectId) {
-  return `gencontent-image-workspace-v2-${projectId}`;
 }
 
 function readPendingToast() {
