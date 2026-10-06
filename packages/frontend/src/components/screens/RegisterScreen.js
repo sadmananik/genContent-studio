@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Mail, UserRound } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, Mail, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import AuthVisual from "../common/AuthVisual";
-import Brand from "../common/Brand";
-import Button from "../common/Button";
+import AuthPageLayout from "../common/AuthPageLayout";
 import PasswordField from "../common/PasswordField";
 import PasswordStrength from "../common/PasswordStrength";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
+import "../../styles/signin.css";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -82,66 +82,82 @@ export default function RegisterScreen() {
   }
 
   return (
-    <section className="screen login-screen">
-      <div className="auth-topbar">
-        <Brand />
-        <a className="auth-back-link" href="/">
-          Back to home
-        </a>
-      </div>
-      <form className="login-panel" onSubmit={handleRegister}>
-        <h2>Create account</h2>
-        <p>Start creating with your AI workspace. Verification links expire in 5 minutes.</p>
+    <AuthPageLayout>
+      <form className="signin-card register-card" onSubmit={handleRegister}>
+        <div className="signin-card-brand">
+          <Image alt="" aria-hidden="true" height={34} src="/gencontent-logo.png" width={34} />
+          <strong>GenContent Studio</strong>
+        </div>
+        <h2>Create your account</h2>
+        <p className="signin-card-copy">
+          Start creating with your AI workspace. Verify your email to get started.
+        </p>
         {!message && (
           <>
-            <label>
-              <UserRound aria-hidden="true" size={17} strokeWidth={1.8} />
-              <input
-                autoComplete="name"
-                name="name"
+            <label className="signin-field" htmlFor="register-name">
+              <span>Full name</span>
+              <div className="signin-input">
+                <UserRound aria-hidden="true" size={17} strokeWidth={1.8} />
+                <input
+                  autoComplete="name"
+                  id="register-name"
+                  name="name"
+                  onChange={handleChange}
+                  placeholder="Full name"
+                  required
+                  value={formValues.name}
+                />
+              </div>
+            </label>
+            <label className="signin-field" htmlFor="register-email">
+              <span>Email address</span>
+              <div className="signin-input">
+                <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
+                <input
+                  autoComplete="email"
+                  id="register-email"
+                  name="email"
+                  onChange={handleChange}
+                  placeholder="Email address"
+                  required
+                  type="email"
+                  value={formValues.email}
+                />
+              </div>
+            </label>
+            <label className="signin-field" htmlFor="register-password">
+              <span>Password</span>
+              <PasswordField
+                autoComplete="new-password"
+                id="register-password"
+                label="Password"
+                minLength={8}
+                name="password"
                 onChange={handleChange}
-                placeholder="Full name"
+                placeholder="Password"
                 required
-                value={formValues.name}
+                value={formValues.password}
               />
             </label>
-            <label>
-              <Mail aria-hidden="true" size={17} strokeWidth={1.8} />
-              <input
-                autoComplete="email"
-                name="email"
-                onChange={handleChange}
-                placeholder="Email address"
-                required
-                type="email"
-                value={formValues.email}
-              />
-            </label>
-            <PasswordField
-              autoComplete="new-password"
-              label="Password"
-              minLength={8}
-              name="password"
-              onChange={handleChange}
-              placeholder="Password"
-              required
-              value={formValues.password}
-            />
             <PasswordStrength password={formValues.password} />
-            <PasswordField
-              aria-invalid={
-                Boolean(formValues.confirmPassword) &&
-                formValues.password !== formValues.confirmPassword
-              }
-              autoComplete="new-password"
-              label="Confirm password"
-              minLength={8}
-              name="confirmPassword"
-              onChange={handleChange}
-              placeholder="Confirm password"
-              required
-              value={formValues.confirmPassword}
-            />
+            <label className="signin-field" htmlFor="register-confirm-password">
+              <span>Confirm password</span>
+              <PasswordField
+                aria-invalid={
+                  Boolean(formValues.confirmPassword) &&
+                  formValues.password !== formValues.confirmPassword
+                }
+                autoComplete="new-password"
+                id="register-confirm-password"
+                label="Confirm password"
+                minLength={8}
+                name="confirmPassword"
+                onChange={handleChange}
+                placeholder="Confirm password"
+                required
+                value={formValues.confirmPassword}
+              />
+            </label>
             {formValues.confirmPassword &&
               formValues.password !== formValues.confirmPassword &&
               !formError && <p className="field-hint error">Passwords must match</p>}
@@ -150,15 +166,15 @@ export default function RegisterScreen() {
         {(formError || auth.error) && <p className="auth-error">{formError || auth.error}</p>}
         {message && <p className="auth-success">{message}</p>}
         {!message && (
-          <Button className="full-width register-submit" disabled={auth.loading} type="submit">
+          <button className="signin-submit" disabled={auth.loading} type="submit">
             {auth.loading ? "Creating account..." : "Create Account"}
-          </Button>
+            {!auth.loading ? <ArrowRight size={18} /> : null}
+          </button>
         )}
-        <p className="signup">
+        <p className="signin-footer">
           Already have an account? <Link href="/login">Sign in</Link>
         </p>
       </form>
-      <AuthVisual />
-    </section>
+    </AuthPageLayout>
   );
 }

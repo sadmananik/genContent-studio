@@ -9,11 +9,7 @@
   overflow: hidden;
   color: var(--si-ink);
   font-family: var(--font-landing), "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at 12% 20%, rgba(167, 139, 250, 0.28), transparent 36%),
-    radial-gradient(circle at 88% 18%, rgba(96, 165, 250, 0.22), transparent 34%),
-    radial-gradient(circle at 70% 88%, rgba(196, 181, 253, 0.3), transparent 40%),
-    linear-gradient(135deg, #e8e1ff 0%, #d9d8ff 50%, #dce7ff 100%);
+  background: var(--public-page-background);
 }
 
 .signin-page::before,
@@ -244,6 +240,73 @@
 
 .signin-input input::placeholder {
   color: #9ca3af;
+}
+
+.signin-card .auth-field {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 46px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--si-line);
+  border-radius: 12px;
+  background: #fff;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.signin-card .auth-field:focus-within {
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
+.signin-card .auth-field:has(input[aria-invalid="true"]) {
+  border-color: #d92d20;
+}
+
+.signin-card .auth-field > svg {
+  flex: 0 0 auto;
+  color: #9ca3af;
+}
+
+.signin-card .auth-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--si-ink);
+  background: transparent;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.signin-card .field-hint.error {
+  color: #b42318;
+}
+
+.signin-card .auth-error,
+.signin-card .auth-success {
+  padding: 0.7rem 0.8rem;
+  margin: 0 0 0.9rem;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.signin-card .auth-error {
+  color: #b42318;
+  background: #fff1f0;
+  border-color: #ffd5d2;
+}
+
+.signin-card .auth-success {
+  color: #176b45;
+  background: #edf9f2;
+  border-color: #b9e5ca;
 }
 
 .signin-eye {
