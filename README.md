@@ -1,5 +1,9 @@
 # GenContent Studio
 
+[![Frontend tests](https://github.com/sadmananik/genContent-studio/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/sadmananik/genContent-studio/actions/workflows/frontend-tests.yml)
+[![Backend tests](https://github.com/sadmananik/genContent-studio/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/sadmananik/genContent-studio/actions/workflows/backend-tests.yml)
+[![Cypress E2E](https://github.com/sadmananik/genContent-studio/actions/workflows/e2e.yml/badge.svg)](https://github.com/sadmananik/genContent-studio/actions/workflows/e2e.yml)
+
 AI-driven content creation platform for the COIT20273 capstone project.
 
 Production site: https://gencontentstudio.com/
@@ -88,3 +92,7 @@ cp packages/backend/.env.example packages/backend/.env
 Run `yarn test:frontend` for Jest and React Testing Library component integration tests configured with `next/jest.js`. No running server, browser, or database is needed. See [Jest setup and coverage](packages/frontend/test/README.md).
 
 The mocked browser scenarios now live alongside the existing Cypress tests in `cypress/e2e/mocked`. Run them independently with `yarn test:frontend:browser`, or as part of `yarn test:e2e`. See [Cypress instructions](cypress/e2e/mocked/README.md).
+
+### Test run history
+
+View [all GitHub Actions workflows](https://github.com/sadmananik/genContent-studio/actions) for the complete history, logs, and results of frontend, backend, and end-to-end test runs. The badges above show each workflow's latest status.
