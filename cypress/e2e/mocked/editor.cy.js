@@ -45,14 +45,23 @@ describe("content workspaces", () => {
   });
 
   it("retains editor text when saving fails", () => {
+    cy.intercept("GET", `**/api/text-content/${project._id}`, {
+      delay: 500,
+      body: { content: "<p>Existing draft</p>", updatedAt: project.updatedAt }
+    }).as("loadContent");
     cy.intercept("PUT", "**/api/text-content", {
       statusCode: 500,
       body: { message: "Save unavailable" }
     }).as("save");
     cy.visitFrontend(editorUrl);
-    cy.get(".ProseMirror").type("Keep this draft");
+    cy.wait(["@project", "@loadContent", "@chats"]);
+    cy.get(".ProseMirror")
+      .should("be.visible")
+      .and("have.attr", "contenteditable", "true")
+      .and("contain.text", "Existing draft");
+    cy.get('.ProseMirror[contenteditable="true"]').type("{end} Keep this draft");
     cy.contains("button", /^save$/i).click();
-    cy.wait("@save");
+    cy.wait("@save").its("request.body.content").should("include", "Keep this draft");
     cy.contains("Save unavailable").should("be.visible");
     cy.get(".ProseMirror").should("contain.text", "Keep this draft");
   });

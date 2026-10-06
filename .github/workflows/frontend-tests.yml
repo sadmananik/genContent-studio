@@ -20,11 +20,3 @@ jobs:
       - run: yarn install --frozen-lockfile
       - name: Jest component integration tests
         run: yarn test:frontend
-      - name: Mocked Cypress browser tests
-        run: yarn test:frontend:browser
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: frontend-test-screenshots
-          path: cypress/artifacts/frontend
-          if-no-files-found: ignore

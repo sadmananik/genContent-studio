@@ -23,4 +23,4 @@ This suite uses real pages, React components, Zustand state, browser storage, an
 
 The chat-history and collaboration routes currently show static demo content, so their tests check rendering only. Image-editor coverage checks canvas initialization; it does not validate Fabric drawing operations. Realtime multi-user synchronisation and real backend integration belong in the separate end-to-end suite.
 
-GitHub Actions runs this suite on pull requests to `main` and pushes to `main`. Failed tests upload screenshots from `cypress/artifacts/frontend`; that directory is ignored by Git. No retries or uncaught-exception suppression are configured.
+The Cypress E2E GitHub Actions workflow runs all specs under `cypress/e2e`, including this folder, on pull requests to `main` and pushes to `main`. It uploads failure screenshots from `cypress/screenshots`. The separate Frontend tests workflow runs only Jest. Standalone runs with `yarn test:frontend:browser` write screenshots to the ignored `cypress/artifacts/frontend` directory.
