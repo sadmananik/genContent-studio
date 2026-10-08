@@ -107,7 +107,7 @@ test("failed deletion keeps the project and shows the server error", async () =>
 test("dashboard renders API projects", async () => {
   mockApi({ "GET /api/projects": { body: [project] } });
   render(<DashboardScreen />);
-  expect(await screen.findByText(project.title)).toBeVisible();
+  expect((await screen.findAllByText(project.title))[0]).toBeVisible();
 });
 
 test("publish modal can be closed without publishing", async () => {
@@ -142,4 +142,41 @@ test("publish submits selected visibility and closes after success", async () =>
     title: `${project.title} Template`,
     visibility: "public"
   });
+});
+
+test("recent projects are ordered by activity and search filters both project sections", async () => {
+  const ui = userEvent.setup();
+  const newest = {
+    ...project,
+    _id: "newest",
+    title: "Visual campaign",
+    type: "image",
+    updatedAt: "2026-09-01T00:00:00Z"
+  };
+  setup({ "GET /api/projects": { body: [project, newest] } });
+  const recent = await screen.findByRole("region", { name: "Recent projects" });
+  expect(within(recent).getAllByRole("link")[0]).toHaveTextContent("Visual campaign");
+  await ui.type(screen.getByRole("searchbox", { name: "Search Projects" }), "visual");
+  expect(screen.queryByText(project.title)).not.toBeInTheDocument();
+  expect(screen.getAllByText("Visual campaign")).toHaveLength(2);
+  await ui.clear(screen.getByRole("searchbox"));
+  await ui.type(screen.getByRole("searchbox"), "no-match");
+  expect(screen.getByText("No matching projects")).toBeVisible();
+});
+
+test("starring a project updates both recent and all cards", async () => {
+  const ui = userEvent.setup();
+  setup({
+    [`PATCH /api/projects/${project._id}/favorite`]: { body: { ...project, isFavorite: true } }
+  });
+  const buttons = await screen.findAllByRole("button", {
+    name: `Add ${project.title} to favorites`
+  });
+  await ui.click(buttons[0]);
+  await waitFor(() =>
+    expect(
+      screen.getAllByRole("button", { name: `Remove ${project.title} from favorites` })
+    ).toHaveLength(2)
+  );
+  expect(useAppStore.getState().projectState.favoriteProjects).toHaveLength(1);
 });

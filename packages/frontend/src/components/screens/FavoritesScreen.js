@@ -1,11 +1,16 @@
 "use client";
 
+import ProjectFavoriteButton from "../common/ProjectFavoriteButton";
+import PageTitleIcon from "../common/PageTitleIcon";
+
+import { Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, ExternalLink, StarOff } from "lucide-react";
 import TemplateCard from "../templates/TemplateCard";
 import TemplatePreviewModal from "../templates/TemplatePreviewModal";
 import Button from "../common/Button";
+import { CONTENT_CARD_GRID } from "../common/ContentCard";
 import { EmptyState, SectionHeader } from "../common/Cards";
 import ProjectListCard from "../common/ProjectListCard";
 import ProjectTypeIcon from "../common/ProjectTypeIcon";
@@ -17,6 +22,12 @@ import { useAppStore } from "../../store";
 
 export default function FavoritesScreen() {
   const router = useRouter();
+  const favoriteProjects = useAppStore((state) => state.projectState.favoriteProjects);
+  const fetchFavoriteProjects = useAppStore((state) => state.fetchFavoriteProjects);
+  const [projectError, setProjectError] = useState("");
+  useEffect(() => {
+    fetchFavoriteProjects().catch((error) => setProjectError(error.message));
+  }, [fetchFavoriteProjects]);
   const auth = useAppStore((state) => state.auth);
   const aiState = useAppStore((state) => state.aiState);
   const fetchFavouriteResponses = useAppStore((state) => state.fetchFavouriteResponses);
@@ -114,12 +125,59 @@ export default function FavoritesScreen() {
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
-        <div>
+        <PageTitleIcon icon={Star} />
+        <div className="min-w-0">
           <h1 className="m-0 text-2xl font-bold text-slate-950">{FAVOURITES_ALERTS.PAGE_TITLE}</h1>
           <p className="mt-1.5 text-sm text-slate-500">{FAVOURITES_ALERTS.PAGE_DESCRIPTION}</p>
         </div>
       </header>
 
+      <SectionHeader title="Favorite Projects" />
+      {projectError && (
+        <p role="alert" className="mb-4 text-sm text-red-600">
+          {projectError}
+        </p>
+      )}
+      {favoriteProjects.length ? (
+        <section aria-label="Favorite projects" className={`${CONTENT_CARD_GRID} mb-7`}>
+          {favoriteProjects.map((project) => (
+            <ProjectListCard
+              key={project._id || project.id}
+              layout="card"
+              title={project.title}
+              icon={<ProjectTypeIcon type={project.type} />}
+              cover={{
+                title: project.title,
+                category: project.category,
+                projectType: project.type
+              }}
+              onOpen={() =>
+                router.push(
+                  `${ROUTES.EDITOR}?projectId=${project._id || project.id}&type=${project.type}`
+                )
+              }
+              favoriteControl={
+                <ProjectFavoriteButton
+                  projectId={project._id || project.id}
+                  title={project.title}
+                  isFavorite={project.isFavorite}
+                />
+              }
+            >
+              <p className="text-xs text-slate-500">
+                {project.category} • {project.type === "image" ? "Image" : "Text"} Project
+              </p>
+              <p className="line-clamp-2 text-slate-600">{project.description}</p>
+            </ProjectListCard>
+          ))}
+        </section>
+      ) : (
+        !projectError && (
+          <p className="mb-7 text-sm text-slate-500">
+            Star a project in Projects or Shared with Me to save it here.
+          </p>
+        )
+      )}
       <SectionHeader
         title={`${FAVOURITES_ALERTS.RESPONSE_SECTION_TITLE}${
           favourites.length ? ` (${favourites.length})` : ""
@@ -152,9 +210,16 @@ export default function FavoritesScreen() {
           action={<Button onClick={() => router.push(ROUTES.PROJECTS)}>View Projects</Button>}
         />
       ) : (
-        <section className="grid gap-4">
+        <section className={CONTENT_CARD_GRID}>
           {favourites.map((favourite) => (
             <ProjectListCard
+              layout="card"
+              cover={{
+                title: favourite.projectTitle,
+                category: favourite.projectCategory,
+                projectType: favourite.contentType,
+                starterContent: favourite.responsePreview
+              }}
               actions={
                 <>
                   <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold text-violet-700">
@@ -243,7 +308,7 @@ export default function FavoritesScreen() {
             description="Star a template in Browse Templates to save it here."
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className={CONTENT_CARD_GRID}>
             {templateState.favoriteTemplates.map((template) => (
               <TemplateCard
                 key={template.id}

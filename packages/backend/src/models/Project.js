@@ -28,6 +28,7 @@ const projectSchema = new mongoose.Schema(
       trim: true,
       default: ""
     },
+    favoritedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

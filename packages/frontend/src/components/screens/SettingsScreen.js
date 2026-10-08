@@ -1,5 +1,8 @@
 "use client";
 
+import PageTitleIcon from "../common/PageTitleIcon";
+import { Settings } from "lucide-react";
+
 import { Monitor, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -90,9 +93,12 @@ export default function SettingsScreen() {
 
   return (
     <main className="min-w-0 p-5 md:p-7">
-      <header className="-m-5 mb-6 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
-        <h1 className="m-0 text-2xl font-bold text-slate-950">{SETTINGS_TEXT.PAGE_TITLE}</h1>
-        <p className="mt-1.5 text-sm text-slate-500">{SETTINGS_TEXT.PAGE_DESCRIPTION}</p>
+      <header className="-m-5 mb-6 flex items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
+        <PageTitleIcon icon={Settings} />
+        <div className="min-w-0">
+          <h1 className="m-0 text-2xl font-bold text-slate-950">{SETTINGS_TEXT.PAGE_TITLE}</h1>
+          <p className="mt-1.5 text-sm text-slate-500">{SETTINGS_TEXT.PAGE_DESCRIPTION}</p>
+        </div>
       </header>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">

@@ -1,11 +1,16 @@
 "use client";
 
+import ProjectFavoriteButton from "../common/ProjectFavoriteButton";
+import PageTitleIcon from "../common/PageTitleIcon";
+
+import { Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, ExternalLink, Eye, LogOut } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, LogOut } from "lucide-react";
 import Button from "../common/Button";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, SectionHeader } from "../common/Cards";
+import { CONTENT_CARD_GRID } from "../common/ContentCard";
 import ProjectListCard from "../common/ProjectListCard";
 import ProjectTypeIcon from "../common/ProjectTypeIcon";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
@@ -94,7 +99,8 @@ export default function SharedWithMeScreen() {
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
-        <div>
+        <PageTitleIcon icon={Users} />
+        <div className="min-w-0">
           <h1 className="m-0 text-2xl font-bold text-slate-950">
             {SHARED_PROJECT_ALERTS.PAGE_TITLE}
           </h1>
@@ -138,26 +144,27 @@ export default function SharedWithMeScreen() {
           }
         />
       ) : (
-        <section className="grid gap-4">
+        <section className={CONTENT_CARD_GRID}>
           {projects.map((project) => (
             <ProjectListCard
+              layout="card"
+              favoriteControl={
+                <ProjectFavoriteButton
+                  projectId={project.id}
+                  title={project.title}
+                  isFavorite={project.isFavorite}
+                />
+              }
+              cover={{
+                title: project.title,
+                category: project.category,
+                projectType: project.type === PROJECT_TYPES.IMAGE ? "image" : "text"
+              }}
               actions={
                 <>
                   <span className={getAccessBadgeClassName(project.accessLevel)}>
                     {project.accessLabel}
                   </span>
-                  <Button
-                    className="shared-project-open-button border-violet-100 bg-violet-50 px-3 text-violet-700 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      router.push(getProjectWorkspaceHref(project));
-                    }}
-                    type="button"
-                    variant="secondary"
-                  >
-                    <ExternalLink aria-hidden="true" size={17} />
-                    Open Project
-                  </Button>
                   <div className="relative" data-shared-project-actions>
                     <Button
                       aria-label={`${project.title} actions`}
@@ -231,7 +238,7 @@ export default function SharedWithMeScreen() {
               <p className="mt-1 text-xs text-slate-500">
                 {project.category} • {project.type} Project • {project.updated}
               </p>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 line-clamp-2 break-words text-sm text-slate-600">
                 Owner: <span className="font-bold text-slate-700">{project.ownerName}</span>
                 {project.ownerEmail ? ` (${project.ownerEmail})` : ""}
               </p>
@@ -331,6 +338,7 @@ function formatSharedProject(project) {
 
   return {
     id: project._id || project.id,
+    isFavorite: Boolean(project.isFavorite),
     title: project.title,
     category: project.category || "Other",
     type,

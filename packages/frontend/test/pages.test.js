@@ -128,13 +128,14 @@ test("removing an AI favourite removes its card", async () => {
   };
   mockApi({
     "GET /api/templates/favorites": { body: [] },
+    "GET /api/projects/favorites": { body: [] },
     "GET /api/chats/favourites": { body: [chat] },
     "PATCH /api/chats/chat-1/favourite": { body: { ...chat, isFavourite: false } }
   });
   render(<FavoritesScreen />);
-  await screen.findByText(chat.response);
+  await screen.findAllByText(chat.response);
   await ui.click(screen.getByRole("button", { name: /remove/i }));
-  await waitFor(() => expect(screen.queryByText(chat.response)).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryAllByText(chat.response)).toHaveLength(0));
   expect(useAppStore.getState().aiState.favouriteResponses).toEqual([]);
 });
 
@@ -151,6 +152,7 @@ test("Favorites loads saved templates and removing one clears its star in Browse
     templateState: { ...state.templateState, templates: [template] }
   }));
   mockApi({
+    "GET /api/projects/favorites": { body: [] },
     "GET /api/chats/favourites": { body: [] },
     "GET /api/templates/favorites": { body: [template] },
     "DELETE /api/templates/template-1/favorite": { body: { message: "Removed" } }

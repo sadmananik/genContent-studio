@@ -1,5 +1,7 @@
 const express = require("express");
 const {
+  listFavoriteProjects,
+  toggleProjectFavorite,
   createProject,
   deleteProject,
   getProjectById,
@@ -23,6 +25,8 @@ router.use(requireUser);
 router.post("/", createProject);
 router.get("/", listProjects);
 router.get("/shared", listSharedProjects);
+router.get("/favorites", listFavoriteProjects);
+router.patch("/:id/favorite", validateObjectId("id"), toggleProjectFavorite);
 router.get("/:id", validateObjectId("id"), getProjectById);
 router.put("/:id", validateObjectId("id"), updateProject);
 router.patch("/:id/invite", validateObjectId("id"), inviteProjectCollaborator);

@@ -1,7 +1,7 @@
 import { FileText, Image as ImageIcon, Sparkles } from "lucide-react";
 import Image from "next/image";
 
-export default function TemplateCover({ template }) {
+export default function TemplateCover({ template, itemLabel = "template" }) {
   const isImage = template.projectType === "image";
   const imageSrc = isImage ? findImageSource(template.starterContent) : null;
   const excerpt = getTextExcerpt(template.starterContent);
@@ -36,7 +36,7 @@ export default function TemplateCover({ template }) {
         ) : (
           <FileText aria-hidden="true" size={13} />
         )}
-        {isImage ? "Image template" : "Text template"}
+        {`${isImage ? "Image" : "Text"} ${itemLabel}`}
       </span>
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/55 to-transparent px-4 pb-3 pt-10">
         <p className="truncate text-sm font-bold text-white">{template.category || "Creative"}</p>

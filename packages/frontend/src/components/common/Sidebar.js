@@ -16,7 +16,7 @@ import {
 import Brand from "./Brand";
 import { EDITOR_NAV_ITEMS, NAV_ITEMS, ROUTES } from "../../constants/navigation";
 
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "1.0.2";
 
 const navIcons = {
   Bot,

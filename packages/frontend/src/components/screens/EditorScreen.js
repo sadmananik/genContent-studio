@@ -1,5 +1,7 @@
 "use client";
 
+import { textToHtml } from "../text-workspace/textToHtml";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import WorkspaceLoading from "../common/WorkspaceLoading";
@@ -11,6 +13,7 @@ import AIHistorySidebar from "../text-workspace/AIHistorySidebar";
 import AIResponseCard from "../text-workspace/AIResponseCard";
 import EditorToolbar from "../text-workspace/EditorToolbar";
 import TipTapEditor from "../text-workspace/TipTapEditor";
+import { hasEditorContentChanged, normalizeEditorHtml } from "../text-workspace/editorContent";
 import TextWorkspaceHeader from "../text-workspace/TextWorkspaceHeader";
 import {
   ACCESS_LEVELS,
@@ -133,9 +136,8 @@ function TextEditorScreen() {
   const [notification, setNotification] = useState(null);
   const [collaborationProvider, setCollaborationProvider] = useState(null);
   const [collaborationReady, setCollaborationReady] = useState(false);
-  const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
+  const lastPersistedContentHtmlRef = useRef(defaultTextProject.content);
   const projectStarterContentRef = useRef("");
-  const restoredHistoryResponseRef = useRef(null);
   const editorRef = useRef(null);
   const projectRef = useRef(project);
   const responsesRef = useRef(responses);
@@ -209,13 +211,13 @@ function TextEditorScreen() {
     }
 
     restoredDemoDraftRef.current = true;
-    editor.commands.setContent(restoredDemoContent, false);
+    editor.commands.setContent(restoredDemoContent, { emitUpdate: false });
     const restoredContent = {
       html: restoredDemoContent,
       text: editor.getText()
     };
     setEditorContent(restoredContent);
-    lastPersistedContentHtmlRef.current = normalizeEditorHtml(restoredDemoContent);
+    lastPersistedContentHtmlRef.current = restoredDemoContent;
     setHasUnsavedChanges(false);
   }, [editor, restoredDemoContent]);
   const templateHistoryOptions = useMemo(
@@ -530,7 +532,6 @@ function TextEditorScreen() {
     setIsLoadingHistory(true);
     setWorkspaceLoadError(null);
     setSelectedHistoryId(null);
-    restoredHistoryResponseRef.current = null;
     setHistoryError(null);
 
     Promise.all([
@@ -556,8 +557,8 @@ function TextEditorScreen() {
           typeof textContent?.content === "string"
             ? textContent.content
             : projectStarterContentRef.current;
-        lastPersistedContentHtmlRef.current = normalizeEditorHtml(html);
-        editorRef.current?.commands.setContent(html, false);
+        lastPersistedContentHtmlRef.current = html;
+        editorRef.current?.commands.setContent(html, { emitUpdate: false });
         setEditorContent({ html, text: stripHtml(html) });
         setHasUnsavedChanges(false);
         setLastSavedAt(textContent?.updatedAt ? new Date(textContent.updatedAt) : null);
@@ -586,20 +587,12 @@ function TextEditorScreen() {
       .filter((chat) => chat.contentType === AI_CONTENT_TYPES.TEXT)
       .map(formatChatAsResponse);
     setResponses(realResponses);
-    setSelectedHistoryId(realResponses[0]?.id || null);
-
-    const latestResponse = realResponses[0];
-    if (
-      !isLoadingContent &&
-      !editorContent.text.trim() &&
-      latestResponse &&
-      restoredHistoryResponseRef.current !== latestResponse.id
-    ) {
-      restoredHistoryResponseRef.current = latestResponse.id;
-      replaceEditorWithResponse(latestResponse);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiState.chatHistory, editorContent.text, isLoadingContent, isRealProject]);
+    setSelectedHistoryId((currentId) =>
+      realResponses.some((response) => response.id === currentId)
+        ? currentId
+        : realResponses[0]?.id || null
+    );
+  }, [aiState.chatHistory, isLoadingContent, isRealProject, workspaceLoadError]);
 
   async function handleGenerate(promptOverride) {
     if (!canEditProject) {
@@ -749,10 +742,26 @@ function TextEditorScreen() {
     }
   }
 
-  const handleEditorChange = useCallback((content) => {
+  const handleEditorChange = useCallback((content, schema, { isInitialization = false } = {}) => {
+    // Establish the initial baseline after Tiptap/Yjs has hydrated the document,
+    // provided the user has not already changed the previously displayed draft.
+    if (
+      isInitialization &&
+      !hasEditorContentChanged(
+        editorContentRef.current.html,
+        lastPersistedContentHtmlRef.current,
+        schema || editorRef.current?.schema
+      )
+    ) {
+      lastPersistedContentHtmlRef.current = content.html;
+    }
     setEditorContent(content);
     setHasUnsavedChanges(
-      hasEditorContentChanged(content.html, lastPersistedContentHtmlRef.current)
+      hasEditorContentChanged(
+        content.html,
+        lastPersistedContentHtmlRef.current,
+        schema || editorRef.current?.schema
+      )
     );
     setSaveError(null);
   }, []);
@@ -780,7 +789,7 @@ function TextEditorScreen() {
 
     try {
       await saveCurrentDraft();
-      lastPersistedContentHtmlRef.current = normalizeEditorHtml(editorContent.html);
+      lastPersistedContentHtmlRef.current = editorContent.html;
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
       showNotification(
@@ -1074,7 +1083,13 @@ function TextEditorScreen() {
   }
 
   function queueUnsavedAction(action, copy = {}) {
-    if (!hasEditorContentChanged(editorContent.html, lastPersistedContentHtmlRef.current)) {
+    if (
+      !hasEditorContentChanged(
+        editorContent.html,
+        lastPersistedContentHtmlRef.current,
+        editorRef.current?.schema
+      )
+    ) {
       setHasUnsavedChanges(false);
       return false;
     }
@@ -1090,7 +1105,7 @@ function TextEditorScreen() {
 
     try {
       await saveCurrentDraft();
-      lastPersistedContentHtmlRef.current = normalizeEditorHtml(editorContent.html);
+      lastPersistedContentHtmlRef.current = editorContent.html;
       setHasUnsavedChanges(false);
       setLastSavedAt(new Date());
       pendingEditorAction?.();
@@ -1153,16 +1168,28 @@ function TextEditorScreen() {
 
     if (!editorRef.current) {
       setEditorContent({ html, text: String(value || "") });
-      setHasUnsavedChanges(hasEditorContentChanged(html, lastPersistedContentHtmlRef.current));
+      setHasUnsavedChanges(
+        hasEditorContentChanged(
+          html,
+          lastPersistedContentHtmlRef.current,
+          editorRef.current?.schema
+        )
+      );
       return;
     }
 
-    editorRef.current.commands.setContent(html, true);
+    editorRef.current.commands.setContent(html, { emitUpdate: true });
     editorRef.current.commands.focus("end");
     const nextHtml = editorRef.current.getHTML();
 
     setEditorContent({ html: nextHtml, text: editorRef.current.getText() });
-    setHasUnsavedChanges(hasEditorContentChanged(nextHtml, lastPersistedContentHtmlRef.current));
+    setHasUnsavedChanges(
+      hasEditorContentChanged(
+        nextHtml,
+        lastPersistedContentHtmlRef.current,
+        editorRef.current?.schema
+      )
+    );
     setSaveError(null);
   }
 
@@ -1196,18 +1223,27 @@ function TextEditorScreen() {
     }
 
     setEditorContent({ html: "", text: "" });
-    setHasUnsavedChanges(hasEditorContentChanged("", lastPersistedContentHtmlRef.current));
+    setHasUnsavedChanges(
+      hasEditorContentChanged("", lastPersistedContentHtmlRef.current, editorRef.current?.schema)
+    );
     setSaveError(null);
   }
 
   return (
     <>
-      {(isLoadingContent || isLoadingHistory || workspaceLoadError || isSaving) && (
-        <WorkspaceLoading type="text" error={workspaceLoadError} isSaving={isSaving} />
+      {(isLoadingContent || isLoadingHistory || workspaceLoadError || isSaving || isGenerating) && (
+        <WorkspaceLoading
+          type="text"
+          error={workspaceLoadError}
+          isSaving={isSaving}
+          isGenerating={isGenerating}
+        />
       )}
       <section
         inert={
-          isLoadingContent || isLoadingHistory || workspaceLoadError || isSaving ? "" : undefined
+          isLoadingContent || isLoadingHistory || workspaceLoadError || isSaving || isGenerating
+            ? ""
+            : undefined
         }
         className="min-h-screen overflow-hidden bg-slate-50"
       >
@@ -1234,7 +1270,13 @@ function TextEditorScreen() {
           }}
         />
 
-        <div className="grid min-h-[calc(100vh-73px)] grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
+        <div
+          className={`grid min-h-[calc(100vh-73px)] grid-cols-1 ${
+            isHistoryCollapsed
+              ? "lg:grid-cols-[4rem_minmax(0,1fr)]"
+              : "lg:grid-cols-[18rem_minmax(0,1fr)]"
+          }`}
+        >
           <AIHistorySidebar
             error={historyError}
             history={history}
@@ -1429,17 +1471,6 @@ function getReadingTimeLabel(wordCount) {
   return `${minutes} min read`;
 }
 
-function hasEditorContentChanged(currentHtml, persistedHtml) {
-  return normalizeEditorHtml(currentHtml) !== normalizeEditorHtml(persistedHtml);
-}
-
-function normalizeEditorHtml(value) {
-  return String(value || "")
-    .replace(/<p>(?:\s|<br\s*\/?>|&nbsp;)*<\/p>/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function isEditorShowingResponse(response, editorHtml) {
   return normalizeEditorHtml(editorHtml) === normalizeEditorHtml(textToHtml(response.response));
 }
@@ -1501,108 +1532,6 @@ async function copyText(value) {
   textarea.select();
   document.execCommand("copy");
   textarea.remove();
-}
-
-function escapeHtml(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function textToHtml(value) {
-  const lines = String(value || "")
-    .replace(/\r\n?/g, "\n")
-    .split("\n");
-  const blocks = [];
-  let paragraphLines = [];
-  let listItems = [];
-  let listType = null;
-
-  function flushParagraph() {
-    if (paragraphLines.length === 0) {
-      return;
-    }
-
-    blocks.push(`<p>${formatInlineMarkdown(paragraphLines.join("<br>"))}</p>`);
-    paragraphLines = [];
-  }
-
-  function flushList() {
-    if (listItems.length === 0) {
-      return;
-    }
-
-    blocks.push(
-      `<${listType}>${listItems.map((item) => `<li>${item}</li>`).join("")}</${listType}>`
-    );
-    listItems = [];
-    listType = null;
-  }
-
-  lines.forEach((line) => {
-    const trimmedLine = line.trim();
-    const headingMatch = trimmedLine.match(/^(#{1,3})\s+(.+)$/);
-    const unorderedListMatch = trimmedLine.match(/^[-*]\s+(.+)$/);
-    const orderedListMatch = trimmedLine.match(/^\d+\.\s+(.+)$/);
-
-    if (!trimmedLine) {
-      flushParagraph();
-      flushList();
-      return;
-    }
-
-    if (headingMatch) {
-      flushParagraph();
-      flushList();
-      blocks.push(
-        `<h${headingMatch[1].length}>${formatInlineMarkdown(headingMatch[2])}</h${headingMatch[1].length}>`
-      );
-      return;
-    }
-
-    if (unorderedListMatch || orderedListMatch) {
-      flushParagraph();
-
-      const nextListType = unorderedListMatch ? "ul" : "ol";
-
-      if (listType && listType !== nextListType) {
-        flushList();
-      }
-
-      listType = nextListType;
-      listItems.push(formatInlineMarkdown((unorderedListMatch || orderedListMatch)[1]));
-      return;
-    }
-
-    flushList();
-    paragraphLines.push(trimmedLine);
-  });
-
-  flushParagraph();
-  flushList();
-
-  if (blocks.length === 0) {
-    return "";
-  }
-
-  return blocks.join("");
-}
-
-function formatInlineMarkdown(value) {
-  const tokens = [];
-  const escapedValue = escapeHtml(value).replace(
-    /`([^`]+)`/g,
-    (_, code) => `@@CODE${tokens.push(`<code>${code}</code>`) - 1}@@`
-  );
-
-  return escapedValue
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>')
-    .replace(/@@CODE(\d+)@@/g, (_, index) => tokens[Number(index)] || "");
 }
 
 function formatTime(value) {

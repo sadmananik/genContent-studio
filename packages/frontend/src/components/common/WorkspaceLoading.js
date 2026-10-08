@@ -1,7 +1,25 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { LoaderCircle } from "lucide-react";
 
-export default function WorkspaceLoading({ type, error, isSaving = false }) {
-  return (
+export default function WorkspaceLoading({
+  type,
+  error,
+  isSaving = false,
+  isGenerating = false,
+  title,
+  message
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] grid place-items-center bg-slate-900/15 p-6 backdrop-blur-sm"
       role="status"
@@ -18,13 +36,21 @@ export default function WorkspaceLoading({ type, error, isSaving = false }) {
         <h2 className="text-lg font-bold text-slate-950">
           {error
             ? "Workspace could not load"
-            : `${isSaving ? "Saving" : "Loading"} ${type} workspace`}
+            : title ||
+              (isGenerating
+                ? `Generating ${type === "image" ? "your image" : "your content"}`
+                : `${isSaving ? "Saving" : "Loading"} ${type} workspace`)}
         </h2>
         <p className="mt-2 text-sm text-slate-600">
           {error ||
-            (isSaving
-              ? "Please wait while we save your changes."
-              : "Please wait while we restore your content and AI history.")}
+            message ||
+            (isGenerating
+              ? type === "image"
+                ? "AI is creating your image. This may take a moment."
+                : "AI is preparing your response. This may take a moment."
+              : isSaving
+                ? "Please wait while we save your changes."
+                : "Please wait while we restore your content and AI history.")}
         </p>
         {error && (
           <button
@@ -36,6 +62,7 @@ export default function WorkspaceLoading({ type, error, isSaving = false }) {
           </button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
