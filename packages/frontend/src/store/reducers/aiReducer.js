@@ -112,16 +112,10 @@ export function createAiReducer(set) {
             body: JSON.stringify({ isFavourite })
           }),
         (aiState, chat) => ({
-          chatHistory: aiState.chatHistory.map((item) =>
-            item._id === chat._id || item.id === chat.id ? chat : item
-          ),
+          chatHistory: aiState.chatHistory.map((item) => (isSameChat(item, chat) ? chat : item)),
           favouriteResponses: chat.isFavourite
-            ? aiState.favouriteResponses.map((item) =>
-                item._id === chat._id || item.id === chat.id ? chat : item
-              )
-            : aiState.favouriteResponses.filter(
-                (item) => item._id !== chat._id && item.id !== chat.id
-              )
+            ? aiState.favouriteResponses.map((item) => (isSameChat(item, chat) ? chat : item))
+            : aiState.favouriteResponses.filter((item) => !isSameChat(item, chat))
         })
       );
     },
@@ -134,9 +128,7 @@ export function createAiReducer(set) {
             body: JSON.stringify(updates)
           }),
         (aiState, chat) => ({
-          chatHistory: aiState.chatHistory.map((item) =>
-            item._id === chat._id || item.id === chat.id ? chat : item
-          )
+          chatHistory: aiState.chatHistory.map((item) => (isSameChat(item, chat) ? chat : item))
         })
       );
     },
@@ -188,4 +180,10 @@ function setAiError(set, error) {
       error: error.message || "AI request failed"
     }
   }));
+}
+
+function isSameChat(left, right) {
+  const leftId = left._id || left.id;
+  const rightId = right._id || right.id;
+  return Boolean(leftId && rightId && String(leftId) === String(rightId));
 }

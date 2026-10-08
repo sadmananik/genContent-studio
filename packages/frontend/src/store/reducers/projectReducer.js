@@ -1,6 +1,7 @@
 import { apiRequest } from "../../lib/apiClient";
 
 const initialProjectState = {
+  favoriteProjects: [],
   projects: [],
   sharedProjects: [],
   currentProject: null,
@@ -13,6 +14,33 @@ export function createProjectReducer(set) {
   return {
     projectState: initialProjectState,
 
+    fetchFavoriteProjects: async () => {
+      const favoriteProjects = await apiRequest("/api/projects/favorites");
+      set((state) => ({ projectState: { ...state.projectState, favoriteProjects } }));
+      return favoriteProjects;
+    },
+    toggleProjectFavorite: async (id, isFavorite) => {
+      const project = await apiRequest(`/api/projects/${id}/favorite`, {
+        method: "PATCH",
+        body: JSON.stringify({ isFavorite })
+      });
+      set((state) => {
+        const update = (items) =>
+          items.map((item) => (String(item._id || item.id) === String(id) ? project : item));
+        const favorites = state.projectState.favoriteProjects.filter(
+          (item) => String(item._id || item.id) !== String(id)
+        );
+        return {
+          projectState: {
+            ...state.projectState,
+            projects: update(state.projectState.projects),
+            sharedProjects: update(state.projectState.sharedProjects),
+            favoriteProjects: isFavorite ? [project, ...favorites] : favorites
+          }
+        };
+      });
+      return project;
+    },
     fetchProjects: async () => {
       setProjectRequest(set);
 
@@ -184,6 +212,9 @@ export function createProjectReducer(set) {
         set((state) => ({
           projectState: {
             ...state.projectState,
+            favoriteProjects: state.projectState.favoriteProjects.filter(
+              (project) => project._id !== projectId && project.id !== projectId
+            ),
             projects: state.projectState.projects.filter(
               (project) => project._id !== projectId && project.id !== projectId
             ),
@@ -215,6 +246,9 @@ export function createProjectReducer(set) {
         set((state) => ({
           projectState: {
             ...state.projectState,
+            favoriteProjects: state.projectState.favoriteProjects.filter(
+              (project) => project._id !== projectId && project.id !== projectId
+            ),
             projects: state.projectState.projects.filter(
               (project) => project._id !== projectId && project.id !== projectId
             ),

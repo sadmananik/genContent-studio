@@ -1,9 +1,23 @@
 "use client";
 
+import ProjectFavoriteButton from "../common/ProjectFavoriteButton";
+import PageTitleIcon from "../common/PageTitleIcon";
+
+import { FolderKanban } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, ExternalLink, LayoutTemplate, Pencil, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  LayoutTemplate,
+  Pencil,
+  Search,
+  Trash2
+} from "lucide-react";
+import FilterSelect from "../common/FilterSelect";
 import Button from "../common/Button";
+import { CONTENT_CARD_GRID } from "../common/ContentCard";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, SectionHeader } from "../common/Cards";
 import ProjectListCard from "../common/ProjectListCard";
@@ -35,6 +49,10 @@ export default function ProjectsScreen() {
   const fetchProjects = useAppStore((state) => state.fetchProjects);
   const updateProject = useAppStore((state) => state.updateProject);
   const publishTemplate = useAppStore((state) => state.publishTemplate);
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState("all");
+  const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState("recently-updated");
   const [editingProject, setEditingProject] = useState(null);
   const [openActionProjectId, setOpenActionProjectId] = useState(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -68,6 +86,29 @@ export default function ProjectsScreen() {
   }, [openActionProjectId]);
 
   const projects = useMemo(() => projectState.projects.map(formatProject), [projectState.projects]);
+
+  const filteredProjects = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return projects
+      .filter(
+        (project) =>
+          (type === "all" || project.type.toLowerCase() === type) &&
+          (category === "all" || getTemplateCategory(project.category) === category) &&
+          [project.title, project.description, project.category, project.type].some((value) =>
+            value.toLowerCase().includes(query)
+          )
+      )
+      .sort((a, b) => {
+        if (sort === "title") return a.title.localeCompare(b.title);
+        if (sort === "oldest") return a.createdTimestamp - b.createdTimestamp;
+        if (sort === "newest") return b.createdTimestamp - a.createdTimestamp;
+        return b.updatedTimestamp - a.updatedTimestamp;
+      });
+  }, [projects, search, type, category, sort]);
+  const recentProjects = useMemo(
+    () => [...filteredProjects].sort((a, b) => b.updatedTimestamp - a.updatedTimestamp).slice(0, 3),
+    [filteredProjects]
+  );
 
   async function handleCreateProject(values) {
     try {
@@ -204,7 +245,8 @@ export default function ProjectsScreen() {
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
-        <div>
+        <PageTitleIcon icon={FolderKanban} />
+        <div className="min-w-0">
           <h1 className="m-0 text-2xl font-bold text-slate-950">Projects</h1>
           <p className="mt-1.5 text-sm text-slate-500">
             Manage your text and image workspaces from one place.
@@ -215,6 +257,92 @@ export default function ProjectsScreen() {
           Create Project
         </Button>
       </header>
+
+      <section className="mb-7 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[minmax(14rem,1fr)_11rem_12rem_11rem_auto] md:items-end">
+        <label className="grid gap-2 text-xs font-bold uppercase text-slate-500">
+          Search Projects
+          <span className="relative block">
+            <Search
+              aria-hidden="true"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={17}
+            />
+            <input
+              type="search"
+              className="min-h-10 w-full rounded-md border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by title, description, category or type"
+              value={search}
+            />
+          </span>
+        </label>
+        <FilterSelect
+          label="Type"
+          options={["all", "text", "image"]}
+          value={type}
+          onChange={setType}
+        />
+        <FilterSelect
+          label="Category"
+          options={["all", ...TEMPLATE_CATEGORIES]}
+          value={category}
+          onChange={setCategory}
+        />
+        <FilterSelect
+          label="Sort By"
+          options={["recently-updated", "newest", "oldest", "title"]}
+          value={sort}
+          onChange={setSort}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={!search && type === "all" && category === "all" && sort === "recently-updated"}
+          onClick={() => {
+            setSearch("");
+            setType("all");
+            setCategory("all");
+            setSort("recently-updated");
+          }}
+        >
+          Clear Filters
+        </Button>
+      </section>
+
+      {recentProjects.length > 0 && (
+        <section aria-label="Recent projects" className="mb-7">
+          <SectionHeader title="Recent Projects" />
+          <div className={CONTENT_CARD_GRID}>
+            {recentProjects.map((project) => (
+              <ProjectListCard
+                layout="card"
+                favoriteControl={
+                  <ProjectFavoriteButton
+                    projectId={project.id}
+                    title={project.title}
+                    isFavorite={project.isFavorite}
+                  />
+                }
+                cover={{
+                  title: project.title,
+                  category: project.category,
+                  projectType: project.type === PROJECT_TYPES.IMAGE ? "image" : "text",
+                  starterContent: project.description
+                }}
+                icon={project.icon}
+                key={project.id}
+                onOpen={() => router.push(getProjectWorkspaceHref(project))}
+                title={project.title}
+                tone={project.tone}
+              >
+                <p className="mt-1 text-xs text-slate-500">
+                  {project.type} Project • {project.updated}
+                </p>
+              </ProjectListCard>
+            ))}
+          </div>
+        </section>
+      )}
 
       <SectionHeader title="All Projects" />
 
@@ -230,10 +358,29 @@ export default function ProjectsScreen() {
           title={DASHBOARD_TEXT.EMPTY_PROJECTS_TITLE}
           description={DASHBOARD_TEXT.EMPTY_PROJECTS_DESCRIPTION}
         />
+      ) : filteredProjects.length === 0 ? (
+        <EmptyState
+          title="No matching projects"
+          description="Try a different title, description, category or project type."
+        />
       ) : (
-        <section className="grid gap-4">
-          {projects.map((project) => (
+        <section aria-label="All projects" className={CONTENT_CARD_GRID}>
+          {filteredProjects.map((project) => (
             <ProjectListCard
+              layout="card"
+              favoriteControl={
+                <ProjectFavoriteButton
+                  projectId={project.id}
+                  title={project.title}
+                  isFavorite={project.isFavorite}
+                />
+              }
+              cover={{
+                title: project.title,
+                category: project.category,
+                projectType: project.type === PROJECT_TYPES.IMAGE ? "image" : "text",
+                starterContent: project.description
+              }}
               active={openActionProjectId === project.id}
               icon={project.icon}
               key={project.id}
@@ -269,7 +416,7 @@ export default function ProjectsScreen() {
                   </Button>
                   {openActionProjectId === project.id && (
                     <div
-                      className="project-actions-menu absolute right-0 top-[calc(100%+0.45rem)] z-50 w-52 rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)] before:absolute before:-top-1.5 before:right-3 before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-slate-200 before:bg-white"
+                      className="project-actions-menu absolute bottom-[calc(100%+0.45rem)] right-0 z-50 max-h-[70vh] w-52 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
                       onClick={(event) => event.stopPropagation()}
                       role="menu"
                     >
@@ -416,6 +563,7 @@ function formatProject(project) {
 
   return {
     id: project._id || project.id,
+    isFavorite: Boolean(project.isFavorite),
     title: project.title,
     category: project.category || "Other",
     description: project.description || "",
@@ -427,6 +575,8 @@ function formatProject(project) {
     style: project.style || "",
     tone: project.tone || "",
     type,
+    createdTimestamp: new Date(project.createdAt || project.updatedAt || 0).getTime() || 0,
+    updatedTimestamp: new Date(project.updatedAt || project.createdAt || 0).getTime() || 0,
     updated: formatUpdatedAt(project.updatedAt),
     icon: <ProjectTypeIcon type={type} />,
     tone: type === PROJECT_TYPES.IMAGE ? "lavender" : "mint"

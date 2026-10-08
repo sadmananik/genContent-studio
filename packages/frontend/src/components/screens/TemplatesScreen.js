@@ -1,9 +1,13 @@
 "use client";
 
+import PageTitleIcon from "../common/PageTitleIcon";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LayoutTemplate, Pencil, Search, Send, Trash2 } from "lucide-react";
+import FilterSelect from "../common/FilterSelect";
 import Button from "../common/Button";
+import { CONTENT_CARD_GRID } from "../common/ContentCard";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { EmptyState, SectionHeader } from "../common/Cards";
 import ToastNotification, { TOAST_TYPES } from "../common/ToastNotification";
@@ -273,9 +277,7 @@ export default function TemplatesScreen() {
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="-m-5 mb-6 flex items-center gap-4 border-b border-slate-200 p-5 md:-m-7 md:mb-7 md:p-7">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-700">
-          <LayoutTemplate aria-hidden="true" size={23} />
-        </span>
+        <PageTitleIcon icon={LayoutTemplate} />
         <div className="min-w-0">
           <h1 className="m-0 text-2xl font-bold text-slate-950">{TEMPLATE_TEXT.PAGE_TITLE}</h1>
           <p className="mt-1.5 text-sm text-slate-500">{TEMPLATE_TEXT.PAGE_DESCRIPTION}</p>
@@ -293,10 +295,8 @@ export default function TemplatesScreen() {
           [TEMPLATE_TABS.MINE, TEMPLATE_TEXT.MY_TAB]
         ].map(([tab, label]) => (
           <button
-            className={`min-h-9 min-w-0 flex-1 cursor-pointer rounded px-3 text-sm font-bold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-1 ${
-              activeTab === tab
-                ? "bg-violet-600 text-white shadow-sm hover:bg-violet-700"
-                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
+            className={`template-section-tab min-h-9 min-w-0 flex-1 cursor-pointer rounded px-3 text-sm font-bold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-1 ${
+              activeTab === tab ? "bg-violet-600 text-white shadow-sm" : "text-slate-600"
             }`}
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -559,7 +559,7 @@ function TemplateGrid({
   templates
 }) {
   return (
-    <section className="grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr))]">
+    <section className={CONTENT_CARD_GRID}>
       {templates.map((template) => (
         <TemplateCard
           actions={renderActions?.(template)}
@@ -630,27 +630,6 @@ function ManageTemplateActions({
         {isUsing ? TEMPLATE_TEXT.USING_ACTION : TEMPLATE_TEXT.USE_ACTION}
       </Button>
     </div>
-  );
-}
-
-function FilterSelect({ label, onChange, options, value }) {
-  return (
-    <label className="grid gap-2 text-xs font-bold uppercase text-slate-500">
-      {label}
-      <select
-        className="min-h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm capitalize text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-        onChange={(event) => onChange(event.target.value)}
-        value={value}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option === "all"
-              ? `All${label === TEMPLATE_TEXT.CATEGORY_FILTER_LABEL ? " Categories" : ""}`
-              : option.replaceAll("-", " ")}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }
 

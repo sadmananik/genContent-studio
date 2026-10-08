@@ -1275,11 +1275,20 @@ export default function ImageEditorScreen() {
 
   return (
     <>
-      {(!isCanvasSnapshotResolved || workspaceLoadError || isSaving) && (
-        <WorkspaceLoading type="image" error={workspaceLoadError} isSaving={isSaving} />
+      {(!isCanvasSnapshotResolved || workspaceLoadError || isSaving || isGenerating) && (
+        <WorkspaceLoading
+          type="image"
+          error={workspaceLoadError}
+          isSaving={isSaving}
+          isGenerating={isGenerating}
+        />
       )}
       <section
-        inert={!isCanvasSnapshotResolved || workspaceLoadError || isSaving ? "" : undefined}
+        inert={
+          !isCanvasSnapshotResolved || workspaceLoadError || isSaving || isGenerating
+            ? ""
+            : undefined
+        }
         className="flex min-h-screen flex-col overflow-hidden bg-slate-50"
       >
         <TextWorkspaceHeader

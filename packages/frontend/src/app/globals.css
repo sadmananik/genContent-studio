@@ -1888,3 +1888,19 @@ a.brand:hover {
     display: none;
   }
 }
+
+/* Template tabs highlight both their background and text on hover. */
+.template-section-tab[aria-selected="false"]:hover {
+  background-color: #ede9fe;
+  color: #6d28d9;
+}
+
+.template-section-tab[aria-selected="true"]:hover {
+  background-color: #6d28d9;
+  color: #ffffff;
+}
+
+:root[data-active-theme="dark"] .template-section-tab[aria-selected="false"]:hover {
+  background-color: #2e1065;
+  color: #ddd6fe;
+}

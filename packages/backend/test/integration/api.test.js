@@ -721,3 +721,27 @@ test("pending invitations are deduplicated and applied when a new user verifies 
   );
   assert.equal((await Project.findById(project._id)).collaborators.length, 1);
 });
+
+test("project favorites are private, accessible, and do not change activity dates", async () => {
+  const project = await createProject();
+  const path = `/api/projects/${project._id}/favorite`;
+  assert.equal(
+    (await request(path, { method: "PATCH", user: outsider, body: { isFavorite: true } })).status,
+    404
+  );
+  const starred = await request(path, { method: "PATCH", user: owner, body: { isFavorite: true } });
+  assert.equal(starred.status, 200);
+  assert.equal(starred.body.isFavorite, true);
+  assert.equal(starred.body.favoritedBy, undefined);
+  assert.equal(starred.body.updatedAt, project.updatedAt);
+  assert.equal((await request("/api/projects/favorites", { user: owner })).body.length, 1);
+  assert.equal((await request("/api/projects/favorites", { user: outsider })).body.length, 0);
+  await Project.updateOne({ _id: project._id }, { $addToSet: { collaborators: outsider._id } });
+  assert.equal(
+    (await request(path, { method: "PATCH", user: outsider, body: { isFavorite: true } })).status,
+    200
+  );
+  await request(path, { method: "PATCH", user: owner, body: { isFavorite: false } });
+  assert.equal((await request("/api/projects/favorites", { user: owner })).body.length, 0);
+  assert.equal((await request("/api/projects/favorites", { user: outsider })).body.length, 1);
+});

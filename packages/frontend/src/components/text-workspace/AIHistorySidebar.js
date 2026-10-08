@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, Star, Trash2 } from "lucide-react";
+import { contentPreview } from "./contentPreview";
 import StatusText from "../common/StatusText";
 import EmptyAIHistory from "./EmptyAIHistory";
 import { AI_HISTORY_TEXT } from "../../constants/notifications";
@@ -69,9 +70,7 @@ export default function AIHistorySidebar({
                   >
                     <Star
                       aria-hidden="true"
-                      className={
-                        item.favourite ? "fill-amber-400" : "group-hover/favourite:fill-amber-400"
-                      }
+                      fill={item.favourite ? "currentColor" : "none"}
                       size={16}
                     />
                   </button>
@@ -81,7 +80,7 @@ export default function AIHistorySidebar({
                     type="button"
                   >
                     <span className="line-clamp-2 block break-words text-sm font-bold text-slate-800 transition group-hover:text-violet-700 group-hover:underline group-hover:decoration-violet-300 group-hover:underline-offset-4">
-                      {item.prompt}
+                      {contentPreview(item.prompt, 72)}
                     </span>
                     <StatusText className="transition group-hover:text-slate-600">
                       {item.timestamp}

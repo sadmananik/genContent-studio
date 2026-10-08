@@ -1,5 +1,7 @@
 import { Check, Copy, Edit3, Save, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
+import MarkdownPreview from "./MarkdownPreview";
+import { contentPreview } from "./contentPreview";
 import Button from "../common/Button";
 
 export default function AIResponseCard({
@@ -14,6 +16,18 @@ export default function AIResponseCard({
   selected
 }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const promptPreview = contentPreview(response.prompt, 120);
+  const responsePreview = contentPreview(response.response, 320, { preserveWhitespace: true });
+  const hasMore =
+    promptPreview !==
+      String(response.prompt || "")
+        .replace(/\s+/g, " ")
+        .trim() ||
+    responsePreview !==
+      String(response.response || "")
+        .replace(/\s+/g, " ")
+        .trim();
   const [draftResponse, setDraftResponse] = useState(response.response);
 
   function handleSaveEdit() {
@@ -27,14 +41,16 @@ export default function AIResponseCard({
 
   return (
     <article
-      className={`rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] ${
+      className={`min-w-0 rounded-lg border bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)] ${
         selected ? "border-violet-300 ring-4 ring-violet-100" : "border-slate-200"
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase text-slate-500">Prompt</p>
-          <h3 className="mt-1 text-sm font-bold text-slate-950">{response.prompt}</h3>
+          <h3 className="mt-1 break-words text-sm font-bold text-slate-950">
+            {isExpanded ? response.prompt : promptPreview}
+          </h3>
         </div>
         <span className="text-xs text-slate-500">{response.timestamp}</span>
       </div>
@@ -48,9 +64,22 @@ export default function AIResponseCard({
             value={draftResponse}
           />
         ) : (
-          <p className="mt-2 text-sm leading-6 text-slate-700">{response.response}</p>
+          <div className="mt-2">
+            <MarkdownPreview content={isExpanded ? response.response : responsePreview} />
+          </div>
         )}
       </div>
+
+      {!isEditing && hasMore && (
+        <button
+          className="mt-2 text-xs font-semibold text-violet-700 hover:underline"
+          aria-expanded={isExpanded}
+          onClick={() => setIsExpanded((value) => !value)}
+          type="button"
+        >
+          {isExpanded ? "Show less" : "Show full prompt and response"}
+        </button>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button

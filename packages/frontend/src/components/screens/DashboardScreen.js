@@ -1,12 +1,18 @@
 "use client";
 
+import PageTitleIcon from "../common/PageTitleIcon";
+
+import QuickCreateProject from "../dashboard/QuickCreateProject";
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { LayoutDashboard } from "lucide-react";
+import { useRouter } from "next/navigation";
+import ProjectListCard from "../common/ProjectListCard";
+import { CONTENT_CARD_GRID } from "../common/ContentCard";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, FileText, FolderKanban, Image as ImageIcon, Users } from "lucide-react";
 import {
   CategorySummary,
   EmptyState,
-  RecentProjectCard,
   SectionHeader,
   StatGrid,
   WelcomePanel
@@ -23,13 +29,33 @@ import { COMMON_UI_TEXT, DASHBOARD_ALERTS, PROJECT_ALERTS } from "../../constant
 import { useAppStore } from "../../store";
 
 export default function DashboardScreen() {
+  const router = useRouter();
+  const [greeting, setGreeting] = useState("Hello");
+
+  useEffect(() => {
+    const updateGreeting = () => {
+      const hour = new Date().getHours();
+      setGreeting(hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+    };
+    updateGreeting();
+    const timer = window.setInterval(updateGreeting, 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const auth = useAppStore((state) => state.auth);
   const projectState = useAppStore((state) => state.projectState);
   const fetchProjects = useAppStore((state) => state.fetchProjects);
 
   const user = auth.user || { name: "Sadman Anik" };
   const projects = useMemo(
-    () => projectState.projects.map(formatProjectForDashboard),
+    () =>
+      [...projectState.projects]
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0)
+        )
+        .slice(0, 3)
+        .map(formatProjectForDashboard),
     [projectState.projects]
   );
   const summaryCards = useMemo(
@@ -51,28 +77,23 @@ export default function DashboardScreen() {
   return (
     <main className="min-w-0 p-5 md:p-7">
       <header className="mb-6 flex flex-wrap items-center gap-4 md:mb-7">
-        <div>
+        <PageTitleIcon icon={LayoutDashboard} />
+        <div className="min-w-0">
           <h1 className="m-0 text-2xl font-bold text-slate-950">{DASHBOARD_TEXT.TITLE}</h1>
           <p className="mt-1.5 text-sm text-slate-500">{DASHBOARD_TEXT.SUBTITLE}</p>
         </div>
       </header>
 
       <WelcomePanel
-        title={`${DASHBOARD_TEXT.WELCOME_PREFIX}, ${firstName(user.name)}!`}
+        title={`${greeting}, ${firstName(user.name)}!`}
         description={DASHBOARD_TEXT.WELCOME_DESCRIPTION}
       />
 
-      <StatGrid items={summaryCards} label={DASHBOARD_TEXT.PROJECT_SUMMARY} />
-
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(260px,0.82fr)_minmax(360px,1.55fr)]">
-        <div>
-          <SectionHeader title={DASHBOARD_TEXT.CONTENT_TYPE_SUMMARY} />
-          <CategorySummary items={categoryCounts} />
-        </div>
-
+      <section className="space-y-7">
+        <QuickCreateProject />
         <div>
           <SectionHeader
-            title={DASHBOARD_TEXT.RECENT_PROJECTS}
+            title="Continue where you left off"
             action={
               <Link
                 className="app-button app-button-secondary dashboard-projects-link inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 hover:shadow-[0_10px_22px_rgba(101,69,246,0.14)] focus:outline-none focus:ring-2 focus:ring-violet-100"
@@ -91,13 +112,31 @@ export default function DashboardScreen() {
           ) : projectState.error && !hasProjects ? (
             <EmptyState title={PROJECT_ALERTS.LOAD_FAILED_TITLE} description={projectState.error} />
           ) : hasProjects ? (
-            <div className="grid overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_22px_rgba(16,24,40,0.04)] [&>*+*]:border-t [&>*+*]:border-slate-100">
+            <div className={CONTENT_CARD_GRID}>
               {projects.map((project) => (
-                <RecentProjectCard
-                  project={project}
-                  href={getProjectWorkspaceHref(project)}
+                <ProjectListCard
+                  layout="card"
+                  cover={{
+                    title: project.title,
+                    category: project.category,
+                    projectType: project.type === PROJECT_TYPES.IMAGE ? "image" : "text",
+                    starterContent: project.description
+                  }}
+                  title={project.title}
+                  tone={project.tone}
+                  icon={project.icon}
+                  onOpen={() => router.push(getProjectWorkspaceHref(project))}
                   key={project.id}
-                />
+                >
+                  <p className="mt-1 text-xs text-slate-500">
+                    {project.type} Project • {project.updated}
+                  </p>
+                  {project.description && (
+                    <p className="mt-2 line-clamp-2 text-sm text-slate-600">
+                      {project.description}
+                    </p>
+                  )}
+                </ProjectListCard>
               ))}
             </div>
           ) : (
@@ -107,6 +146,12 @@ export default function DashboardScreen() {
               action={<Link href={ROUTES.PROJECTS}>Go to Projects</Link>}
             />
           )}
+        </div>
+        <StatGrid items={summaryCards} label={DASHBOARD_TEXT.PROJECT_SUMMARY} />
+
+        <div>
+          <SectionHeader title={DASHBOARD_TEXT.CONTENT_TYPE_SUMMARY} />
+          <CategorySummary items={categoryCounts} />
         </div>
       </section>
     </main>
@@ -123,6 +168,7 @@ function formatProjectForDashboard(project) {
   return {
     id: project._id || project.id,
     title: project.title,
+    description: project.description || "",
     category: project.category || "Other",
     type,
     updated: formatUpdatedAt(project.updatedAt),
@@ -160,7 +206,7 @@ function buildSummaryCards(projects) {
       icon: <Users aria-hidden="true" size={19} strokeWidth={2.25} />,
       value: String(sharedCount),
       label: SUMMARY_CARD_LABELS.SHARED,
-      tone: "mint"
+      tone: "amber"
     }
   ];
 }

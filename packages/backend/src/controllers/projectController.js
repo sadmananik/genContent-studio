@@ -72,6 +72,34 @@ const listProjects = asyncHandler(async (req, res) => {
   res.json(projects.map((project) => serializeProjectForUser(project, req.user.id)));
 });
 
+const listFavoriteProjects = asyncHandler(async (req, res) => {
+  const projects = await Project.find({
+    favoritedBy: req.user.id,
+    $or: [{ owner: req.user.id }, { collaborators: req.user.id }]
+  })
+    .populate("owner", "name email")
+    .populate("collaborators", "name email")
+    .sort({ updatedAt: -1 });
+  res.json(projects.map((project) => serializeProjectForUser(project, req.user.id)));
+});
+
+const toggleProjectFavorite = asyncHandler(async (req, res) => {
+  await findAccessibleProject(req.params.id, req.user.id);
+  if (typeof req.body.isFavorite !== "boolean")
+    throw httpError(400, "isFavorite must be a boolean.");
+  const project = await Project.findOneAndUpdate(
+    { _id: req.params.id, $or: [{ owner: req.user.id }, { collaborators: req.user.id }] },
+    req.body.isFavorite
+      ? { $addToSet: { favoritedBy: req.user.id } }
+      : { $pull: { favoritedBy: req.user.id } },
+    { returnDocument: "after", timestamps: false }
+  )
+    .populate("owner", "name email")
+    .populate("collaborators", "name email");
+  if (!project) throw httpError(404, "Project not found.");
+  res.json(serializeProjectForUser(project, req.user.id));
+});
+
 const listSharedProjects = asyncHandler(async (req, res) => {
   const projects = await Project.find({
     owner: { $ne: req.user.id },
@@ -421,8 +449,10 @@ function serializeProjectForUser(project, userId) {
   const collaboratorIds = (projectObject.collaborators || []).map(getObjectIdString);
   const accessLevel = getAccessLevelForUser(projectObject, userIdString);
 
+  const { favoritedBy = [], ...publicProject } = projectObject;
   return {
-    ...projectObject,
+    ...publicProject,
+    isFavorite: favoritedBy.some((id) => String(id) === userIdString),
     currentUserRole:
       ownerIdString === userIdString ? PROJECT_ROLES.OWNER : PROJECT_ROLES.COLLABORATOR,
     accessLevel,
@@ -463,6 +493,8 @@ function requireProjectEditAccess(project, userId) {
 }
 
 module.exports = {
+  listFavoriteProjects,
+  toggleProjectFavorite,
   createProject,
   deleteProject,
   findAccessibleProject,

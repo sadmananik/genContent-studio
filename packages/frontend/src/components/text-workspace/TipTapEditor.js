@@ -49,22 +49,26 @@ export default function TipTapEditor({
     immediatelyRender: false,
     onCreate: ({ editor: createdEditor }) => {
       if (collaborationProvider && initialContent && !createdEditor.getText().trim()) {
-        createdEditor.commands.setContent(initialContent);
+        createdEditor.commands.setContent(initialContent, { emitUpdate: false });
       }
+      onContentChange(
+        { html: createdEditor.getHTML(), text: createdEditor.getText() },
+        createdEditor.schema,
+        { isInitialization: true }
+      );
     },
     onUpdate: ({ editor: updatedEditor }) => {
-      if (
-        collaborationProvider &&
-        isHydratingCollaborationRef.current &&
-        !updatedEditor.getText().trim()
-      ) {
+      if (collaborationProvider && isHydratingCollaborationRef.current) {
         return;
       }
 
-      onContentChange({
-        html: updatedEditor.getHTML(),
-        text: updatedEditor.getText()
-      });
+      onContentChange(
+        {
+          html: updatedEditor.getHTML(),
+          text: updatedEditor.getText()
+        },
+        updatedEditor.schema
+      );
     }
   });
 
@@ -74,7 +78,7 @@ export default function TipTapEditor({
 
   useEffect(() => {
     if (editor) {
-      editor.setEditable(editable);
+      editor.setEditable(editable, false);
     }
   }, [editable, editor]);
 
@@ -92,33 +96,36 @@ export default function TipTapEditor({
       const fragment = collaborationProvider.doc.getXmlFragment("default");
 
       if (!editor.getText().trim() && (fragment.length === 0 || initialContent)) {
-        editor.commands.setContent(initialContent);
+        editor.commands.setContent(initialContent, { emitUpdate: false });
       }
 
       isHydratingCollaborationRef.current = false;
       seededCollaborationRef.current = editor;
+      onContentChange({ html: editor.getHTML(), text: editor.getText() }, editor.schema, {
+        isInitialization: true
+      });
     };
     const frameId = window.requestAnimationFrame(() => {
       window.requestAnimationFrame(seedEditor);
     });
     const timeoutId = window.setTimeout(() => {
       if (!editor.getText().trim()) {
-        editor.commands.setContent(initialContent);
+        editor.commands.setContent(initialContent, { emitUpdate: false });
       }
-      isHydratingCollaborationRef.current = false;
+      if (seededCollaborationRef.current !== editor) seedEditor();
     }, 750);
 
     return () => {
       window.cancelAnimationFrame(frameId);
       window.clearTimeout(timeoutId);
     };
-  }, [collaborationProvider, editor, initialContent]);
+  }, [collaborationProvider, editor, initialContent, onContentChange]);
 
   useEffect(() => {
     if (editor && editorKey && appliedEditorKeyRef.current !== editorKey) {
       appliedEditorKeyRef.current = editorKey;
       if (initialContent && !editor.getText().trim()) {
-        editor.commands.setContent(initialContent, false);
+        editor.commands.setContent(initialContent, { emitUpdate: false });
       }
     }
   }, [collaborationProvider, editor, editorKey, initialContent]);

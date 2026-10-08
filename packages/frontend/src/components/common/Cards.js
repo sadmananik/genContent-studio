@@ -20,14 +20,50 @@ export function IconBadge({ children, tone = "" }) {
   );
 }
 
+const statTones = {
+  violet: {
+    panel: "from-violet-50 to-white",
+    icon: "bg-violet-100 text-violet-700",
+    accent: "bg-violet-500"
+  },
+  mint: {
+    panel: "from-emerald-50 to-white",
+    icon: "bg-emerald-100 text-emerald-700",
+    accent: "bg-emerald-500"
+  },
+  lavender: {
+    panel: "from-sky-50 to-white",
+    icon: "bg-sky-100 text-sky-700",
+    accent: "bg-sky-500"
+  },
+  amber: {
+    panel: "from-amber-50 to-white",
+    icon: "bg-amber-100 text-amber-700",
+    accent: "bg-amber-500"
+  }
+};
+
 export function StatCard({ icon, value, label, tone = "violet" }) {
+  const colors = statTones[tone] || statTones.violet;
   return (
-    <article className="flex min-h-22 items-center gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(16,24,40,0.04)]">
-      <IconBadge>{icon}</IconBadge>
-      <div>
-        <strong className="text-2xl text-slate-950">{value}</strong>
-        <p className="mt-1 text-xs text-slate-500">{label}</p>
+    <article
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br p-5 shadow-sm",
+        colors.panel
+      )}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+          <strong className="mt-3 block text-4xl font-extrabold leading-none tracking-tight text-slate-950">
+            {value}
+          </strong>
+        </div>
+        <span className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-xl", colors.icon)}>
+          {icon}
+        </span>
       </div>
+      <span aria-hidden="true" className={cn("mt-5 block h-1 w-12 rounded-full", colors.accent)} />
     </article>
   );
 }
