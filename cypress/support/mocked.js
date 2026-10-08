@@ -13,6 +13,7 @@ beforeEach(() => {
   cy.intercept("GET", "**/api/users", [user]);
   cy.intercept("GET", "**/api/projects", [project]).as("projects");
   cy.intercept("GET", "**/api/projects/shared", []).as("shared");
+  cy.intercept("GET", "**/api/projects/favorites", []).as("favoriteProjects");
   cy.intercept("GET", `**/api/projects/${project._id}`, project).as("project");
   cy.intercept("GET", "**/api/projects/*/chats", []).as("chats");
   cy.intercept("GET", "**/api/projects/*/audit-history*", []);
