@@ -28,7 +28,16 @@ const {
 const { emitProjectEvent } = require("../services/collaborationServer");
 
 const createProject = asyncHandler(async (req, res) => {
-  const { title, type, category = "Other", description = "", collaborators = [] } = req.body;
+  const {
+    title,
+    type,
+    category = "Other",
+    description = "",
+    collaborators = [],
+    starterPrompt = "",
+    tone = "",
+    style = ""
+  } = req.body;
   const normalizedTitle = requireTrimmedString(title, PROJECT_FIELD_LABELS.PROJECT_TITLE);
 
   if (!type) {
@@ -46,6 +55,9 @@ const createProject = asyncHandler(async (req, res) => {
     type,
     category: normalizeString(category, "Other") || "Other",
     description: normalizeString(description),
+    starterPrompt: normalizeString(starterPrompt).slice(0, 4000),
+    tone: normalizeString(tone).slice(0, 120),
+    style: normalizeString(style).slice(0, 120),
     owner: req.user.id,
     collaborators: normalizedCollaborators,
     collaboratorPermissions: normalizedCollaborators.map((userId) => ({

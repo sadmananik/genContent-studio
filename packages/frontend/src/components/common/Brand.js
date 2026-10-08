@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-export default function Brand({ compact = false, href = "/" }) {
+export default function Brand({ compact = false, href = "/", label = "genContent Studio" }) {
   return (
     <a className="brand" href={href}>
       <Image
@@ -11,7 +11,7 @@ export default function Brand({ compact = false, href = "/" }) {
         src="/gencontent-logo.png"
         width={40}
       />
-      {!compact && <strong>genContent Studio</strong>}
+      {!compact && <strong>{label}</strong>}
     </a>
   );
 }

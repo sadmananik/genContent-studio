@@ -20,7 +20,6 @@ export const NAV_ITEMS = [
   { icon: "FolderKanban", label: "Projects", href: ROUTES.PROJECTS },
   { icon: "Sparkles", label: "AI Studio", href: ROUTES.TEMPLATES },
   { icon: "Image", label: "Image Studio", href: `${ROUTES.PROJECTS}?type=image` },
-  { icon: "SearchCheck", label: "SEO Tools", href: ROUTES.TEMPLATES },
   { icon: "Star", label: "Favorites", href: ROUTES.FAVORITES },
   { icon: "Users", label: "Shared with Me", href: ROUTES.SHARED }
 ];

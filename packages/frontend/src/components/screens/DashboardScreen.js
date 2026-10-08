@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
+  ChevronDown,
   FileText,
+  Globe,
   Image as ImageIcon,
   Lightbulb,
   SearchCheck,
@@ -15,14 +17,13 @@ import {
 import { UserAvatar } from "../common/UserAvatar";
 import { API_PROJECT_TYPES, PROJECT_TYPES } from "../../constants/content";
 import { ROUTES } from "../../constants/navigation";
+import { stashPendingGenerate } from "../../lib/pendingGenerate";
 import { useAppStore } from "../../store";
 import "./dashboard.css";
 
 const GENERATE_TABS = [
   { id: "text", label: "Text", type: API_PROJECT_TYPES.TEXT },
-  { id: "image", label: "Image", type: API_PROJECT_TYPES.IMAGE },
-  { id: "improve", label: "Improve", type: API_PROJECT_TYPES.TEXT },
-  { id: "seo", label: "SEO", type: API_PROJECT_TYPES.TEXT }
+  { id: "image", label: "Image", type: API_PROJECT_TYPES.IMAGE }
 ];
 
 const QUICK_ACTIONS = [
@@ -70,8 +71,6 @@ export default function DashboardScreen() {
   const projectState = useAppStore((state) => state.projectState);
   const fetchProjects = useAppStore((state) => state.fetchProjects);
   const fetchSharedProjects = useAppStore((state) => state.fetchSharedProjects);
-  const createProject = useAppStore((state) => state.createProject);
-
   const user = auth.user || { name: "Creator" };
   const first = firstName(user.name);
   const [activeTab, setActiveTab] = useState("text");
@@ -106,7 +105,7 @@ export default function DashboardScreen() {
     fetchSharedProjects().catch(() => {});
   }, [auth.token, fetchProjects, fetchSharedProjects]);
 
-  async function handleGenerate(event) {
+  function handleGenerate(event) {
     event.preventDefault();
     const trimmed = prompt.trim();
 
@@ -119,22 +118,20 @@ export default function DashboardScreen() {
     setIsGenerating(true);
     setGenerateError("");
 
-    try {
-      const title = trimmed.length > 48 ? `${trimmed.slice(0, 48).trim()}…` : trimmed;
-      const project = await createProject({
-        title,
-        type: tab.type,
-        category: contentType,
-        description: `${trimmed}\n\nTone: ${tone}. Language: ${language}. Mode: ${tab.label}.`
-      });
+    const title = trimmed.length > 48 ? `${trimmed.slice(0, 48).trim()}…` : trimmed;
+    const fullPrompt = `${trimmed}\n\nTone: ${tone}. Language: ${language}.`;
 
-      const projectId = project._id || project.id;
-      router.push(`${ROUTES.EDITOR}?projectId=${projectId}&type=${tab.type}`);
-    } catch (error) {
-      setGenerateError(error?.message || "Could not start generation. Please try again.");
-    } finally {
-      setIsGenerating(false);
-    }
+    stashPendingGenerate({
+      title,
+      type: tab.type,
+      category: contentType,
+      description: fullPrompt,
+      starterPrompt: fullPrompt,
+      tone,
+      style: language
+    });
+
+    router.push(`${ROUTES.EDITOR}?type=${tab.type}&autogenerate=1`);
   }
 
   return (
@@ -195,9 +192,16 @@ export default function DashboardScreen() {
 
         <div className="dash-generate-bar">
           <div className="dash-selects">
-            <label>
+            <label className="dash-select-chip">
+              <FileText aria-hidden="true" size={15} strokeWidth={1.9} />
+              <span className="dash-select-chip-label">{contentType}</span>
+              <ChevronDown aria-hidden="true" className="dash-select-chevron" size={14} strokeWidth={2.2} />
               <span className="sr-only">Content type</span>
-              <select onChange={(event) => setContentType(event.target.value)} value={contentType}>
+              <select
+                aria-label="Content type"
+                onChange={(event) => setContentType(event.target.value)}
+                value={contentType}
+              >
                 {CONTENT_TYPES.map((option) => (
                   <option key={option} value={option}>
                     {option}
@@ -205,9 +209,12 @@ export default function DashboardScreen() {
                 ))}
               </select>
             </label>
-            <label>
+            <label className="dash-select-chip">
+              <Sparkles aria-hidden="true" size={15} strokeWidth={1.9} />
+              <span className="dash-select-chip-label">Tone: {tone}</span>
+              <ChevronDown aria-hidden="true" className="dash-select-chevron" size={14} strokeWidth={2.2} />
               <span className="sr-only">Tone</span>
-              <select onChange={(event) => setTone(event.target.value)} value={tone}>
+              <select aria-label="Tone" onChange={(event) => setTone(event.target.value)} value={tone}>
                 {TONES.map((option) => (
                   <option key={option} value={option}>
                     Tone: {option}
@@ -215,9 +222,16 @@ export default function DashboardScreen() {
                 ))}
               </select>
             </label>
-            <label>
+            <label className="dash-select-chip">
+              <Globe aria-hidden="true" size={15} strokeWidth={1.9} />
+              <span className="dash-select-chip-label">Language: {language}</span>
+              <ChevronDown aria-hidden="true" className="dash-select-chevron" size={14} strokeWidth={2.2} />
               <span className="sr-only">Language</span>
-              <select onChange={(event) => setLanguage(event.target.value)} value={language}>
+              <select
+                aria-label="Language"
+                onChange={(event) => setLanguage(event.target.value)}
+                value={language}
+              >
                 {LANGUAGES.map((option) => (
                   <option key={option} value={option}>
                     Language: {option}

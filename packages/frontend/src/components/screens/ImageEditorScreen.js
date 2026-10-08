@@ -34,13 +34,16 @@ import {
 import { apiRequest } from "../../lib/apiClient";
 import { getAuthSession } from "../../lib/auth";
 import { createCollaborationProvider } from "../../lib/collaboration";
+import { consumePendingGenerate } from "../../lib/pendingGenerate";
 import { useAppStore } from "../../store";
 
 export default function ImageEditorScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const shouldAutoGenerate = searchParams.get("autogenerate") === "1";
   const projectId = searchParams.get("projectId") || mockImageProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
+  const createProject = useAppStore((state) => state.createProject);
   const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
   const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
   const fetchProjectById = useAppStore((state) => state.fetchProjectById);
@@ -84,6 +87,9 @@ export default function ImageEditorScreen() {
   const selectedResponseIdRef = useRef(selectedResponseId);
   const pendingLeaveTimersRef = useRef(new Map());
   const hasAutoLoadedResponseRef = useRef(false);
+  const autoGenerateHandledRef = useRef(false);
+  const pendingAutoPromptRef = useRef("");
+  const pendingProjectBootstrapRef = useRef(false);
   projectRef.current = project;
   responsesRef.current = responses;
   selectedResponseIdRef.current = selectedResponseId;
@@ -341,6 +347,50 @@ export default function ImageEditorScreen() {
   }, []);
 
   useEffect(() => {
+    if (isRealProject || !shouldAutoGenerate || pendingProjectBootstrapRef.current) {
+      return;
+    }
+
+    const pending = consumePendingGenerate();
+    if (!pending?.starterPrompt) {
+      return;
+    }
+
+    pendingProjectBootstrapRef.current = true;
+    const nextPrompt = String(pending.starterPrompt).trim();
+    setPrompt(nextPrompt);
+    pendingAutoPromptRef.current = nextPrompt;
+    setIsProjectLoaded(false);
+
+    createProject({
+      title: pending.title || "Untitled Image Project",
+      type: pending.type || API_PROJECT_TYPES.IMAGE,
+      category: pending.category || "Image",
+      description: pending.description || nextPrompt,
+      starterPrompt: nextPrompt,
+      tone: pending.tone || "",
+      style: pending.style || ""
+    })
+      .then((createdProject) => {
+        const createdId = createdProject._id || createdProject.id;
+        const nextParams = new URLSearchParams(searchParams.toString());
+        nextParams.set("projectId", createdId);
+        nextParams.set("type", pending.type || API_PROJECT_TYPES.IMAGE);
+        nextParams.set("autogenerate", "1");
+        router.replace(`${ROUTES.EDITOR}?${nextParams.toString()}`, { scroll: false });
+      })
+      .catch((error) => {
+        pendingProjectBootstrapRef.current = false;
+        setIsProjectLoaded(true);
+        showNotification(
+          TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_TITLE,
+          error.message || "Could not create the project for generation.",
+          TOAST_TYPES.ERROR
+        );
+      });
+  }, [createProject, isRealProject, router, searchParams, shouldAutoGenerate]);
+
+  useEffect(() => {
     if (!isRealProject) {
       return;
     }
@@ -352,6 +402,9 @@ export default function ImageEditorScreen() {
         setIsProjectLoaded(true);
         if (loadedProject.starterPrompt) {
           setPrompt(loadedProject.starterPrompt);
+          if (shouldAutoGenerate) {
+            pendingAutoPromptRef.current = loadedProject.starterPrompt;
+          }
         }
       })
       .catch((error) => {
@@ -361,7 +414,7 @@ export default function ImageEditorScreen() {
           TOAST_TYPES.ERROR
         );
       });
-  }, [fetchProjectById, isRealProject, projectId]);
+  }, [fetchProjectById, isRealProject, projectId, shouldAutoGenerate]);
 
   useEffect(() => {
     if (!isRealProject || !isProjectLoaded) {
@@ -625,6 +678,33 @@ export default function ImageEditorScreen() {
       setIsGenerating(false);
     }
   }
+
+  useEffect(() => {
+    if (!shouldAutoGenerate || autoGenerateHandledRef.current) {
+      return;
+    }
+
+    if (!isProjectLoaded || isGenerating || !canEditProject) {
+      return;
+    }
+
+    const pendingPrompt = String(pendingAutoPromptRef.current || "").trim();
+    if (!pendingPrompt) {
+      return;
+    }
+
+    autoGenerateHandledRef.current = true;
+    pendingAutoPromptRef.current = "";
+    setPrompt(pendingPrompt);
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("autogenerate");
+    const query = nextParams.toString();
+    router.replace(query ? `${ROUTES.EDITOR}?${query}` : ROUTES.EDITOR, { scroll: false });
+
+    void handleGenerate({ prompt: pendingPrompt });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAutoGenerate, isProjectLoaded, isGenerating, canEditProject, projectId]);
 
   function getCurrentVisualInput() {
     // Prefer the saved AI image when the canvas has not been edited, so image

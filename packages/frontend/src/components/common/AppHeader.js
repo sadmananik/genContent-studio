@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Bell, Search } from "lucide-react";
 import UserProfileMenu from "./UserProfileMenu";
 import { ROUTES } from "../../constants/navigation";
@@ -9,7 +9,6 @@ import { useAppStore } from "../../store";
 
 export default function AppHeader() {
   const router = useRouter();
-  const pathname = usePathname();
   const auth = useAppStore((state) => state.auth);
   const userState = useAppStore((state) => state.userState);
   const logoutUser = useAppStore((state) => state.logoutUser);
@@ -58,7 +57,7 @@ export default function AppHeader() {
   return (
     <header className="dash-header">
       <form className="dash-search" onSubmit={handleSearch}>
-        <Search aria-hidden="true" size={16} />
+        <Search aria-hidden="true" className="dash-search-icon" size={18} strokeWidth={1.9} />
         <input
           aria-label="Search projects"
           onChange={(event) => setQuery(event.target.value)}
@@ -71,17 +70,17 @@ export default function AppHeader() {
 
       <div className="dash-header-actions">
         <button aria-label="Notifications" className="dash-bell" type="button">
-          <Bell size={18} />
+          <Bell size={18} strokeWidth={1.9} />
+          <span aria-hidden="true" className="dash-bell-dot" />
         </button>
-        <div className="dash-header-user">
-          <UserProfileMenu
-            user={user}
-            onLogout={handleLogout}
-            onProfile={handleProfile}
-            onSettings={handleSettings}
-          />
-          {pathname === ROUTES.DASHBOARD ? <span className="dash-plan-badge">{planLabel}</span> : null}
-        </div>
+        <UserProfileMenu
+          planLabel={planLabel}
+          user={user}
+          variant="dashboard"
+          onLogout={handleLogout}
+          onProfile={handleProfile}
+          onSettings={handleSettings}
+        />
       </div>
     </header>
   );

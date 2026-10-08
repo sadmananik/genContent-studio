@@ -28,6 +28,7 @@ import {
 import { apiRequest } from "../../lib/apiClient";
 import { getAuthSession } from "../../lib/auth";
 import { createCollaborationProvider } from "../../lib/collaboration";
+import { consumePendingGenerate } from "../../lib/pendingGenerate";
 import { useAppStore } from "../../store";
 import { textPromptActions } from "../text-workspace/promptActions";
 
@@ -85,10 +86,12 @@ function TextEditorScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedAccess = searchParams.get("access");
+  const shouldAutoGenerate = searchParams.get("autogenerate") === "1";
   const projectId = searchParams.get("projectId") || defaultTextProject.id;
   const isRealProject = /^[a-f\d]{24}$/i.test(projectId);
   const aiState = useAppStore((state) => state.aiState);
   const deleteAiResponse = useAppStore((state) => state.deleteAiResponse);
+  const createProject = useAppStore((state) => state.createProject);
   const fetchProjectById = useAppStore((state) => state.fetchProjectById);
   const fetchProjectChatHistory = useAppStore((state) => state.fetchProjectChatHistory);
   const inviteProjectCollaborator = useAppStore((state) => state.inviteProjectCollaborator);
@@ -130,6 +133,9 @@ function TextEditorScreen() {
   const lastPersistedContentHtmlRef = useRef(normalizeEditorHtml(defaultTextProject.content));
   const projectStarterContentRef = useRef("");
   const restoredHistoryResponseRef = useRef(null);
+  const autoGenerateHandledRef = useRef(false);
+  const pendingAutoPromptRef = useRef("");
+  const pendingProjectBootstrapRef = useRef(false);
   const editorRef = useRef(null);
   const projectRef = useRef(project);
   const responsesRef = useRef(responses);
@@ -467,6 +473,50 @@ function TextEditorScreen() {
   }, []);
 
   useEffect(() => {
+    if (isRealProject || !shouldAutoGenerate || pendingProjectBootstrapRef.current) {
+      return;
+    }
+
+    const pending = consumePendingGenerate();
+    if (!pending?.starterPrompt) {
+      return;
+    }
+
+    pendingProjectBootstrapRef.current = true;
+    const nextPrompt = String(pending.starterPrompt).trim();
+    setPrompt(nextPrompt);
+    pendingAutoPromptRef.current = nextPrompt;
+    setIsLoadingContent(true);
+
+    createProject({
+      title: pending.title || "Untitled Text Project",
+      type: pending.type || API_PROJECT_TYPES.TEXT,
+      category: pending.category || "Blog Post",
+      description: pending.description || nextPrompt,
+      starterPrompt: nextPrompt,
+      tone: pending.tone || "",
+      style: pending.style || ""
+    })
+      .then((project) => {
+        const createdId = project._id || project.id;
+        const nextParams = new URLSearchParams(searchParams.toString());
+        nextParams.set("projectId", createdId);
+        nextParams.set("type", pending.type || API_PROJECT_TYPES.TEXT);
+        nextParams.set("autogenerate", "1");
+        router.replace(`${ROUTES.EDITOR}?${nextParams.toString()}`, { scroll: false });
+      })
+      .catch((error) => {
+        pendingProjectBootstrapRef.current = false;
+        setIsLoadingContent(false);
+        showNotification(
+          TEXT_EDITOR_ALERTS.PROJECT_LOAD_FAILED_TITLE,
+          error.message || "Could not create the project for generation.",
+          TOAST_TYPES.ERROR
+        );
+      });
+  }, [createProject, isRealProject, router, searchParams, shouldAutoGenerate]);
+
+  useEffect(() => {
     if (!isRealProject) {
       setResponses([]);
       setSelectedHistoryId(null);
@@ -487,6 +537,9 @@ function TextEditorScreen() {
           projectStarterContentRef.current = loadedProject.starterContent || "";
           if (loadedProject.starterPrompt) {
             setPrompt(loadedProject.starterPrompt);
+            if (shouldAutoGenerate) {
+              pendingAutoPromptRef.current = loadedProject.starterPrompt;
+            }
           }
           if (typeof loadedProject.starterContent === "string" && loadedProject.starterContent) {
             setEditorContent({
@@ -585,7 +638,14 @@ function TextEditorScreen() {
     return () => {
       isActive = false;
     };
-  }, [clearAiError, fetchProjectById, fetchProjectChatHistory, isRealProject, projectId]);
+  }, [
+    clearAiError,
+    fetchProjectById,
+    fetchProjectChatHistory,
+    isRealProject,
+    projectId,
+    shouldAutoGenerate
+  ]);
 
   useEffect(() => {
     if (!isRealProject) {
@@ -711,6 +771,33 @@ function TextEditorScreen() {
       setIsGenerating(false);
     }
   }
+
+  useEffect(() => {
+    if (!shouldAutoGenerate || autoGenerateHandledRef.current) {
+      return;
+    }
+
+    if (isLoadingContent || isGenerating || !canEditProject) {
+      return;
+    }
+
+    const pendingPrompt = String(pendingAutoPromptRef.current || "").trim();
+    if (!pendingPrompt) {
+      return;
+    }
+
+    autoGenerateHandledRef.current = true;
+    pendingAutoPromptRef.current = "";
+    setPrompt(pendingPrompt);
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("autogenerate");
+    const query = nextParams.toString();
+    router.replace(query ? `${ROUTES.EDITOR}?${query}` : ROUTES.EDITOR, { scroll: false });
+
+    void handleGenerate(pendingPrompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAutoGenerate, isLoadingContent, isGenerating, canEditProject, projectId]);
 
   async function handleQuickAction(action) {
     if (!canEditProject) {
