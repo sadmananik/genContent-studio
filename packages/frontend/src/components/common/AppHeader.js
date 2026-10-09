@@ -1,11 +1,12 @@
 "use client";
 
+import { Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import UserProfileMenu from "./UserProfileMenu";
 import { ROUTES } from "../../constants/navigation";
 import { useAppStore } from "../../store";
 
-export default function AppHeader() {
+export default function AppHeader({ navigationOpen = false, onToggleNavigation }) {
   const router = useRouter();
   const auth = useAppStore((state) => state.auth);
   const userState = useAppStore((state) => state.userState);
@@ -23,6 +24,18 @@ export default function AppHeader() {
 
   return (
     <header className="flex min-h-[73px] items-center justify-end border-b border-slate-200 bg-white px-5 py-4 md:px-7">
+      {onToggleNavigation && (
+        <button
+          type="button"
+          className="mobile-navigation-toggle"
+          aria-label="Open navigation"
+          aria-expanded={navigationOpen}
+          aria-controls="app-navigation"
+          onClick={onToggleNavigation}
+        >
+          <Menu aria-hidden="true" size={24} />
+        </button>
+      )}
       <UserProfileMenu user={user} onLogout={handleLogout} onProfile={handleProfile} />
     </header>
   );
