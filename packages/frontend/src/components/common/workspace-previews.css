@@ -1,0 +1,44 @@
+.workspace-previews {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+  color: #111827;
+}
+.workspace-preview-card {
+  min-width: 0;
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid #e3e5ef;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(79 70 229 / 5%);
+}
+.workspace-preview-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+.workspace-preview-card figcaption {
+  display: grid;
+  gap: 0.3rem;
+  padding-top: 0.85rem;
+}
+.workspace-preview-card strong {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+.workspace-preview-card span {
+  color: #6b7280;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.workspace-previews-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 600px) {
+  .workspace-previews {
+    grid-template-columns: 1fr;
+  }
+}

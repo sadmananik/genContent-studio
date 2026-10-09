@@ -125,23 +125,6 @@
   margin-top: 0.85rem;
   padding: 1.1rem 0.5rem 1.5rem;
   background: transparent;
-  perspective: 1400px;
-}
-
-.signin-preview-img {
-  width: 100%;
-  height: auto;
-  display: block;
-  background: transparent;
-  image-rendering: auto;
-  transform: rotateY(-6deg) rotateX(3deg);
-  transform-origin: center left;
-  filter: drop-shadow(0 28px 48px rgba(79, 70, 229, 0.2));
-  transition: transform 420ms ease;
-}
-
-.signin-preview:hover .signin-preview-img {
-  transform: rotateY(-3deg) rotateX(1.5deg);
 }
 
 .signin-form-wrap {
@@ -429,8 +412,8 @@
   }
 
   .signin-preview {
-    width: min(720px, 110%);
-    margin-left: -0.35rem;
+    width: min(720px, 100%);
+    margin-left: 0;
   }
 
   .signin-form-wrap {
@@ -447,4 +430,137 @@
     padding-top: 4rem;
     align-items: start;
   }
+}
+
+/* Login returns to writing; signup introduces a new creative workflow. */
+.signup-workflow {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+.signup-workflow li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+.signup-workflow li > span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #ede9fe;
+  color: #4f46e5;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+.signup-workflow strong {
+  font-size: 0.95rem;
+}
+.signup-workflow p {
+  margin: 0.2rem 0 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+.signin-page-signup .signin-preview {
+  padding: 0;
+  max-width: 480px;
+}
+@media (min-width: 980px) {
+  .signin-page-signup .signin-layout {
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 4rem;
+  }
+  .signin-page-signup .signin-form-wrap {
+    grid-column: 1;
+    grid-row: 1;
+    justify-content: center;
+  }
+  .signin-page-signup .signin-marketing {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 2rem;
+    border: 1px solid #e3e5ef;
+    border-radius: 24px;
+    background: linear-gradient(145deg, #fff, #f5f3ff);
+  }
+  .signin-page-signup .signin-marketing h1 {
+    font-size: clamp(2rem, 3vw, 2.7rem);
+  }
+  .signin-page-signup .signin-card {
+    box-shadow: 0 12px 40px rgb(79 70 229 / 8%);
+  }
+}
+
+.login-creative-story {
+  padding: 1.5rem;
+  border: 1px solid #e3e5ef;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #fff, #f5f3ff);
+  box-shadow: 0 12px 36px rgb(79 70 229 / 6%);
+}
+.login-story-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #4f46e5;
+}
+.login-story-heading h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+.login-story-steps {
+  display: grid;
+  gap: 1.15rem;
+  margin: 1.25rem 0;
+  padding: 0;
+  list-style: none;
+}
+.login-story-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+.login-story-number {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ede9fe;
+  color: #4f46e5;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+.login-story-steps li:last-child .login-story-number {
+  background: #d1fae5;
+  color: #047857;
+}
+.login-story-steps strong {
+  font-size: 0.9rem;
+}
+.login-story-steps p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+.login-story-steps .login-story-prompt {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #e3e5ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #4f46e5;
+}
+.login-story-caption {
+  margin: 0;
+  padding-top: 1rem;
+  border-top: 1px solid #e3e5ef;
+  color: #6b7280;
+  font-size: 0.8rem;
 }

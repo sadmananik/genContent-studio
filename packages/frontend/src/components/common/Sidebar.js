@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  X,
   HelpCircle,
   Bot,
   FilePenLine,
@@ -31,12 +32,28 @@ const navIcons = {
   Users
 };
 
-export function AppSidebar({ active }) {
+export function AppSidebar({ active, mobileOpen = false, onClose }) {
   const pathname = usePathname();
   const currentYear = new Date().getFullYear();
 
   return (
-    <aside className="app-sidebar styled-sidebar">
+    <aside
+      id="app-navigation"
+      className={`app-sidebar styled-sidebar${mobileOpen ? " mobile-open" : ""}`}
+      onClick={(event) => {
+        if (event.target.closest("a")) onClose?.();
+      }}
+    >
+      {onClose && (
+        <button
+          type="button"
+          className="mobile-navigation-close"
+          aria-label="Close navigation"
+          onClick={onClose}
+        >
+          <X aria-hidden="true" size={24} />
+        </button>
+      )}
       <Brand href={ROUTES.DASHBOARD} variant="sidebar" />
       <nav className="nav-list">
         {NAV_ITEMS.map(({ icon, label, href }) => {

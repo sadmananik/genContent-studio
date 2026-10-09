@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { ROUTES } from "../../constants/navigation";
 import { getAuthSession } from "../../lib/auth";
+import WorkspacePreviews from "../common/WorkspacePreviews";
 import "./landing.css";
 
 const FEATURES = [
@@ -112,62 +113,6 @@ function BrandMark({ text = true }) {
       <Image alt="" aria-hidden="true" height={34} src="/gencontent-logo.png" width={34} />
       {text ? <span>GenContent Studio</span> : null}
     </Link>
-  );
-}
-
-function HeroProductMock() {
-  return (
-    <div className="lp-product-shell" aria-hidden="true">
-      <aside className="lp-product-side">
-        <div className="mini-brand">
-          <Sparkles size={14} color="#4f46e5" />
-          GenContent
-        </div>
-        {[
-          ["Workspace", true],
-          ["Projects", false],
-          ["AI Assistant", false],
-          ["Templates", false],
-          ["Shared", false]
-        ].map(([label, active]) => (
-          <div className={`lp-side-item${active ? " active" : ""}`} key={label}>
-            {label}
-          </div>
-        ))}
-      </aside>
-      <div className="lp-product-main">
-        <h3>Create Amazing Content</h3>
-        <p>Describe what you want to create and let AI do the heavy lifting.</p>
-        <div className="lp-composer">
-          <div className="placeholder">
-            Write a blog post about sustainable living tips for beginners...
-          </div>
-          <div className="lp-composer-row">
-            <div className="lp-chip-row">
-              <span className="lp-chip">Blog</span>
-              <span className="lp-chip">SEO</span>
-              <span className="lp-chip">Friendly</span>
-            </div>
-            <span className="lp-mini-btn">Generate</span>
-          </div>
-        </div>
-        <div className="lp-recent-label">Recent Projects</div>
-        <div className="lp-recent-grid">
-          <div className="lp-recent-card">
-            <div className="thumb" />
-            <div className="meta">Eco Lifestyle Guide</div>
-          </div>
-          <div className="lp-recent-card">
-            <div className="thumb t2" />
-            <div className="meta">Product Launch Copy</div>
-          </div>
-          <div className="lp-recent-card">
-            <div className="thumb t3" />
-            <div className="meta">Social Campaign</div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -277,7 +222,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="lp-hero-visual lp-reveal lp-reveal-delay">
-            <HeroProductMock />
+            <WorkspacePreviews preview="dashboard" priority />
           </div>
         </div>
       </section>
@@ -340,26 +285,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-section lp-section-showcase" id="see-it-in-action">
+      <section className="lp-section lp-section-showcase" id="workspace-previews">
         <div className="lp-container">
           <div className="lp-section-head">
-            <span className="lp-pill">See it in Action</span>
+            <span className="lp-pill">Workspace Previews</span>
             <h2>A smarter way to create content</h2>
             <p>
               Draft, refine, optimise and illustrate in a single workspace built for creators and
               teams.
             </p>
           </div>
-          <div className="lp-showcase-image">
-            <Image
-              alt="GenContent Studio workspace with AI Assistant, SEO suggestions, image generation, and export tools"
-              className="lp-showcase-img"
-              height={900}
-              priority={false}
-              src="/images/dashboard-showcase.jpg"
-              width={1400}
-            />
-          </div>
+          <WorkspacePreviews items={["text-workspace", "image-workspace", "collaboration"]} />
         </div>
       </section>
 

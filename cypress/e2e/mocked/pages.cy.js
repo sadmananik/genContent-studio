@@ -1,6 +1,27 @@
 import { user, project, sharedProject } from "./fixtures";
 
 describe("account and secondary pages", () => {
+  it("opens mobile navigation and closes it after navigation or dismissal", () => {
+    cy.viewport(390, 844);
+    cy.visitFrontend("/profile");
+    cy.get("#app-navigation").should("not.be.visible");
+    cy.get('[aria-label="Open navigation"]').click().should("have.attr", "aria-expanded", "true");
+    cy.get("#app-navigation").should("be.visible");
+    cy.get('[aria-label="Close navigation"]').should("have.focus");
+    cy.get("#app-navigation").contains("a", "Settings").click();
+    cy.location("pathname").should("eq", "/settings");
+    cy.get("#app-navigation").should("not.be.visible");
+    cy.get('[aria-label="Open navigation"]').click();
+    cy.get("body").type("{esc}");
+    cy.get("#app-navigation").should("not.be.visible");
+    cy.get('[aria-label="Open navigation"]').should("have.focus").click();
+    cy.get('[aria-label="Dismiss navigation"]').click("right");
+    cy.get("#app-navigation").should("not.be.visible");
+    cy.viewport(1280, 800);
+    cy.get("#app-navigation").should("be.visible");
+    cy.get('[aria-label="Open navigation"]').should("not.be.visible");
+  });
+
   it("renders the public landing page and links to sign in", () => {
     cy.visitFrontend("/", false);
     cy.get('a[href="/login"]').first().click();
