@@ -13,7 +13,7 @@ describe("account and secondary pages", () => {
     cy.get("input[name=name]").should("have.value", user.name).clear().type("Updated Creator");
     cy.contains("button", "Save Changes").click();
     cy.wait("@saveProfile").its("request.body.name").should("eq", "Updated Creator");
-    cy.contains("h2", "Updated Creator").should("be.visible");
+    cy.contains("h2", "Updated Creator").scrollIntoView().should("be.visible");
   });
 
   it("shows profile save failures and keeps the entered name", () => {
