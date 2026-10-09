@@ -22,7 +22,29 @@ export default function TemplateCard({
   const isImage = template.projectType === "image";
 
   return (
-    <ContentCard cover={<TemplateCover template={template} />}>
+    <ContentCard
+      cover={<TemplateCover template={template} />}
+      onClick={
+        onPreview
+          ? (event) => {
+              if (event.target.closest("button, a, input, select, textarea")) return;
+              onPreview(template);
+            }
+          : undefined
+      }
+      role={onPreview ? "button" : undefined}
+      tabIndex={onPreview ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (
+          onPreview &&
+          event.target === event.currentTarget &&
+          (event.key === "Enter" || event.key === " ")
+        ) {
+          event.preventDefault();
+          onPreview(template);
+        }
+      }}
+    >
       <div className="flex min-w-0 items-start gap-3">
         <span
           className={cn(

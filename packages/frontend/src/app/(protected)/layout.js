@@ -37,9 +37,9 @@ export default function ProtectedLayout({ children }) {
       <main className="protected-stage">
         <section className="screen app-frame">
           <AppSidebar />
-          <div className="min-w-0">
+          <div className="app-main-panel min-w-0">
             <AppHeader />
-            {children}
+            <div className="app-page-content">{children}</div>
           </div>
         </section>
       </main>

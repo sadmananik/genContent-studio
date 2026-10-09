@@ -66,3 +66,30 @@ test("generation retry reuses the created project", async () => {
   await waitFor(() => expect(mockRouter.push).toHaveBeenCalled());
   expect(actions.createProject).toHaveBeenCalledTimes(1);
 });
+
+test("content type and tone use the existing project and generation actions", async () => {
+  const actions = prepare();
+  fireEvent.change(screen.getByRole("combobox", { name: "Content type" }), {
+    target: { value: "Article" }
+  });
+  fireEvent.change(screen.getByRole("combobox", { name: "Tone" }), {
+    target: { value: "Friendly" }
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate" }));
+  await waitFor(() => expect(mockRouter.push).toHaveBeenCalled());
+  expect(actions.createProject).toHaveBeenCalledWith(
+    expect.objectContaining({ category: "Article" })
+  );
+  expect(actions.generateTextFromPrompt).toHaveBeenCalledWith({
+    project: project._id,
+    prompt: "Create something\n\nContent type: Article. Tone: Friendly."
+  });
+});
+
+test("example fills the prompt without generating or replacing project details", () => {
+  const actions = prepare();
+  fireEvent.click(screen.getByRole("button", { name: "Try an example" }));
+  expect(screen.getByLabelText("Prompt").value).toContain("small businesses");
+  expect(screen.getByLabelText("Title")).toHaveValue("New draft");
+  expect(actions.createProject).not.toHaveBeenCalled();
+});

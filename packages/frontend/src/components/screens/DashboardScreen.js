@@ -9,22 +9,12 @@ import { useRouter } from "next/navigation";
 import ProjectListCard from "../common/ProjectListCard";
 import { CONTENT_CARD_GRID } from "../common/ContentCard";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, FileText, FolderKanban, Image as ImageIcon, Users } from "lucide-react";
-import {
-  CategorySummary,
-  EmptyState,
-  SectionHeader,
-  StatGrid,
-  WelcomePanel
-} from "../common/Cards";
+import { ArrowRight } from "lucide-react";
+import { EmptyState, SectionHeader, WelcomePanel } from "../common/Cards";
 import ProjectTypeIcon from "../common/ProjectTypeIcon";
-import { DASHBOARD_TEXT, SUMMARY_CARD_LABELS } from "../../constants/dashboard";
+import { DASHBOARD_TEXT } from "../../constants/dashboard";
 import { ROUTES } from "../../constants/navigation";
-import {
-  API_PROJECT_TYPES,
-  CONTENT_CATEGORY_SUMMARY_LABELS,
-  PROJECT_TYPES
-} from "../../constants/content";
+import { API_PROJECT_TYPES, PROJECT_TYPES } from "../../constants/content";
 import { COMMON_UI_TEXT, DASHBOARD_ALERTS, PROJECT_ALERTS } from "../../constants/notifications";
 import { useAppStore } from "../../store";
 
@@ -56,14 +46,6 @@ export default function DashboardScreen() {
         )
         .slice(0, 3)
         .map(formatProjectForDashboard),
-    [projectState.projects]
-  );
-  const summaryCards = useMemo(
-    () => buildSummaryCards(projectState.projects),
-    [projectState.projects]
-  );
-  const categoryCounts = useMemo(
-    () => buildCategoryCounts(projectState.projects),
     [projectState.projects]
   );
   const hasProjects = projects.length > 0;
@@ -147,12 +129,6 @@ export default function DashboardScreen() {
             />
           )}
         </div>
-        <StatGrid items={summaryCards} label={DASHBOARD_TEXT.PROJECT_SUMMARY} />
-
-        <div>
-          <SectionHeader title={DASHBOARD_TEXT.CONTENT_TYPE_SUMMARY} />
-          <CategorySummary items={categoryCounts} />
-        </div>
       </section>
     </main>
   );
@@ -176,58 +152,6 @@ function formatProjectForDashboard(project) {
     tone: type === PROJECT_TYPES.IMAGE ? "lavender" : "mint",
     collaborators: project.collaborators || []
   };
-}
-
-function buildSummaryCards(projects) {
-  const textCount = projects.filter((project) => project.type === API_PROJECT_TYPES.TEXT).length;
-  const imageCount = projects.filter((project) => project.type === API_PROJECT_TYPES.IMAGE).length;
-  const sharedCount = projects.filter((project) => (project.collaborators || []).length > 0).length;
-
-  return [
-    {
-      icon: <FolderKanban aria-hidden="true" size={19} strokeWidth={2.25} />,
-      value: String(projects.length),
-      label: SUMMARY_CARD_LABELS.TOTAL,
-      tone: "violet"
-    },
-    {
-      icon: <FileText aria-hidden="true" size={19} strokeWidth={2.25} />,
-      value: String(textCount),
-      label: SUMMARY_CARD_LABELS.TEXT,
-      tone: "mint"
-    },
-    {
-      icon: <ImageIcon aria-hidden="true" size={19} strokeWidth={2.25} />,
-      value: String(imageCount),
-      label: SUMMARY_CARD_LABELS.IMAGE,
-      tone: "lavender"
-    },
-    {
-      icon: <Users aria-hidden="true" size={19} strokeWidth={2.25} />,
-      value: String(sharedCount),
-      label: SUMMARY_CARD_LABELS.SHARED,
-      tone: "amber"
-    }
-  ];
-}
-
-function buildCategoryCounts(projects) {
-  const counts = projects.reduce((result, project) => {
-    const category = project.category || "Other";
-    result[category] = (result[category] || 0) + 1;
-    return result;
-  }, {});
-
-  const entries = Object.entries(counts);
-
-  if (entries.length === 0) {
-    return [{ label: DASHBOARD_ALERTS.NO_CATEGORIES_LABEL, count: 0 }];
-  }
-
-  return entries.map(([category, count]) => ({
-    label: CONTENT_CATEGORY_SUMMARY_LABELS[category] || category,
-    count
-  }));
 }
 
 function getProjectWorkspaceHref(project) {
