@@ -82,7 +82,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <AuthPageLayout>
+    <AuthPageLayout variant="signup" preview="image-workspace">
       <form className="signin-card register-card" onSubmit={handleRegister}>
         <div className="signin-card-brand">
           <Image alt="" aria-hidden="true" height={34} src="/gencontent-logo.png" width={34} />
