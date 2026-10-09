@@ -43,19 +43,25 @@ const statTones = {
   }
 };
 
-export function StatCard({ icon, value, label, tone = "violet" }) {
+export function StatCard({ icon, value, label, tone = "violet", compact = false }) {
   const colors = statTones[tone] || statTones.violet;
   return (
     <article
       className={cn(
-        "relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br p-5 shadow-sm",
+        "relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br shadow-sm",
+        compact ? "p-4" : "p-5",
         colors.panel
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-          <strong className="mt-3 block text-4xl font-extrabold leading-none tracking-tight text-slate-950">
+          <strong
+            className={cn(
+              "block font-extrabold leading-none tracking-tight text-slate-950",
+              compact ? "mt-2 text-2xl" : "mt-3 text-4xl"
+            )}
+          >
             {value}
           </strong>
         </div>
@@ -63,12 +69,15 @@ export function StatCard({ icon, value, label, tone = "violet" }) {
           {icon}
         </span>
       </div>
-      <span aria-hidden="true" className={cn("mt-5 block h-1 w-12 rounded-full", colors.accent)} />
+      <span
+        aria-hidden="true"
+        className={cn("block h-1 w-12 rounded-full", compact ? "mt-3" : "mt-5", colors.accent)}
+      />
     </article>
   );
 }
 
-export function StatGrid({ items, label }) {
+export function StatGrid({ items, label, compact = false }) {
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label={label}>
       {items.map((item) => (
@@ -77,6 +86,7 @@ export function StatGrid({ items, label }) {
           value={item.value}
           label={item.label}
           tone={item.tone}
+          compact={compact}
           key={item.label}
         />
       ))}

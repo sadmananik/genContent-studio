@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-export default function Brand({ compact = false, href = "/" }) {
+export default function Brand({ compact = false, href = "/", variant = "default" }) {
   return (
     <a className="brand" href={href}>
       <Image
@@ -11,7 +11,14 @@ export default function Brand({ compact = false, href = "/" }) {
         src="/gencontent-logo.png"
         width={40}
       />
-      {!compact && <strong>genContent Studio</strong>}
+      {!compact &&
+        (variant === "sidebar" ? (
+          <span className="sidebar-brand-label">
+            <strong>GenContent</strong> Studio
+          </span>
+        ) : (
+          <strong>genContent Studio</strong>
+        ))}
     </a>
   );
 }

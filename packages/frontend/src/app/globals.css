@@ -1904,3 +1904,235 @@ a.brand:hover {
   background-color: #2e1065;
   color: #ddd6fe;
 }
+
+/* Sidebar and composer visual styling shared with the UI design branch. */
+.styled-sidebar .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.15rem 0.55rem 0.35rem;
+  text-decoration: none;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.styled-sidebar .brand-mark {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.styled-sidebar .sidebar-brand-label {
+  font-size: 0.98rem;
+  letter-spacing: -0.03em;
+  color: #64748b;
+  font-weight: 500;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.styled-sidebar .sidebar-brand-label strong {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.styled-sidebar .nav-list {
+  display: grid;
+  margin-top: 1.45rem;
+  gap: 0.28rem;
+  flex: 0 0 auto;
+  align-content: start;
+}
+
+.styled-sidebar .nav-list a {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 46px;
+  border-radius: 12px;
+  padding: 0 0.95rem;
+  background: transparent;
+  border: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  letter-spacing: -0.015em;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.styled-sidebar .nav-list a svg {
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.styled-sidebar .nav-list a:hover {
+  color: #4f46e5;
+  background: #f5f3ff;
+}
+
+.styled-sidebar .nav-list a:hover svg {
+  color: #6366f1;
+}
+
+.styled-sidebar .nav-list a.active {
+  color: #6366f1;
+  background: #eef2ff;
+  font-weight: 700;
+}
+
+.styled-sidebar .nav-list a.active svg {
+  color: #6366f1;
+}
+
+.quick-generate-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+  color: #ffffff !important;
+  font-weight: 750;
+  font-size: 0.94rem;
+  min-height: 46px;
+  padding: 0.75rem 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.26);
+  transition:
+    filter 0.15s ease,
+    transform 0.15s ease;
+}
+
+.quick-generate-button:hover:not(:disabled) {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.quick-generate-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.styled-sidebar {
+  padding: 1.35rem 1.05rem 1.15rem;
+}
+.quick-create-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: white;
+  color: #1e293b;
+  box-shadow: 0 1px 2px #0f172a0a;
+}
+.quick-create-chip:focus-within {
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 3px #eef2ff;
+}
+.quick-create-chip select {
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  max-width: 12rem;
+}
+:root[data-active-theme="dark"] .styled-sidebar .sidebar-brand-label strong {
+  color: #f8fafc;
+}
+:root[data-active-theme="dark"] .quick-create-chip {
+  background: #182235;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+:root[data-active-theme="dark"] .quick-create-chip select option {
+  background: #182235;
+}
+
+/* Keep the sidebar brand legible despite transparent padding in the logo asset. */
+.styled-sidebar .brand {
+  gap: 0.45rem;
+  padding-left: 0.25rem;
+}
+.styled-sidebar .brand-mark {
+  width: 48px;
+  height: 48px;
+}
+.styled-sidebar .sidebar-brand-label {
+  font-size: 1.05rem;
+}
+.styled-sidebar .sidebar-secondary {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid #e8ebf2;
+}
+.styled-sidebar .sidebar-footer {
+  margin-top: 1rem;
+}
+
+/* Reserve enough width for the brand and keep sidebar utilities in view. */
+@media (min-width: 901px) {
+  .app-frame {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+  .app-frame > .styled-sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding: 1rem 0.9rem;
+  }
+  .styled-sidebar > .nav-list:not(.sidebar-secondary) {
+    min-height: 0;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+  }
+  .styled-sidebar .sidebar-secondary,
+  .styled-sidebar .sidebar-footer {
+    flex-shrink: 0;
+  }
+  .styled-sidebar .sidebar-secondary {
+    gap: 0.2rem;
+    padding-top: 0.65rem;
+  }
+  .styled-sidebar .sidebar-footer {
+    padding-top: 0.5rem;
+    margin-top: 0.65rem;
+  }
+}
+
+/* On desktop, scroll page content independently of navigation and the header. */
+@media (min-width: 901px) {
+  .screen.app-frame {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .app-main-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .app-main-panel > header {
+    flex-shrink: 0;
+  }
+  .app-page-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+}

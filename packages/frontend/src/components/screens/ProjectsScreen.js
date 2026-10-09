@@ -1,5 +1,6 @@
 "use client";
 
+import ProjectOverview from "../common/ProjectOverview";
 import ProjectFavoriteButton from "../common/ProjectFavoriteButton";
 import PageTitleIcon from "../common/PageTitleIcon";
 
@@ -257,6 +258,10 @@ export default function ProjectsScreen() {
           Create Project
         </Button>
       </header>
+
+      <div className="mb-7">
+        <ProjectOverview projects={projectState.projects} />
+      </div>
 
       <section className="mb-7 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[minmax(14rem,1fr)_11rem_12rem_11rem_auto] md:items-end">
         <label className="grid gap-2 text-xs font-bold uppercase text-slate-500">

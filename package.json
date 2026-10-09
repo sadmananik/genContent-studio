@@ -1,6 +1,6 @@
 {
   "name": "gencontent-studio",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "AI-driven content creation platform monorepo.",
   "packageManager": "yarn@1.22.22",

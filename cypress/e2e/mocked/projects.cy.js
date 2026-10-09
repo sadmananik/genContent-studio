@@ -4,7 +4,7 @@ describe("projects and dashboard", () => {
   it("renders dashboard projects returned by the API", () => {
     cy.visitFrontend("/dashboard");
     cy.wait("@projects");
-    cy.contains(project.title).should("be.visible");
+    cy.contains(project.title).scrollIntoView().should("be.visible");
   });
 
   it("validates and creates a project, then opens its workspace", () => {
@@ -58,15 +58,27 @@ describe("projects and dashboard", () => {
   });
 
   it("shows project loading and API errors", () => {
-    cy.intercept("GET", "**/api/projects", {
-      delay: 700,
-      statusCode: 500,
-      body: { message: "Projects unavailable" }
-    }).as("failedProjects");
+    const responseControl = {};
+    cy.intercept(
+      "GET",
+      "**/api/projects",
+      (req) =>
+        new Cypress.Promise((resolve) => {
+          responseControl.release = () => {
+            req.reply({ statusCode: 500, body: { message: "Projects unavailable" } });
+            resolve();
+          };
+        })
+    ).as("failedProjects");
     cy.visitFrontend("/projects");
-    cy.contains(/loading projects/i).should("be.visible");
+    cy.contains(/loading projects/i)
+      .scrollIntoView()
+      .should("be.visible");
+    cy.wrap(responseControl)
+      .should("have.property", "release")
+      .then((release) => release());
     cy.wait("@failedProjects");
-    cy.contains("Projects unavailable").should("be.visible");
+    cy.contains("Projects unavailable").scrollIntoView().should("be.visible");
   });
 });
 

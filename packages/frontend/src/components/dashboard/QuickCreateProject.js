@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { Sparkles, FileText, ArrowRight, Lightbulb } from "lucide-react";
 import { useAppStore } from "../../store";
 import { ROUTES } from "../../constants/navigation";
 import WorkspaceLoading from "../common/WorkspaceLoading";
@@ -13,6 +13,8 @@ export default function QuickCreateProject() {
   const [description, setDescription] = useState("");
   const [prompt, setPrompt] = useState("");
   const [type, setType] = useState("text");
+  const [contentType, setContentType] = useState("Blog Post");
+  const [tone, setTone] = useState("Professional");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const projectRef = useRef(null);
@@ -39,12 +41,15 @@ export default function QuickCreateProject() {
           title: title.trim(),
           description: description.trim(),
           type,
-          category: "Other"
+          category: type === "text" ? contentType : "Other"
         });
       const project = projectRef.current._id || projectRef.current.id;
       if (!project) throw new Error("The project could not be opened. Please try again.");
       if (type === "text") {
-        const result = await generateText({ project, prompt: prompt.trim() });
+        const result = await generateText({
+          project,
+          prompt: `${prompt.trim()}\n\nContent type: ${contentType}. Tone: ${tone}.`
+        });
         if (!result.text?.trim()) throw new Error("AI returned no content. Please try again.");
         await saveResponse({
           project,
@@ -54,7 +59,11 @@ export default function QuickCreateProject() {
         });
         await saveText({ project, content: textToHtml(result.text) });
       } else {
-        const result = await generateImage({ project, action: "generate", prompt: prompt.trim() });
+        const result = await generateImage({
+          project,
+          action: "generate",
+          prompt: `${prompt.trim()}\n\nTone: ${tone}.`
+        });
         if (!result.imageUrl) throw new Error("AI returned no image. Please try again.");
         await saveResponse({
           project,
@@ -85,6 +94,20 @@ export default function QuickCreateProject() {
           <div className="flex items-center gap-2">
             <Sparkles size={20} className="text-violet-600" aria-hidden="true" />
             <h2 className="text-lg font-bold text-slate-950">What will you create today?</h2>
+            <button
+              type="button"
+              className="ml-auto inline-flex items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-indigo-600"
+              onClick={() =>
+                setPrompt(
+                  type === "image"
+                    ? "Create a clean product photograph of a reusable coffee cup, with soft morning light and space for a headline."
+                    : "Write a blog post about five practical ways small businesses can create better content with AI."
+                )
+              }
+            >
+              <Lightbulb size={16} aria-hidden="true" />
+              Try an example
+            </button>
           </div>
           <fieldset
             disabled={Boolean(projectRef.current)}
@@ -146,14 +169,43 @@ export default function QuickCreateProject() {
             />
           </label>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-slate-500">Your content opens in a new {type} workspace.</p>
+            <div className="flex flex-wrap gap-2">
+              {type === "text" && (
+                <label className="quick-create-chip">
+                  <FileText size={15} aria-hidden="true" />
+                  <select
+                    aria-label="Content type"
+                    disabled={Boolean(projectRef.current)}
+                    value={contentType}
+                    onChange={(event) => setContentType(event.target.value)}
+                  >
+                    {["Blog Post", "Social Post", "Article", "Product Description"].map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="quick-create-chip">
+                <Sparkles size={15} aria-hidden="true" />
+                <span className="text-xs font-bold">Tone:</span>
+                <select
+                  aria-label="Tone"
+                  value={tone}
+                  onChange={(event) => setTone(event.target.value)}
+                >
+                  {["Professional", "Friendly", "Persuasive", "Casual"].map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <button
               type="submit"
               disabled={!title.trim() || !prompt.trim()}
-              className="app-button app-button-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="quick-generate-button"
             >
               <Sparkles size={16} aria-hidden="true" />
-              Generate
+              Generate <ArrowRight size={16} aria-hidden="true" />
             </button>
           </div>
         </fieldset>

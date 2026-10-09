@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  HelpCircle,
   Bot,
   FilePenLine,
   FolderKanban,
@@ -16,7 +17,7 @@ import {
 import Brand from "./Brand";
 import { EDITOR_NAV_ITEMS, NAV_ITEMS, ROUTES } from "../../constants/navigation";
 
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.4";
 
 const navIcons = {
   Bot,
@@ -35,8 +36,8 @@ export function AppSidebar({ active }) {
   const currentYear = new Date().getFullYear();
 
   return (
-    <aside className="app-sidebar">
-      <Brand href={ROUTES.DASHBOARD} />
+    <aside className="app-sidebar styled-sidebar">
+      <Brand href={ROUTES.DASHBOARD} variant="sidebar" />
       <nav className="nav-list">
         {NAV_ITEMS.map(({ icon, label, href }) => {
           const Icon = navIcons[icon];
@@ -47,11 +48,21 @@ export function AppSidebar({ active }) {
               href={href}
               key={label}
             >
-              {Icon && <Icon aria-hidden="true" size={18} strokeWidth={2.25} />}
+              {Icon && <Icon aria-hidden="true" size={18} strokeWidth={1.8} />}
               {label}
             </Link>
           );
         })}
+      </nav>
+      <nav className="sidebar-secondary nav-list" aria-label="Support and settings">
+        <Link href={ROUTES.SETTINGS} className={pathname === ROUTES.SETTINGS ? "active" : ""}>
+          <Settings aria-hidden="true" size={18} strokeWidth={1.8} />
+          Settings
+        </Link>
+        <a href="mailto:generativecontentstudio@gmail.com">
+          <HelpCircle aria-hidden="true" size={18} strokeWidth={1.8} />
+          Help &amp; Support
+        </a>
       </nav>
       <div className="sidebar-footer">
         <p>GenContent Studio v{APP_VERSION}</p>
